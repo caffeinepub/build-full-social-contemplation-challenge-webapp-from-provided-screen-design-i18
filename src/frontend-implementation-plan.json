@@ -1,0 +1,117 @@
+{
+  "kind": "implementation_plan",
+  "version": "1.0",
+  "title": "Step 6 Manage Challenge + Step 7 In-Challenge Tabs + Remove Migrating Message",
+  "requirements": [
+    {
+      "id": "REQ-1",
+      "summary": "Implement the Step 6 in-active-challenge Manage Challenge screen to match the reference screenshot, including close affordance, Participants card (refresh + empty state), and destructive Leave Challenge card with full-width button.",
+      "acceptanceCriteria": [
+        "The Manage Challenge screen visually matches the uploaded screenshot “Scherm­afbeelding 2026-02-03 om 23.02.17.png” in structure (header, subtitle, card order), key typography hierarchy, and spacing.",
+        "Participants card includes a refresh icon/button and shows an empty-state message when no participants exist.",
+        "Leave Challenge section is clearly destructive (red emphasis) and includes a full-width Leave Challenge button."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/screens/Screen5ManageChallenge.tsx",
+          "operation": "create",
+          "description": "Create the Step 6 Manage Challenge screen UI to match the provided screenshot 1:1 (header with top-left X close, centered title/subtitle, Participants card with refresh control + empty-state, and destructive Leave Challenge card with prominent full-width button). Compose existing shadcn/ui components (Card/Button) and lucide icons; do not edit frontend/src/components/ui. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Add/adjust a React Query hook for fetching challenge participants appropriate for the Step 6 Participants card (and ensure it supports manual refresh via query refetch). Keep logic frontend-only and actor-backed. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/i18n/translations.ts",
+          "operation": "modify",
+          "description": "Add/adjust translation keys used by the Step 6 Manage Challenge screen (title, subtitle, Participants labels, empty-state text, Leave Challenge copy, and button labels) so UI text matches the reference screenshot. Verify the component's usage instructions before implementing."
+        }
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "summary": "Render the existing two scrollable info dialogs on the Step 6 Manage Challenge screen using the shared InfoPopups component.",
+      "acceptanceCriteria": [
+        "The Manage Challenge screen includes both info popup triggers and each popup opens as a dialog with scrollable content (same interaction pattern as Screens 1 and 3)."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/screens/Screen5ManageChallenge.tsx",
+          "operation": "modify",
+          "description": "Use the existing InfoPopups component to render the two info popup triggers (Social Contemplation + About the Challenge) on the Step 6 Manage Challenge screen, preserving the same dialog + scroll behavior as other screens. Verify the component's usage instructions before implementing."
+        }
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "summary": "Fix state-based routing so authenticated users with an active challenge land on Step 6 by default, and can navigate Step 6 ↔ Step 7 via clear in-UI actions (not URL-only).",
+      "acceptanceCriteria": [
+        "Authenticated + hasActiveChallenge users land on the Step 6 Manage Challenge screen after refresh and after login.",
+        "There is an obvious UI action to proceed from Step 6 to Step 7, and a way to return to Step 6 from Step 7 (without relying on URL routing)."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/App.tsx",
+          "operation": "modify",
+          "description": "Update app screen selection so hasActiveChallenge defaults to Step 6 (Manage Challenge) after login/refresh, and wire navigation between Step 6 and Step 7 using local screen state (no new top-level routes). Ensure Step 6 close (X) navigates to Step 7 and Step 7 provides a UI action that navigates back to Step 6. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/screens/Screen6InChallenge.tsx",
+          "operation": "modify",
+          "description": "Adjust Step 7 screen props and header actions so a clear UI control (e.g., existing settings/gear action) navigates back to Step 6 Manage Challenge via the callback wired in App.tsx (no URL reliance). Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/screens/Screen5ManageChallenge.tsx",
+          "operation": "modify",
+          "description": "Wire the top-left close (X) affordance to navigate from Step 6 to Step 7 using the callback provided by App.tsx, making the forward navigation obvious while preserving the screenshot-matching layout. Verify the component's usage instructions before implementing."
+        }
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "summary": "Complete Step 7 as a clean tabbed shell with exactly three tabs (My / Team / Coming Soon) styled consistently with the existing screen family.",
+      "acceptanceCriteria": [
+        "Step 7 renders a 3-tab layout: My, Team, Coming Soon.",
+        "Visual style (header section + card styling) is consistent with the existing screen family (Screens 1/3/5)."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/screens/Screen6InChallenge.tsx",
+          "operation": "modify",
+          "description": "Ensure Step 7 is presented as a clean 3-tab shell (My/Team/Coming Soon) with consistent header typography, spacing, and card treatment matching the established screen family. Keep scope limited to the tabbed structure and styling polish (no new product features beyond what’s already present). Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/i18n/translations.ts",
+          "operation": "modify",
+          "description": "Add/adjust translation keys for Step 7 tab labels (My/Team/Coming Soon) and any updated header/subtitle copy needed for consistent styling/text across screens. Verify the component's usage instructions before implementing."
+        }
+      ]
+    },
+    {
+      "id": "REQ-5",
+      "summary": "Remove/disable the recurring bogus “Migrating…” UI message so it never appears in normal use; show a generic friendly error message instead.",
+      "acceptanceCriteria": [
+        "The literal “Migrating your project to the new structure. Hold tight — this is a one-time operation.” is not shown anywhere in the UI under normal navigation and query/mutation error states.",
+        "If the underlying error still occurs, the UI shows a generic error message and remains usable (e.g., retry still works in QueryStateGate)."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/utils/sanitizeErrorMessage.ts",
+          "operation": "create",
+          "description": "Create a shared frontend utility that detects the literal bogus “Migrating…” message (and close variants) and replaces it with a generic, user-friendly message for safe UI display. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/components/QueryStateGate.tsx",
+          "operation": "modify",
+          "description": "Refactor QueryStateGate to use the shared sanitizeErrorMessage utility so blocked messages never render in query error states, while keeping Retry behavior intact. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/screens/Screen6InChallenge.tsx",
+          "operation": "modify",
+          "description": "Remove the local blocked-message sanitizer and use the shared sanitizeErrorMessage utility anywhere an error string could be displayed or logged for user-visible UI states, preventing the bogus message from surfacing. Verify the component's usage instructions before implementing."
+        }
+      ]
+    }
+  ]
+}

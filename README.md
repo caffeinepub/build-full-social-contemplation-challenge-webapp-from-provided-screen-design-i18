@@ -1,2 +1,3 @@
-# build-full-social-contemplation-challenge-webapp-from-provided-screen-design-i18
-Exported from Caffeine project: Social Contemplation
+## 
+
+To run app build and run docker image: `docker build -t app . docker run -it --network host app`

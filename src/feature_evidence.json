@@ -1,0 +1,111 @@
+{
+  "kind": "feature_evidence_report",
+  "features": [
+    {
+      "featureId": "feature-finish-step-6-by-implementing-the-in-active-challenge-manage-challenge-screen-to-match-the-uploaded-reference-screenshot-1-1-title-subtitle-spacing-card-styling-icons-and-layout-including-a-a-top-left-close-x-affordance-b-a-participants-card-with-a-refresh-button-and-an-empty-state-message-when-there-are-no-participants-and-c-a-destructive-styled-leave-challenge-card-with-a-prominent-full-width-leave-challenge-button",
+      "featureTitle": "Finish Step 6 by implementing the in-active-challenge Manage Challenge screen to match the uploaded reference screenshot 1:1 (title, subtitle, spacing, card styling, icons, and layout), including: (a) a top-left close (X) affordance, (b) a Participants card with a refresh button and an empty-state message when there are no participants, and (c) a destructive-styled Leave Challenge card with a prominent full-width Leave Challenge button.",
+      "files": [
+        "frontend/src/i18n/translations.ts",
+        "frontend/src/screens/Screen5ManageChallenge.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0"
+      ],
+      "testIds": [
+        "REQ-1"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-ensure-step-6-has-the-same-popup-behavior-as-screens-1-3-by-rendering-the-existing-two-scrollable-info-dialogs-social-contemplation-about-the-challenge-on-the-step-6-manage-challenge-screen-using-the-shared-infopopups-component",
+      "featureTitle": "Ensure Step 6 has the same popup behavior as Screens 1 & 3 by rendering the existing two scrollable info dialogs (Social Contemplation + About the Challenge) on the Step 6 Manage Challenge screen using the shared InfoPopups component.",
+      "files": [
+        "frontend/src/screens/Screen5ManageChallenge.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0"
+      ],
+      "testIds": [
+        "REQ-2"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-correct-state-based-routing-so-that-when-a-user-is-authenticated-and-has-an-active-challenge-the-app-routes-to-step-6-manage-challenge-as-the-default-screen-and-provides-a-clear-navigation-path-from-step-6-to-step-7-the-in-challenge-tabs-experience-and-back",
+      "featureTitle": "Correct state-based routing so that when a user is authenticated and has an active challenge, the app routes to Step 6 (Manage Challenge) as the default screen, and provides a clear navigation path from Step 6 to Step 7 (the in-challenge tabs experience) and back.",
+      "files": [
+        "frontend/src/App.tsx",
+        "frontend/src/screens/Screen5ManageChallenge.tsx",
+        "frontend/src/screens/Screen6InChallenge.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0"
+      ],
+      "testIds": [
+        "REQ-3"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-build-finish-step-7-by-completing-the-screen-6-in-challenge-structure-as-a-clean-tabbed-shell-with-exactly-three-tabs-my-team-coming-soon-and-styling-consistent-with-screens-1-3-5-typography-card-treatment-spacing-and-header-style",
+      "featureTitle": "Build/finish Step 7 by completing the Screen 6 in-challenge structure as a clean tabbed shell with exactly three tabs (My / Team / Coming Soon) and styling consistent with Screens 1/3/5 (typography, card treatment, spacing, and header style).",
+      "files": [
+        "frontend/src/i18n/translations.ts",
+        "frontend/src/screens/Screen6InChallenge.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0"
+      ],
+      "testIds": [
+        "REQ-4"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-remove-disable-the-erroneous-recurring-ui-message-migrating-your-project-to-the-new-structure-hold-tight-this-is-a-one-time-operation-so-it-never-appears-during-normal-app-usage-replace-any-occurrences-that-might-surface-via-error-rendering-with-a-generic-user-friendly-error-message-instead",
+      "featureTitle": "Remove/disable the erroneous recurring UI message “Migrating your project to the new structure. Hold tight — this is a one-time operation.” so it never appears during normal app usage. Replace any occurrences that might surface via error rendering with a generic, user-friendly error message instead.",
+      "files": [
+        "frontend/src/components/QueryStateGate.tsx",
+        "frontend/src/screens/Screen6InChallenge.tsx",
+        "frontend/src/utils/sanitizeErrorMessage.ts"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0"
+      ],
+      "testIds": [
+        "REQ-5"
+      ],
+      "confidence": "high"
+    }
+  ]
+}

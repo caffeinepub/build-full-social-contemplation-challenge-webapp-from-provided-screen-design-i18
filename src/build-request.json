@@ -1,0 +1,106 @@
+{
+  "kind": "build_request",
+  "title": "Finish Step 6 (Manage Challenge screen) and complete Step 7 (In-Challenge tabs), and remove bogus “Migrating…” message",
+  "priority": "normal",
+  "requirements": [
+    {
+      "id": "REQ-1",
+      "text": "Finish Step 6 by implementing the in-active-challenge Manage Challenge screen to match the uploaded reference screenshot 1:1 (title, subtitle, spacing, card styling, icons, and layout), including: (a) a top-left close (X) affordance, (b) a Participants card with a refresh button and an empty-state message when there are no participants, and (c) a destructive-styled Leave Challenge card with a prominent full-width Leave Challenge button.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-1"
+        ],
+        "quotes": [
+          "rond stap 6 af, en bouw stap 7"
+        ]
+      },
+      "acceptanceCriteria": [
+        "The Manage Challenge screen visually matches the uploaded screenshot “Scherm­afbeelding 2026-02-03 om 23.02.17.png” in structure (header, subtitle, card order), key typography hierarchy, and spacing.",
+        "Participants card includes a refresh icon/button and shows an empty-state message when no participants exist.",
+        "Leave Challenge section is clearly destructive (red emphasis) and includes a full-width Leave Challenge button."
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "text": "Ensure Step 6 has the same popup behavior as Screens 1 & 3 by rendering the existing two scrollable info dialogs (Social Contemplation + About the Challenge) on the Step 6 Manage Challenge screen using the shared InfoPopups component.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-1"
+        ],
+        "quotes": [
+          "rond stap 6 af, en bouw stap 7"
+        ]
+      },
+      "acceptanceCriteria": [
+        "The Manage Challenge screen includes both info popup triggers and each popup opens as a dialog with scrollable content (same interaction pattern as Screens 1 and 3)."
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "text": "Correct state-based routing so that when a user is authenticated and has an active challenge, the app routes to Step 6 (Manage Challenge) as the default screen, and provides a clear navigation path from Step 6 to Step 7 (the in-challenge tabs experience) and back.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-1"
+        ],
+        "quotes": [
+          "Correct routing: logged in & in challenge → Screen 5"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Authenticated + hasActiveChallenge users land on the Step 6 Manage Challenge screen after refresh and after login.",
+        "There is an obvious UI action to proceed from Step 6 to Step 7, and a way to return to Step 6 from Step 7 (without relying on URL routing)."
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "text": "Build/finish Step 7 by completing the Screen 6 in-challenge structure as a clean tabbed shell with exactly three tabs (My / Team / Coming Soon) and styling consistent with Screens 1/3/5 (typography, card treatment, spacing, and header style).",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-1"
+        ],
+        "quotes": [
+          "bouw stap 7"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Step 7 renders a 3-tab layout: My, Team, Coming Soon.",
+        "Visual style (header section + card styling) is consistent with the existing screen family (Screens 1/3/5)."
+      ]
+    },
+    {
+      "id": "REQ-5",
+      "text": "Remove/disable the erroneous recurring UI message “Migrating your project to the new structure. Hold tight — this is a one-time operation.” so it never appears during normal app usage. Replace any occurrences that might surface via error rendering with a generic, user-friendly error message instead.",
+      "target": "both",
+      "source": {
+        "messageIds": [
+          "msg-1"
+        ],
+        "quotes": [
+          "Migrating your project to the new structure. Hold tight — this is a one-time operation."
+        ]
+      },
+      "acceptanceCriteria": [
+        "The literal “Migrating your project to the new structure. Hold tight — this is a one-time operation.” is not shown anywhere in the UI under normal navigation and query/mutation error states.",
+        "If the underlying error still occurs, the UI shows a generic error message and remains usable (e.g., retry still works in QueryStateGate)."
+      ]
+    }
+  ],
+  "constraints": [
+    "Do not edit files under frontend/src/components/ui (compose existing Shadcn components instead).",
+    "Do not modify frontend immutable paths: frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, frontend/src/components/ui.",
+    "Backend must remain a single Motoko actor in backend/main.mo; add migration.mo only if an upgrade of stable state is required."
+  ],
+  "nonGoals": [
+    "Do not add new authentication providers (Internet Identity only).",
+    "Do not add real-time features (no WebSockets/chat).",
+    "Do not expand Step 7 with new product features beyond the tabbed structure/styling (keep scope limited to finishing the requested steps)."
+  ],
+  "imageRequirements": {
+    "required": [],
+    "edits": []
+  }
+}
