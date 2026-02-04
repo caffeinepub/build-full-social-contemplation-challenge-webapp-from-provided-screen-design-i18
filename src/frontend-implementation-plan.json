@@ -1,91 +1,94 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Live in-recording feedback UI for Screen 6 audio capture",
+  "title": "Step 9 Polish: URL-synced subviews, unified popups, and responsive consistency",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Add a large, prominent in-recording focus UI in Screen 6 (My tab) with live meter, REC state, timer, and reassuring microcopy, rendering correctly in LTR/RTL.",
+      "summary": "Synchronize screen + Screen 6 tab/subview selections to explicit URL tokens so refresh restores the exact in-app state without introducing a router framework.",
       "acceptanceCriteria": [
-        "When recording starts for an assignment, a large, visually dominant component appears in the recording area (not just a small icon change).",
-        "The component animates in real time based on microphone input (waveform or level meter).",
-        "The component shows a REC indicator and a timer that increments while recording is active.",
-        "The component includes a short, reassuring line of text (English) indicating recording is in progress.",
-        "The component layout renders correctly in both LTR and RTL modes."
+        "When the user is on Screen 6 and refreshes, the app returns to Screen 6 (not Screen 5/3) if challenge status still permits it.",
+        "When the user selects a Screen 6 tab (My/Team/Coming Soon) and refreshes, the same tab remains selected after reload.",
+        "When the user changes key subview selections on Screen 6 (e.g., selected day; in Team tab, selected participant and participant day), those selections are preserved across refresh via URL tokens.",
+        "URL token updates do not require a full page reload (use history replace/push), and do not break existing invitation-link parsing behavior."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/RecordingFeedback.tsx",
+          "path": "frontend/src/utils/appUrlState.ts",
           "operation": "create",
-          "description": "Create a reusable RecordingFeedback UI component that renders a visually dominant in-recording panel (live animated level meter driven by mic input, REC indicator, elapsed timer, and short reassuring microcopy) and supports correct layout in both LTR and RTL directions."
+          "description": "Add a small URL-token utility for reading/writing app navigation state (screen + Screen 6 subview tokens) via window.history.replaceState/pushState, merging with existing query params so invitation params (challengeId/code) remain intact until cleared."
+        },
+        {
+          "path": "frontend/src/App.tsx",
+          "operation": "modify",
+          "description": "Initialize and keep currentScreen synchronized with URL tokens using the new URL state utility (no router). On load/refresh, restore the URL-requested screen when allowed by authenticated challenge status/resolvedChallengeId; on in-app navigation, update URL tokens without reloading."
         },
         {
           "path": "frontend/src/screens/Screen6InChallenge.tsx",
           "operation": "modify",
-          "description": "Render the new RecordingFeedback component inside the My-tab assignment recording area, visible only when the assignment is actively recording; pass live feedback state (level/timer) and direction-aware layout props so the component is prominent and RTL-safe."
+          "description": "Make Screen 6 tab selection and key subview selections controlled (tab, selectedDay, selectedParticipant, selectedParticipantDay) and hydrate them from URL tokens on mount; update URL tokens on changes without full reload using the shared URL state utility."
+        },
+        {
+          "path": "frontend/src/utils/invitationLinks.ts",
+          "operation": "modify",
+          "description": "Ensure invitation parsing/clearing remains compatible with additional app URL tokens by continuing to remove only challengeId/code parameters while preserving any other query params used for screen/subview restoration."
         }
       ]
     },
     {
       "id": "REQ-2",
-      "summary": "Extend useAudioRecording to expose minimal live-feedback state (input level and elapsed seconds) using Web Audio API AnalyserNode, with smooth updates and complete cleanup on stop/unmount.",
+      "summary": "Unify all popup/dialog behavior behind a shared abstraction and migrate existing popups to it without editing shadcn/ui source files.",
       "acceptanceCriteria": [
-        "`useAudioRecording` continues to return `recordedBlob`, `isRecording`, and existing controls, and additionally provides live feedback state usable by the UI (level and/or waveform data + elapsed time).",
-        "While recording, the UI updates at a smooth cadence (e.g., animation frame or short interval) without blocking the main thread noticeably.",
-        "Stopping a recording stops the live meter updates and releases microphone resources.",
-        "Starting a new recording resets the timer and feedback visuals."
+        "Info popups rendered by the existing InfoPopups component behave identically on all screens where they appear (Screen 3 and Screen 5).",
+        "Assignment detail popups on Screen 6 use the same shared popup abstraction and match the same interaction behavior (overlay click, ESC, close button placement, max width/height, ScrollArea behavior).",
+        "No edits are made to shadcn component source files under frontend/src/components/ui; composition/wrapping is used instead."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/hooks/useAudioRecording.ts",
+          "path": "frontend/src/components/SharedPopup.tsx",
+          "operation": "create",
+          "description": "Create a shared popup/dialog wrapper component that composes existing shadcn Dialog primitives to enforce consistent sizing, viewport-bounded max height, scroll behavior, close behavior (overlay/ESC/close button), focus behavior defaults, and RTL-aligned header/layout. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/components/InfoPopups.tsx",
           "operation": "modify",
-          "description": "Extend the hook to create and manage an AudioContext + AnalyserNode while recording, expose live feedback state (e.g., normalized input level and elapsedSeconds), update smoothly (e.g., requestAnimationFrame), reset feedback state on start, and ensure all resources (media tracks, audio context, analyser, animation/timer handles) are cleaned up on stop and on component unmount."
+          "description": "Refactor InfoPopups to use the new SharedPopup abstraction so both dialogs behave identically across Screen 3 and Screen 5 (consistent sizing, ScrollArea behavior, close behavior, and RTL alignment). Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/screens/Screen6InChallenge.tsx",
+          "operation": "modify",
+          "description": "Replace the assignment details Dialog/ScrollArea usage with SharedPopup so Screen 6 assignment detail popups match the same interaction and sizing behavior as other popups across the app. Verify the component's usage instructions before implementing."
         }
       ]
     },
     {
       "id": "REQ-3",
-      "summary": "Integrate the feedback UI into Screen 6’s existing recording flow, tied to recordingAssignment, without altering save/upload behavior or requiring backend changes.",
+      "summary": "Polish responsive/mobile-first layouts across Screens 1, 3, 4, 5, 6 to prevent overflow/clipping and keep primary controls usable at common breakpoints.",
       "acceptanceCriteria": [
-        "The feedback UI appears only for the assignment currently being recorded.",
-        "Existing behavior remains unchanged: stopping triggers save/upload as it does today, and overwrite prevention remains intact.",
-        "No backend interface changes are required to ship this feature."
+        "On small mobile widths, core actions remain visible and tappable (e.g., Screen 6 tabs, day selectors, record/play/delete controls).",
+        "Dialogs/popups remain within viewport bounds and their content is scrollable rather than overflowing off-screen.",
+        "On tablet/desktop widths, layouts do not appear stretched or awkward (content remains comfortably centered and spaced)."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/screens/Screen6InChallenge.tsx",
+          "path": "frontend/src/components/AppShell.tsx",
           "operation": "modify",
-          "description": "Tie RecordingFeedback visibility strictly to the current `recordingAssignment` and `isRecording` state; ensure stop/save side effects remain unchanged, the UI does not affect overwrite-prevention disabling logic, and no new backend calls or interface changes are introduced."
-        },
-        {
-          "path": "frontend/src/components/RecordingFeedback.tsx",
-          "operation": "modify",
-          "description": "Ensure the component is purely presentational (no save/upload side effects), accepts live feedback state from the hook/screen, and can be mounted/unmounted safely as recordingAssignment changes."
-        }
-      ]
-    },
-    {
-      "id": "REQ-4",
-      "summary": "Move newly introduced user-facing strings for recording feedback into i18n, ensuring English translations exist for all new keys.",
-      "acceptanceCriteria": [
-        "No hard-coded new UI strings are added directly in Screen 6 or new components (except translation keys).",
-        "English translations exist for all new keys and render correctly."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/i18n/translations.ts",
-          "operation": "modify",
-          "description": "Add new English i18n keys for the recording feedback UI (REC label, recording-in-progress microcopy, timer label/format helpers if needed) under the existing Screen 6 namespace so all new user-facing strings are sourced from translations."
-        },
-        {
-          "path": "frontend/src/components/RecordingFeedback.tsx",
-          "operation": "modify",
-          "description": "Replace any user-facing strings in the new feedback UI with i18n translation keys via the existing translation context, ensuring English text is present for all newly referenced keys."
+          "description": "Adjust the shell container to be mobile-first while supporting tablet/desktop comfortably (responsive max-width), and ensure the app content can scroll within the viewport (avoid clipped content due to fixed min-heights/overflow-hidden)."
         },
         {
           "path": "frontend/src/screens/Screen6InChallenge.tsx",
           "operation": "modify",
-          "description": "Ensure any newly added user-facing strings related to the recording feedback integration are referenced via i18n keys (no new hard-coded English strings introduced in Screen 6 for this feature)."
+          "description": "Tune Screen 6 small-width layout for tappability and no overflow (e.g., day selectors, recording controls, team recordings area) while keeping tablet/desktop spacing centered and not awkwardly stretched."
+        },
+        {
+          "path": "frontend/src/components/SharedPopup.tsx",
+          "operation": "modify",
+          "description": "Ensure the shared popup abstraction is viewport-safe at mobile/tablet/desktop (max width/height constraints and internal scroll area behavior) so dialogs never overflow off-screen. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/index.css",
+          "operation": "modify",
+          "description": "Apply minimal global responsive polish where necessary (e.g., safe scrolling behavior/viewport constraints) while preserving existing RTL-aware base styles and avoiding new global stylesheet entry points."
         }
       ]
     }

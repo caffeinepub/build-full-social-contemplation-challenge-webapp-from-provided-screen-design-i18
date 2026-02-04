@@ -1,12 +1,12 @@
 # Specification
 
 ## Summary
-**Goal:** Provide clear, prominent live feedback during audio recording on Screen 6 (My tab) so users can confidently see that recording is active.
+**Goal:** Polish navigation state restoration, popup consistency, and responsive behavior so the app reliably returns to the same screen/subview after refresh and remains usable across devices.
 
 **Planned changes:**
-- Add a large in-recording focus UI in Screen 6 that appears only while an assignment is actively recording, showing a live animated waveform/level meter, a REC indicator, an elapsed timer, and short reassuring English microcopy.
-- Extend the existing `useAudioRecording` hook to expose minimal additional live-feedback state (mic level and elapsed seconds) using the Web Audio API (AnalyserNode), with proper cleanup of tracks/audio context/analyser on stop and unmount, and reset on new recordings.
-- Integrate the feedback UI into the current Screen 6 recording flow so it is tied to the active `recordingAssignment` and does not change existing stop/save/upload behavior or overwrite prevention.
-- Add any new user-facing strings to the i18n translation system and ensure English translations exist for all new keys, including correct rendering in both LTR and RTL layouts.
+- Add explicit URL tokens synchronized with the app’s existing state-based navigation so a page refresh restores the current screen and key subview selections (not defaults), including Screen 6 tab and subview state.
+- Ensure URL token updates happen via history push/replace without full reloads and without breaking existing invitation-link parsing.
+- Introduce a single shared popup/dialog abstraction (wrapping existing UI primitives) and refactor existing popups (InfoPopups on Screens 3 & 5, assignment detail popups on Screen 6) to use it for consistent sizing, scrolling, closing, focus, and RTL alignment.
+- Perform mobile-first responsive checks and adjust layouts for Screens 1, 3, 4, 5, and 6 to prevent overflow/clipping and keep core actions accessible across common breakpoints.
 
-**User-visible outcome:** When the user records an assignment in Screen 6, a big, animated recording indicator appears with a live meter/waveform, REC status, and a running timer (plus reassuring text), then disappears when recording stops without changing existing save/upload behavior.
+**User-visible outcome:** Refreshing the page returns users to the exact same screen/tab/subview (especially on Screen 6), popups behave the same everywhere, and all primary screens and dialogs remain readable and usable on mobile, tablet, and desktop.

@@ -78,4 +78,10 @@
     [dir="rtl"] .text-right {
         text-align: left;
     }
+
+    /* Ensure scrollable containers work properly */
+    html, body {
+        overflow: auto;
+        height: 100%;
+    }
 }

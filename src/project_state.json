@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 9,
+  "projectStateVersion": 16,
   "summary": "Social Contemplation is an Internet Computer (ICP) full‑stack dapp (Motoko canister backend + React/TypeScript frontend) where users authenticate via Internet Identity, create or join a shared “challenge” with a chosen start **date** (date-only, no start time), invite others via **single‑use invitation codes/links**, and complete a fixed 7‑day journey consisting of 5 fixed reflection assignments per day (Awareness, Utopia, Small steps, Support strategies, Other contemplations). Participants can record short browser audio reflections (one recording per day+assignment per user), upload them as blobs to the canister, delete and re-record their own audio, and play back their own and **all other participants’** recordings for all days/assignments. Start date may be adjusted by the creator only until the end of Day 1 of the originally chosen start date; after Day 1 ends, start date is locked and no new participants may join (codes become unusable). Challenge creator (admin) can remove participants and permanently delete the challenge (including all audio); any participant can always leave. The frontend uses TanStack React Query for backend calls, state-based navigation (no router), shared scrollable info popups (Social Contemplation/About the challenge) on key screens, and global i18n with RTL support (10 common languages + Dutch seeded via machine translations).",
   "existing_features": [
     {
@@ -326,51 +326,46 @@
       "version": 1
     },
     {
-      "id": "feature-add-a-prominent-in-recording-focus-ui-in-screen-6-my-tab-that-becomes-visible-while-the-user-is-actively-recording-an-assignment-showing-1-a-live-animated-waveform-or-level-meter-driven-by-microphone-input-2-a-clear-rec-state-indicator-3-an-elapsed-timer-and-4-short-reassuring-microcopy-that-confirms-recording-is-working",
-      "title": "Add a prominent in-recording focus UI in Screen 6 (My tab) that becomes visible while the user is actively recording an assignment, showing (1) a live animated waveform or level meter driven by microphone input, (2) a clear REC state indicator, (3) an elapsed timer, and (4) short reassuring microcopy that confirms recording is working.",
+      "id": "IF-30",
+      "title": "In-recording feedback UI (recording indicator + live level meter)",
+      "synonyms": [
+        "RecordingFeedback",
+        "recording state focus UI",
+        "level meter"
+      ],
+      "description": "Adds a dedicated in-recording feedback component to make it obvious when microphone capture is active/working, including a clear recording indicator and a live animated level meter/feedback display that can be shown prominently while recording.",
+      "reqIds": [
+        "AR-1",
+        "AR-2"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-explicit-url-tokens-so-that-refreshing-the-page-restores-the-exact-current-screen-and-subview-state-including-screen-6-tab-selection-and-its-key-subview-selections-rather-than-falling-back-to-default-in-memory-navigation",
+      "title": "Implement explicit URL tokens so that refreshing the page restores the exact current screen and subview state (including Screen 6 tab selection and its key subview selections) rather than falling back to default in-memory navigation.",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
     },
     {
-      "id": "feature-extend-the-existing-useaudiorecording-hook-to-expose-the-minimal-additional-state-needed-for-live-feedback-e-g-current-input-level-and-elapsed-recording-seconds-using-the-web-audio-api-analysernode-while-recording-and-ensure-all-media-resources-tracks-audio-context-analyser-are-cleaned-up-on-stop-and-on-component-unmount",
-      "title": "Extend the existing `useAudioRecording` hook to expose the minimal additional state needed for live feedback (e.g., current input level and elapsed recording seconds) using the Web Audio API (AnalyserNode) while recording, and ensure all media resources (tracks/audio context/analyser) are cleaned up on stop and on component unmount.",
+      "id": "feature-refactor-popup-dialog-usage-to-a-single-shared-popup-abstraction-so-popups-behave-identically-across-the-app-consistent-sizing-scroll-behavior-close-behavior-focus-behavior-and-rtl-alignment-and-update-existing-popup-usages-to-use-it",
+      "title": "Refactor popup/dialog usage to a single shared popup abstraction so popups behave identically across the app (consistent sizing, scroll behavior, close behavior, focus behavior, and RTL alignment), and update existing popup usages to use it.",
       "reqIds": [
         "REQ-2"
       ],
       "version": 1
     },
     {
-      "id": "feature-integrate-the-new-recording-feedback-ui-into-the-existing-screen-6-recording-flow-so-that-it-is-tied-to-the-currently-recording-assignment-using-the-existing-recordingassignment-state-does-not-interfere-with-saving-upload-behavior-and-does-not-require-any-backend-changes",
-      "title": "Integrate the new recording feedback UI into the existing Screen 6 recording flow so that it is tied to the currently-recording assignment (using the existing `recordingAssignment` state), does not interfere with saving/upload behavior, and does not require any backend changes.",
+      "id": "feature-perform-final-responsive-mobile-first-layout-checks-across-mobile-tablet-and-desktop-and-adjust-layout-styles-where-needed-so-all-primary-screens-screens-1-3-4-5-6-are-readable-and-fully-usable-without-overflow-or-clipped-content-at-common-breakpoints",
+      "title": "Perform final responsive/mobile-first layout checks across mobile, tablet, and desktop, and adjust layout styles where needed so all primary screens (Screens 1, 3, 4, 5, 6) are readable and fully usable without overflow or clipped content at common breakpoints.",
       "reqIds": [
         "REQ-3"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-move-any-new-user-facing-strings-introduced-by-the-recording-feedback-ui-e-g-recording-speak-naturally-tap-stop-when-done-into-the-i18n-translation-system-and-ensure-english-text-is-present-for-all-newly-referenced-keys",
-      "title": "Move any new user-facing strings introduced by the recording feedback UI (e.g., 'Recording…', 'Speak naturally', 'Tap Stop when done') into the i18n translation system and ensure English text is present for all newly referenced keys.",
-      "reqIds": [
-        "REQ-4"
       ],
       "version": 1
     }
   ],
   "new_feature_requests": [
-    {
-      "id": "AR-1",
-      "summary": "Add clear in-recording feedback UI (e.g., visible waveform/level meter + recording indicator) so users can tell audio recording is active and working",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-2",
-      "summary": "Improve in-recording feedback during audio capture: provide live animated waveform/level-meter plus an emotionally reassuring recording state (e.g., REC/timer/confirming copy), presented as a larger focus component while recording so users clearly see it’s working",
-      "reqIds": [],
-      "status": "pending"
-    },
     {
       "id": "AR-3",
       "summary": "Implement strict challenge rule enforcement: date-only start date adjustable until end of Day 1 of originally chosen start date; after Day 1 no joins (invites disabled); creator can remove participants and permanently delete challenge; participants can always leave",
@@ -403,7 +398,13 @@
     },
     {
       "id": "AR-8",
-      "summary": "Screen 6: replace tab text labels (My/Team/Coming Soon) with icon-only tabs (single person / multiple people / chat) while keeping behavior unchanged and using a consistent icon set; keep active-state highlight subtle",
+      "summary": "Step 9 – Polish & consistency: ensure navigation/routing works correctly across refreshes, ensure all info popups behave identically across screens, and perform final responsive layout checks",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-9",
+      "summary": "Step 9 polish: introduce explicit URL tokens to restore exact tab/subview on refresh; refactor to a single shared popup component with unified behavior; perform mobile-first responsive checks across mobile/tablet/desktop",
       "reqIds": [],
       "status": "in_progress"
     }
@@ -418,11 +419,7 @@
     "Challenge context recovery uses multi-source resolution: backend lookup (creator and participant) plus a sessionStorage fallback for last-known `challengeId`.",
     "Audio capture uses the browser `MediaRecorder` API; audio is stored as `audio/webm` and uploaded as an `ExternalBlob` to the canister, then played back via `ExternalBlob.getDirectURL()`.",
     "UI is built with Tailwind CSS + shadcn/ui primitives and lucide-react icons; the app is presented in a centered, mobile-sized card shell.",
-    "Custom i18n is implemented via a React Context that persists language selection to localStorage and updates `document.dir` / `document.lang` for RTL/LTR rendering.",
-    "Challenge start is date-only (no start time); day headers should show day number + weekday + calendar date derived from start date.",
-    "Start date is editable by creator only until the end of Day 1 of the originally chosen start date; after that the start date is locked and invitation redemption is disabled (no joins after Day 1).",
-    "Challenge creator acts as admin for that challenge: can remove participants and permanently delete the challenge (including recordings); any participant can always leave.",
-    "Invitation links are derived from single-use invitation codes; codes/links are only redeemable before Day 1 ends and are removed/invalidated after redemption."
+    "Custom i18n is implemented via a React Context that persists language selection to localStorage and updates `document.dir` / `document.lang` for RTL/LTR rendering."
   ],
   "known_issues": [
     "Backend state is not stored in stable variables; canister upgrades/reinstalls will lose profiles, challenges, invitation codes, and recordings.",
@@ -434,12 +431,9 @@
     "`formatDayHeader` always formats using the hard-coded `en-US` locale rather than the currently selected app language.",
     "Backend recording APIs do not validate day bounds (1–7) or restrict assignment IDs; arbitrary `day`/`assignment` values can be stored.",
     "Duplicate hook name exists (`useUserChallengeStatus`) in both `frontend/src/hooks/useQueries.ts` and `frontend/src/hooks/useUserChallengeStatus.ts`, increasing the risk of inconsistent imports.",
-    "Two Tailwind entry CSS files exist (`frontend/index.css` and `frontend/src/index.css`) with different token sets; build entry uses `src/index.css`, but duplication is confusing and can cause inconsistencies if the entrypoint changes.",
-    "i18n language list includes many languages, but `translations.ts` currently defines only `en`; selecting other languages will mostly return untranslated keys. `frontend/src/i18n/locales/en.json` and `es.json` are empty placeholders and appear unused.",
-    "UI repeatedly shows the status message “Migrating your project to the new structure. Hold tight — this is a one-time operation.” even when no migration is running (misleading/ghost message).",
-    "i18n regression observed where non-English languages display translation keys and RTL rendering breaks; needs stabilization to ensure all configured locales render real strings and correct dir/layout."
+    "Two Tailwind entry CSS files exist (`frontend/index.css` and `frontend/src/index.css`) with different token sets; build entry uses `src/index.css`, but duplication is confusing and can cause inconsistencies if the entrypoint changes."
   ],
-  "isFixRequest": true,
+  "isFixRequest": false,
   "gameProjectType": "none",
   "projectName": "Social Contemplation",
   "clarification_mode": "pro",

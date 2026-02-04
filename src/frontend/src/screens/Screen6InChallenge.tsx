@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from '../i18n/I18nContext';
 import { Button } from '../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
+import { SharedPopup } from '../components/SharedPopup';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -22,6 +22,7 @@ import { ExternalBlob } from '../backend';
 import { FIXED_ASSIGNMENTS, clampDay } from '../utils/assignments';
 import { sanitizeErrorMessage } from '../utils/sanitizeErrorMessage';
 import { formatDayHeader } from '../utils/challengeDayFormat';
+import { readAppUrlState, writeAppUrlState } from '../utils/appUrlState';
 import type { Principal } from '@icp-sdk/core/principal';
 
 interface Screen6InChallengeProps {
@@ -34,6 +35,10 @@ const MAX_DAYS = 7;
 export function Screen6InChallenge({ onNavigateToManage }: Screen6InChallengeProps) {
   const { t, direction } = useTranslation();
   const isRTL = direction === 'rtl';
+  
+  // Initialize state from URL
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>('my');
   const [selectedDay, setSelectedDay] = useState(1);
   const [selectedParticipant, setSelectedParticipant] = useState<Principal | null>(null);
   const [selectedParticipantDay, setSelectedParticipantDay] = useState(1);
@@ -60,6 +65,76 @@ export function Screen6InChallenge({ onNavigateToManage }: Screen6InChallengePro
   // Mutations
   const saveRecordingMutation = useSaveRecording();
   const deleteRecordingMutation = useDeleteRecording();
+
+  // Initialize from URL on mount
+  useEffect(() => {
+    if (!isInitialized) {
+      const urlState = readAppUrlState();
+      
+      if (urlState.tab) {
+        setActiveTab(urlState.tab);
+      }
+      
+      if (urlState.day) {
+        const day = parseInt(urlState.day, 10);
+        if (!isNaN(day)) {
+          setSelectedDay(clampDay(day));
+        }
+      }
+      
+      if (urlState.participant) {
+        try {
+          // Parse principal from URL
+          const principal = urlState.participant;
+          // We'll set it after profiles load
+          setSelectedParticipant(principal as any);
+        } catch (e) {
+          console.error('Failed to parse participant from URL:', e);
+        }
+      }
+      
+      if (urlState.participantDay) {
+        const day = parseInt(urlState.participantDay, 10);
+        if (!isNaN(day)) {
+          setSelectedParticipantDay(clampDay(day));
+        }
+      }
+      
+      setIsInitialized(true);
+    }
+  }, [isInitialized]);
+
+  // Sync tab changes to URL
+  useEffect(() => {
+    if (isInitialized) {
+      writeAppUrlState({ tab: activeTab });
+    }
+  }, [activeTab, isInitialized]);
+
+  // Sync day changes to URL
+  useEffect(() => {
+    if (isInitialized) {
+      writeAppUrlState({ day: selectedDay.toString() });
+    }
+  }, [selectedDay, isInitialized]);
+
+  // Sync participant changes to URL
+  useEffect(() => {
+    if (isInitialized) {
+      writeAppUrlState({ 
+        participant: selectedParticipant?.toString() || undefined 
+      });
+    }
+  }, [selectedParticipant, isInitialized]);
+
+  // Sync participant day changes to URL
+  useEffect(() => {
+    if (isInitialized) {
+      writeAppUrlState({ 
+        participantDay: selectedParticipantDay.toString() 
+      });
+    }
+  }, [selectedParticipantDay, isInitialized]);
 
   // Clamp day selection to valid range (1-7)
   const handleDaySelection = (day: number) => {
@@ -179,9 +254,9 @@ export function Screen6InChallenge({ onNavigateToManage }: Screen6InChallengePro
   return (
     <div className="flex flex-col min-h-[600px]">
       {/* Header Section */}
-      <div className="bg-gradient-to-b from-primary/5 to-transparent px-6 pt-12 pb-8">
+      <div className="bg-gradient-to-b from-primary/5 to-transparent px-4 sm:px-6 pt-12 pb-8">
         <div className={`flex items-center gap-3 mb-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
-          <h1 className={`text-2xl font-bold tracking-tight ${isRTL ? 'text-right' : 'text-left'} flex-1`}>
+          <h1 className={`text-xl sm:text-2xl font-bold tracking-tight ${isRTL ? 'text-right' : 'text-left'} flex-1`}>
             {t('screen6.title')}
           </h1>
           {onNavigateToManage && (
@@ -201,19 +276,19 @@ export function Screen6InChallenge({ onNavigateToManage }: Screen6InChallengePro
       </div>
 
       {/* Main Content with Tabs */}
-      <div className="flex-1 px-6 py-8">
-        <Tabs defaultValue="my" className="w-full">
+      <div className="flex-1 px-4 sm:px-6 py-6 sm:py-8">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="my" aria-label="My">
-              <User className="w-5 h-5" />
+              <User className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="sr-only">My</span>
             </TabsTrigger>
             <TabsTrigger value="team" aria-label="Team">
-              <Users className="w-5 h-5" />
+              <Users className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="sr-only">Team</span>
             </TabsTrigger>
             <TabsTrigger value="coming" aria-label="Coming Soon">
-              <MessageCircle className="w-5 h-5" />
+              <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="sr-only">Coming Soon</span>
             </TabsTrigger>
           </TabsList>
@@ -222,7 +297,7 @@ export function Screen6InChallenge({ onNavigateToManage }: Screen6InChallengePro
           <TabsContent value="my" className="space-y-4 mt-6">
             {/* Day Header with weekday and date */}
             <div className={`text-center ${isRTL ? 'text-right' : ''}`}>
-              <h2 className="text-lg font-semibold">{dayHeader}</h2>
+              <h2 className="text-base sm:text-lg font-semibold">{dayHeader}</h2>
             </div>
 
             {/* Day Selector - Separate label with numeric-only buttons */}
@@ -230,14 +305,14 @@ export function Screen6InChallenge({ onNavigateToManage }: Screen6InChallengePro
               <p className={`text-sm font-medium ${isRTL ? 'text-right' : 'text-left'}`}>
                 Day
               </p>
-              <div className="grid grid-cols-7 gap-2">
+              <div className="grid grid-cols-7 gap-1 sm:gap-2">
                 {Array.from({ length: MAX_DAYS }, (_, i) => i + 1).map((day) => (
                   <Button
                     key={day}
                     variant={selectedDay === day ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => handleDaySelection(day)}
-                    className="w-full"
+                    className="w-full text-xs sm:text-sm"
                   >
                     {day}
                   </Button>
@@ -276,11 +351,11 @@ export function Screen6InChallenge({ onNavigateToManage }: Screen6InChallengePro
             {/* Participants List */}
             <Card>
               <CardHeader>
-                <CardTitle className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                  <Users className="w-5 h-5" />
+                <CardTitle className={`flex items-center gap-2 text-base sm:text-lg ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5" />
                   {t('screen6.team.participants')}
                 </CardTitle>
-                <CardDescription>{t('screen6.team.participantsDescription')}</CardDescription>
+                <CardDescription className="text-xs sm:text-sm">{t('screen6.team.participantsDescription')}</CardDescription>
               </CardHeader>
               <CardContent>
                 {participantProfilesQuery.isLoading ? (
@@ -324,13 +399,13 @@ export function Screen6InChallenge({ onNavigateToManage }: Screen6InChallengePro
             {selectedParticipant && (
               <Card>
                 <CardHeader>
-                  <CardTitle>{t('screen6.team.recordings')}</CardTitle>
-                  <CardDescription>{t('screen6.team.recordingsDescription')}</CardDescription>
+                  <CardTitle className="text-base sm:text-lg">{t('screen6.team.recordings')}</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">{t('screen6.team.recordingsDescription')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Day Header with weekday and date */}
                   <div className={`text-center ${isRTL ? 'text-right' : ''}`}>
-                    <h3 className="text-base font-semibold">{participantDayHeader}</h3>
+                    <h3 className="text-sm sm:text-base font-semibold">{participantDayHeader}</h3>
                   </div>
 
                   {/* Day Selector for Team - Separate label with numeric-only buttons */}
@@ -338,14 +413,14 @@ export function Screen6InChallenge({ onNavigateToManage }: Screen6InChallengePro
                     <p className={`text-sm font-medium ${isRTL ? 'text-right' : 'text-left'}`}>
                       Day
                     </p>
-                    <div className="grid grid-cols-7 gap-2">
+                    <div className="grid grid-cols-7 gap-1 sm:gap-2">
                       {Array.from({ length: MAX_DAYS }, (_, i) => i + 1).map((day) => (
                         <Button
                           key={day}
                           variant={selectedParticipantDay === day ? 'default' : 'outline'}
                           size="sm"
                           onClick={() => handleParticipantDaySelection(day)}
-                          className="w-full"
+                          className="w-full text-xs sm:text-sm"
                         >
                           {day}
                         </Button>
@@ -354,7 +429,7 @@ export function Screen6InChallenge({ onNavigateToManage }: Screen6InChallengePro
                   </div>
 
                   {/* Assignments for Selected Participant and Day */}
-                  <ScrollArea className="h-[400px]">
+                  <ScrollArea className="h-[300px] sm:h-[400px]">
                     <div className="space-y-2 pr-4">
                       {FIXED_ASSIGNMENTS.map((assignment) => (
                         <ParticipantAssignmentCard
@@ -379,8 +454,8 @@ export function Screen6InChallenge({ onNavigateToManage }: Screen6InChallengePro
           <TabsContent value="coming" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>{t('screen6.coming.title')}</CardTitle>
-                <CardDescription>{t('screen6.coming.description')}</CardDescription>
+                <CardTitle className="text-base sm:text-lg">{t('screen6.coming.title')}</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">{t('screen6.coming.description')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground text-center py-8">
@@ -393,7 +468,7 @@ export function Screen6InChallenge({ onNavigateToManage }: Screen6InChallengePro
       </div>
 
       {/* Footer */}
-      <div className={`px-6 pb-6 text-center ${isRTL ? 'text-right' : ''}`}>
+      <div className={`px-4 sm:px-6 pb-6 text-center ${isRTL ? 'text-right' : ''}`}>
         <p className="text-xs text-muted-foreground">
           {t('screen1.footer').split('caffeine.ai')[0]}
           <a 
@@ -462,35 +537,30 @@ function AssignmentCard({
   return (
     <Card>
       <CardHeader className="pb-3">
-        <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
-          <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
-            <CardTitle className="text-base">{assignment.title}</CardTitle>
+        <div className={`flex items-center justify-between gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <div className={`flex items-center gap-2 flex-1 min-w-0 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <CardTitle className="text-sm sm:text-base truncate">{assignment.title}</CardTitle>
             {hasRecording && (
-              <Badge variant="default" className="flex items-center gap-1">
+              <Badge variant="default" className="flex items-center gap-1 flex-shrink-0">
                 <CheckCircle2 className="w-3 h-3" />
-                <span className="text-xs">Recorded</span>
+                <span className="text-xs hidden sm:inline">Recorded</span>
               </Badge>
             )}
           </div>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <Info className={`w-4 h-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
-                {t('screen6.my.viewDetails')}
+          <SharedPopup
+            trigger={
+              <Button variant="ghost" size="sm" className="flex-shrink-0">
+                <Info className={`w-4 h-4 ${isRTL ? 'ml-1 sm:ml-2' : 'mr-1 sm:mr-2'}`} />
+                <span className="hidden sm:inline">{t('screen6.my.viewDetails')}</span>
               </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>{assignment.title}</DialogTitle>
-                <DialogDescription>{t('screen6.my.assignmentDescription')}</DialogDescription>
-              </DialogHeader>
-              <ScrollArea className="max-h-[500px] pr-4">
-                <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                  {assignment.content}
-                </div>
-              </ScrollArea>
-            </DialogContent>
-          </Dialog>
+            }
+            title={assignment.title}
+            description={t('screen6.my.assignmentDescription')}
+          >
+            <div className="whitespace-pre-wrap text-sm leading-relaxed">
+              {assignment.content}
+            </div>
+          </SharedPopup>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -514,7 +584,7 @@ function AssignmentCard({
               disabled={isRecording || isSaving || hasRecording}
             >
               <Mic className={`w-4 h-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
-              {t('screen6.my.record')}
+              <span className="hidden sm:inline">{t('screen6.my.record')}</span>
             </Button>
           ) : (
             <Button
@@ -524,7 +594,7 @@ function AssignmentCard({
               className="flex-1"
             >
               <Square className={`w-4 h-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
-              {t('screen6.my.stopRecording')}
+              <span className="hidden sm:inline">{t('screen6.my.stopRecording')}</span>
             </Button>
           )}
           <Button

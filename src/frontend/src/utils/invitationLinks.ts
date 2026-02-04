@@ -1,5 +1,6 @@
 /**
  * Utility functions for creating and parsing shareable invitation links.
+ * Updated to preserve app navigation state tokens.
  */
 
 /**
@@ -39,6 +40,7 @@ export function parseInvitationFromURL(): { challengeId: bigint; code: string } 
 
 /**
  * Clears invitation parameters from the URL without reloading the page.
+ * Preserves app navigation state tokens (screen, tab, day, etc.).
  */
 export function clearInvitationFromURL(): void {
   try {

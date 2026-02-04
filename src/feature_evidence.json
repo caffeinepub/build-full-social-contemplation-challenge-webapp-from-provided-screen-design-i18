@@ -2,11 +2,13 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-add-a-prominent-in-recording-focus-ui-in-screen-6-my-tab-that-becomes-visible-while-the-user-is-actively-recording-an-assignment-showing-1-a-live-animated-waveform-or-level-meter-driven-by-microphone-input-2-a-clear-rec-state-indicator-3-an-elapsed-timer-and-4-short-reassuring-microcopy-that-confirms-recording-is-working",
-      "featureTitle": "Add a prominent in-recording focus UI in Screen 6 (My tab) that becomes visible while the user is actively recording an assignment, showing (1) a live animated waveform or level meter driven by microphone input, (2) a clear REC state indicator, (3) an elapsed timer, and (4) short reassuring microcopy that confirms recording is working.",
+      "featureId": "feature-implement-explicit-url-tokens-so-that-refreshing-the-page-restores-the-exact-current-screen-and-subview-state-including-screen-6-tab-selection-and-its-key-subview-selections-rather-than-falling-back-to-default-in-memory-navigation",
+      "featureTitle": "Implement explicit URL tokens so that refreshing the page restores the exact current screen and subview state (including Screen 6 tab selection and its key subview selections) rather than falling back to default in-memory navigation.",
       "files": [
-        "frontend/src/components/RecordingFeedback.tsx",
-        "frontend/src/screens/Screen6InChallenge.tsx"
+        "frontend/src/App.tsx",
+        "frontend/src/screens/Screen6InChallenge.tsx",
+        "frontend/src/utils/appUrlState.ts",
+        "frontend/src/utils/invitationLinks.ts"
       ],
       "components": [
         "authorization@4.0.0",
@@ -23,10 +25,12 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-extend-the-existing-useaudiorecording-hook-to-expose-the-minimal-additional-state-needed-for-live-feedback-e-g-current-input-level-and-elapsed-recording-seconds-using-the-web-audio-api-analysernode-while-recording-and-ensure-all-media-resources-tracks-audio-context-analyser-are-cleaned-up-on-stop-and-on-component-unmount",
-      "featureTitle": "Extend the existing `useAudioRecording` hook to expose the minimal additional state needed for live feedback (e.g., current input level and elapsed recording seconds) using the Web Audio API (AnalyserNode) while recording, and ensure all media resources (tracks/audio context/analyser) are cleaned up on stop and on component unmount.",
+      "featureId": "feature-refactor-popup-dialog-usage-to-a-single-shared-popup-abstraction-so-popups-behave-identically-across-the-app-consistent-sizing-scroll-behavior-close-behavior-focus-behavior-and-rtl-alignment-and-update-existing-popup-usages-to-use-it",
+      "featureTitle": "Refactor popup/dialog usage to a single shared popup abstraction so popups behave identically across the app (consistent sizing, scroll behavior, close behavior, focus behavior, and RTL alignment), and update existing popup usages to use it.",
       "files": [
-        "frontend/src/hooks/useAudioRecording.ts"
+        "frontend/src/components/InfoPopups.tsx",
+        "frontend/src/components/SharedPopup.tsx",
+        "frontend/src/screens/Screen6InChallenge.tsx"
       ],
       "components": [
         "authorization@4.0.0",
@@ -43,10 +47,12 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-integrate-the-new-recording-feedback-ui-into-the-existing-screen-6-recording-flow-so-that-it-is-tied-to-the-currently-recording-assignment-using-the-existing-recordingassignment-state-does-not-interfere-with-saving-upload-behavior-and-does-not-require-any-backend-changes",
-      "featureTitle": "Integrate the new recording feedback UI into the existing Screen 6 recording flow so that it is tied to the currently-recording assignment (using the existing `recordingAssignment` state), does not interfere with saving/upload behavior, and does not require any backend changes.",
+      "featureId": "feature-perform-final-responsive-mobile-first-layout-checks-across-mobile-tablet-and-desktop-and-adjust-layout-styles-where-needed-so-all-primary-screens-screens-1-3-4-5-6-are-readable-and-fully-usable-without-overflow-or-clipped-content-at-common-breakpoints",
+      "featureTitle": "Perform final responsive/mobile-first layout checks across mobile, tablet, and desktop, and adjust layout styles where needed so all primary screens (Screens 1, 3, 4, 5, 6) are readable and fully usable without overflow or clipped content at common breakpoints.",
       "files": [
-        "frontend/src/components/RecordingFeedback.tsx",
+        "frontend/src/components/AppShell.tsx",
+        "frontend/src/components/SharedPopup.tsx",
+        "frontend/src/index.css",
         "frontend/src/screens/Screen6InChallenge.tsx"
       ],
       "components": [
@@ -60,28 +66,6 @@
       ],
       "testIds": [
         "REQ-3"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-move-any-new-user-facing-strings-introduced-by-the-recording-feedback-ui-e-g-recording-speak-naturally-tap-stop-when-done-into-the-i18n-translation-system-and-ensure-english-text-is-present-for-all-newly-referenced-keys",
-      "featureTitle": "Move any new user-facing strings introduced by the recording feedback UI (e.g., 'Recording…', 'Speak naturally', 'Tap Stop when done') into the i18n translation system and ensure English text is present for all newly referenced keys.",
-      "files": [
-        "frontend/src/components/RecordingFeedback.tsx",
-        "frontend/src/i18n/translations.ts",
-        "frontend/src/screens/Screen6InChallenge.tsx"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0",
-        "blob-storage@4.0.0"
-      ],
-      "testIds": [
-        "REQ-4"
       ],
       "confidence": "high"
     }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { I18nProvider } from './i18n/I18nContext';
 import { useAuthPrincipal } from './hooks/useAuthPrincipal';
 import { useUserChallengeStatus } from './hooks/useUserChallengeStatus';
@@ -11,6 +11,7 @@ import { Screen4Placeholder } from './screens/Screen4Placeholder';
 import { Screen5ManageChallenge } from './screens/Screen5ManageChallenge';
 import { Screen6InChallenge } from './screens/Screen6InChallenge';
 import { useResolvedActiveChallengeId } from './hooks/useQueries';
+import { readAppUrlState, writeAppUrlState } from './utils/appUrlState';
 
 type AppScreen = 'screen1' | 'screen3' | 'screen4' | 'screen5' | 'screen6';
 
@@ -19,6 +20,41 @@ function AppContent() {
   const userStatusQuery = useUserChallengeStatus();
   const resolvedChallengeId = useResolvedActiveChallengeId();
   const [currentScreen, setCurrentScreen] = useState<AppScreen>('screen1');
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Initialize screen from URL on mount
+  useEffect(() => {
+    if (!isInitialized && isAuthenticated && userStatusQuery.data) {
+      const urlState = readAppUrlState();
+      const requestedScreen = urlState.screen as AppScreen | undefined;
+      
+      // Determine base screen from challenge status
+      let baseScreen: AppScreen = 'screen3';
+      if (userStatusQuery.data.hasActiveChallenge && resolvedChallengeId !== null) {
+        baseScreen = 'screen5';
+      }
+      
+      // Restore URL-requested screen if valid
+      if (requestedScreen === 'screen6' && userStatusQuery.data.hasActiveChallenge && resolvedChallengeId !== null) {
+        setCurrentScreen('screen6');
+      } else if (requestedScreen === 'screen5' && userStatusQuery.data.hasActiveChallenge && resolvedChallengeId !== null) {
+        setCurrentScreen('screen5');
+      } else if (requestedScreen === 'screen4') {
+        setCurrentScreen('screen4');
+      } else {
+        setCurrentScreen(baseScreen);
+      }
+      
+      setIsInitialized(true);
+    }
+  }, [isAuthenticated, userStatusQuery.data, resolvedChallengeId, isInitialized]);
+
+  // Sync screen changes to URL
+  useEffect(() => {
+    if (isInitialized) {
+      writeAppUrlState({ screen: currentScreen });
+    }
+  }, [currentScreen, isInitialized]);
 
   // Show loading/error states while resolving auth and user state
   if (!isAuthenticated) {

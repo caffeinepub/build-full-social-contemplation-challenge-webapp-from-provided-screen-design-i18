@@ -1,101 +1,79 @@
 {
   "kind": "build_request",
-  "title": "Add large live recording feedback UI (waveform/level meter + REC + timer) during audio capture",
+  "title": "Step 9 Polish: URL-based subview restoration, unified popups, and responsive consistency",
   "priority": "normal",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Add a prominent in-recording focus UI in Screen 6 (My tab) that becomes visible while the user is actively recording an assignment, showing (1) a live animated waveform or level meter driven by microphone input, (2) a clear REC state indicator, (3) an elapsed timer, and (4) short reassuring microcopy that confirms recording is working.",
+      "text": "Implement explicit URL tokens so that refreshing the page restores the exact current screen and subview state (including Screen 6 tab selection and its key subview selections) rather than falling back to default in-memory navigation.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-4",
-          "msg-5",
-          "msg-6"
+          "msg-3",
+          "msg-4"
         ],
         "quotes": [
-          "Ik wil bij het opnemen duidelijke feedback om te zien dat hij opneemt, bijvoorbeeld dat in de vorm van een waveform die ik kan zien.",
-          "2: ja",
-          "3: grotere focus‑component",
-          "implementeer maar"
+          "Ensure routing works flawlessly across refreshes",
+          "introduce explicit URL tokens so refresh restores the exact tab/subview?"
         ]
       },
       "acceptanceCriteria": [
-        "When recording starts for an assignment, a large, visually dominant component appears in the recording area (not just a small icon change).",
-        "The component animates in real time based on microphone input (waveform or level meter).",
-        "The component shows a REC indicator and a timer that increments while recording is active.",
-        "The component includes a short, reassuring line of text (English) indicating recording is in progress.",
-        "The component layout renders correctly in both LTR and RTL modes."
+        "When the user is on Screen 6 and refreshes, the app returns to Screen 6 (not Screen 5/3) if challenge status still permits it.",
+        "When the user selects a Screen 6 tab (My/Team/Coming Soon) and refreshes, the same tab remains selected after reload.",
+        "When the user changes key subview selections on Screen 6 (e.g., selected day; in Team tab, selected participant and participant day), those selections are preserved across refresh via URL tokens.",
+        "URL token updates do not require a full page reload (use history replace/push), and do not break existing invitation-link parsing behavior."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Extend the existing `useAudioRecording` hook to expose the minimal additional state needed for live feedback (e.g., current input level and elapsed recording seconds) using the Web Audio API (AnalyserNode) while recording, and ensure all media resources (tracks/audio context/analyser) are cleaned up on stop and on component unmount.",
+      "text": "Refactor popup/dialog usage to a single shared popup abstraction so popups behave identically across the app (consistent sizing, scroll behavior, close behavior, focus behavior, and RTL alignment), and update existing popup usages to use it.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-4",
-          "msg-5",
-          "msg-6"
+          "msg-3",
+          "msg-4"
         ],
         "quotes": [
-          "je wilt tijdens het opnemen duidelijke, geruststellende feedback dat de opname echt loopt (bijv. een waveform of level‑meter).",
-          "1: ja",
-          "implementeer maar"
+          "Ensure popups behave identically everywhere",
+          "a single unified popup component with consistent behavior"
         ]
       },
       "acceptanceCriteria": [
-        "`useAudioRecording` continues to return `recordedBlob`, `isRecording`, and existing controls, and additionally provides live feedback state usable by the UI (level and/or waveform data + elapsed time).",
-        "While recording, the UI updates at a smooth cadence (e.g., animation frame or short interval) without blocking the main thread noticeably.",
-        "Stopping a recording stops the live meter updates and releases microphone resources.",
-        "Starting a new recording resets the timer and feedback visuals."
+        "Info popups rendered by the existing InfoPopups component behave identically on all screens where they appear (Screen 3 and Screen 5).",
+        "Assignment detail popups on Screen 6 use the same shared popup abstraction and match the same interaction behavior (overlay click, ESC, close button placement, max width/height, ScrollArea behavior).",
+        "No edits are made to shadcn component source files under frontend/src/components/ui; composition/wrapping is used instead."
       ]
     },
     {
       "id": "REQ-3",
-      "text": "Integrate the new recording feedback UI into the existing Screen 6 recording flow so that it is tied to the currently-recording assignment (using the existing `recordingAssignment` state), does not interfere with saving/upload behavior, and does not require any backend changes.",
+      "text": "Perform final responsive/mobile-first layout checks across mobile, tablet, and desktop, and adjust layout styles where needed so all primary screens (Screens 1, 3, 4, 5, 6) are readable and fully usable without overflow or clipped content at common breakpoints.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-6"
+          "msg-3",
+          "msg-4"
         ],
         "quotes": [
-          "Integratie in de bestaande opname‑flow (zonder backend‑wijzigingen nodig)"
+          "Final responsive checks",
+          "mobile-first + tablet + desktop,  (but mobile first)"
         ]
       },
       "acceptanceCriteria": [
-        "The feedback UI appears only for the assignment currently being recorded.",
-        "Existing behavior remains unchanged: stopping triggers save/upload as it does today, and overwrite prevention remains intact.",
-        "No backend interface changes are required to ship this feature."
-      ]
-    },
-    {
-      "id": "REQ-4",
-      "text": "Move any new user-facing strings introduced by the recording feedback UI (e.g., 'Recording…', 'Speak naturally', 'Tap Stop when done') into the i18n translation system and ensure English text is present for all newly referenced keys.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-6"
-        ],
-        "quotes": [
-          "Use English for any user-facing text in the build request."
-        ]
-      },
-      "acceptanceCriteria": [
-        "No hard-coded new UI strings are added directly in Screen 6 or new components (except translation keys).",
-        "English translations exist for all new keys and render correctly."
+        "On small mobile widths, core actions remain visible and tappable (e.g., Screen 6 tabs, day selectors, record/play/delete controls).",
+        "Dialogs/popups remain within viewport bounds and their content is scrollable rather than overflowing off-screen.",
+        "On tablet/desktop widths, layouts do not appear stretched or awkward (content remains comfortably centered and spaced)."
       ]
     }
   ],
   "constraints": [
-    "Do not modify files under `frontend/src/components/ui` (compose existing shadcn components instead).",
-    "Keep the backend as a single Motoko actor; do not introduce backend changes for this feature.",
-    "Respect existing state-based navigation (no router) and existing Screen 6 save/delete/play flows."
+    "Do not introduce a full router framework; keep state-based navigation but synchronize it with URL tokens.",
+    "Do not modify files under frontend/src/components/ui (read-only); implement shared popup behavior via wrapper/components that compose these primitives.",
+    "Use English for any user-facing text introduced by these changes."
   ],
   "nonGoals": [
-    "Do not add comments, reactions, or chat features.",
-    "Do not change challenge rules, invitation logic, or recording storage schema.",
-    "Do not implement third-party audio visualization libraries; use built-in browser APIs."
+    "Backend API/schema changes.",
+    "Adding new product features beyond URL subview restoration, popup consistency, and responsive polish.",
+    "Changing Internet Identity authentication behavior."
   ],
   "imageRequirements": {
     "required": [],
