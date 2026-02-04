@@ -28,6 +28,10 @@ export function sanitizeErrorMessage(error: unknown): string {
       return 'Cannot overwrite existing recording. Delete it first.';
     }
     
+    if (message.includes('Challenge not found')) {
+      return 'Challenge not found. It may have been deleted.';
+    }
+    
     if (message.includes('not found') || message.includes('No recordings')) {
       return 'Recording not found.';
     }
@@ -47,6 +51,10 @@ export function sanitizeErrorMessage(error: unknown): string {
     
     if (error.includes('cannot overwrite')) {
       return 'Cannot overwrite existing recording. Delete it first.';
+    }
+    
+    if (error.includes('Challenge not found')) {
+      return 'Challenge not found. It may have been deleted.';
     }
     
     return error;
@@ -69,9 +77,35 @@ export function sanitizeErrorMessage(error: unknown): string {
         return 'Cannot overwrite existing recording. Delete it first.';
       }
       
+      if (errorObj.message.includes('Challenge not found')) {
+        return 'Challenge not found. It may have been deleted.';
+      }
+      
       return errorObj.message;
     }
   }
   
   return 'An unexpected error occurred';
+}
+
+/**
+ * Check if an error is a "Challenge not found" error.
+ */
+export function isChallengeNotFoundError(error: unknown): boolean {
+  if (error instanceof Error) {
+    return error.message.includes('Challenge not found');
+  }
+  
+  if (typeof error === 'string') {
+    return error.includes('Challenge not found');
+  }
+  
+  if (error && typeof error === 'object') {
+    const errorObj = error as any;
+    if (errorObj.message && typeof errorObj.message === 'string') {
+      return errorObj.message.includes('Challenge not found');
+    }
+  }
+  
+  return false;
 }

@@ -1,79 +1,77 @@
 {
   "kind": "build_request",
-  "title": "Step 9 Polish: URL-based subview restoration, unified popups, and responsive consistency",
-  "priority": "normal",
+  "title": "Fix Manage Challenge: add Save-to-create flow and hide invites until saved",
+  "priority": "high",
   "requirements": [
     {
-      "id": "REQ-1",
-      "text": "Implement explicit URL tokens so that refreshing the page restores the exact current screen and subview state (including Screen 6 tab selection and its key subview selections) rather than falling back to default in-memory navigation.",
+      "id": "REQ-5",
+      "text": "Implement a working Manage Challenge screen flow where a challenge is only created/saved via an explicit **Save** action under the start-date section, and invitations are only available after a successful save.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-3",
-          "msg-4"
+          "msg-5",
+          "msg-6",
+          "msg-7"
         ],
         "quotes": [
-          "Ensure routing works flawlessly across refreshes",
-          "introduce explicit URL tokens so refresh restores the exact tab/subview?"
+          "onder de startdatum instellen, met daaronder het uitnodigen van mensen.",
+          "Uitnodigingscodes zijn na de save, en zijn zelfstandig aan te maken",
+          "Daarom dacht ik aan een 'save' knop, dan wordt er een challenge gemaakt."
         ]
       },
       "acceptanceCriteria": [
-        "When the user is on Screen 6 and refreshes, the app returns to Screen 6 (not Screen 5/3) if challenge status still permits it.",
-        "When the user selects a Screen 6 tab (My/Team/Coming Soon) and refreshes, the same tab remains selected after reload.",
-        "When the user changes key subview selections on Screen 6 (e.g., selected day; in Team tab, selected participant and participant day), those selections are preserved across refresh via URL tokens.",
-        "URL token updates do not require a full page reload (use history replace/push), and do not break existing invitation-link parsing behavior."
+        "On Manage Challenge, the Start Date card contains a primary button labeled exactly \"Save\" (English UI text).",
+        "If the user has no active challenge, clicking \"Save\" creates a new challenge using the selected start date.",
+        "If the user already has a managed challenge and is the creator, clicking \"Save\" updates the challenge start date (respecting the existing Day-1 backend restriction).",
+        "The Invitations section is hidden until the save action succeeds (i.e., until there is a confirmed active challenge ID).",
+        "The Participants section is hidden until a challenge exists (post-save)."
       ]
     },
     {
-      "id": "REQ-2",
-      "text": "Refactor popup/dialog usage to a single shared popup abstraction so popups behave identically across the app (consistent sizing, scroll behavior, close behavior, focus behavior, and RTL alignment), and update existing popup usages to use it.",
+      "id": "REQ-6",
+      "text": "Fix incorrect 'managed challenge' state when a stale/persisted challengeId exists but no real challenge exists in the backend, so the UI does not get stuck showing Participants with no way to create/save.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-3",
-          "msg-4"
+          "msg-4",
+          "msg-5"
         ],
         "quotes": [
-          "Ensure popups behave identically everywhere",
-          "a single unified popup component with consistent behavior"
+          "ik kan geen challenge aanmaken en ik kan geen codes aanmaken. ik zie wel een veld met participants, maar weer geen plek om op te slaan"
         ]
       },
       "acceptanceCriteria": [
-        "Info popups rendered by the existing InfoPopups component behave identically on all screens where they appear (Screen 3 and Screen 5).",
-        "Assignment detail popups on Screen 6 use the same shared popup abstraction and match the same interaction behavior (overlay click, ESC, close button placement, max width/height, ScrollArea behavior).",
-        "No edits are made to shadcn component source files under frontend/src/components/ui; composition/wrapping is used instead."
+        "If any Manage Challenge query/mutation returns a backend error equivalent to \"Challenge not found\" for the currently resolved challengeId, the app clears the persisted active challenge context (sessionStorage) and re-renders Manage Challenge in 'create new challenge' mode.",
+        "In 'create new challenge' mode, the UI shows Start Date + Save, and does not show Invitations or Participants."
       ]
     },
     {
-      "id": "REQ-3",
-      "text": "Perform final responsive/mobile-first layout checks across mobile, tablet, and desktop, and adjust layout styles where needed so all primary screens (Screens 1, 3, 4, 5, 6) are readable and fully usable without overflow or clipped content at common breakpoints.",
+      "id": "REQ-7",
+      "text": "Ensure there is a clear, working 'Create challenge' entry point that opens Manage Challenge in create mode (no challenge created until Save).",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-3",
-          "msg-4"
+          "msg-6"
         ],
         "quotes": [
-          "Final responsive checks",
-          "mobile-first + tablet + desktop,  (but mobile first)"
+          "Ik mis ook een knop create challenge. Althans, die knop brengt mij naar dit menu, maar uiteindelijk kan ik het in het menu niet aanmaken, alleen instellen."
         ]
       },
       "acceptanceCriteria": [
-        "On small mobile widths, core actions remain visible and tappable (e.g., Screen 6 tabs, day selectors, record/play/delete controls).",
-        "Dialogs/popups remain within viewport bounds and their content is scrollable rather than overflowing off-screen.",
-        "On tablet/desktop widths, layouts do not appear stretched or awkward (content remains comfortably centered and spaced)."
+        "From the 'no active challenge' experience, the user can navigate to Manage Challenge in create mode.",
+        "Navigating to Manage Challenge in create mode does not create a challenge automatically; only the Save button does."
       ]
     }
   ],
   "constraints": [
-    "Do not introduce a full router framework; keep state-based navigation but synchronize it with URL tokens.",
-    "Do not modify files under frontend/src/components/ui (read-only); implement shared popup behavior via wrapper/components that compose these primitives.",
-    "Use English for any user-facing text introduced by these changes."
+    "Do not modify files in frontend/src/components/ui (shadcn components must be composed, not edited).",
+    "Do not edit any frontend paths listed in SYSTEM_CONTEXT.frontend.immutablePaths.",
+    "Respect the single-actor backend architecture (all Motoko logic remains in backend/main.mo)."
   ],
   "nonGoals": [
-    "Backend API/schema changes.",
-    "Adding new product features beyond URL subview restoration, popup consistency, and responsive polish.",
-    "Changing Internet Identity authentication behavior."
+    "Do not change the invitation model from single-use invitation URLs (no new 'raw code only' sharing flow).",
+    "Do not add new authentication providers (Internet Identity only).",
+    "Do not redesign the in-challenge (Screen 6) recording experience as part of this request."
   ],
   "imageRequirements": {
     "required": [],

@@ -8,12 +8,13 @@ import { DevPanel } from './components/DevPanel';
 import { Screen1Placeholder } from './screens/Screen1Placeholder';
 import { Screen3Placeholder } from './screens/Screen3Placeholder';
 import { Screen4Placeholder } from './screens/Screen4Placeholder';
-import { Screen5ManageChallenge } from './screens/Screen5ManageChallenge';
 import { Screen6InChallenge } from './screens/Screen6InChallenge';
 import { useResolvedActiveChallengeId } from './hooks/useQueries';
 import { readAppUrlState, writeAppUrlState } from './utils/appUrlState';
+import { parseInvitationFromURL } from './utils/invitationLinks';
+import { persistInvitationParams } from './utils/urlParams';
 
-type AppScreen = 'screen1' | 'screen3' | 'screen4' | 'screen5' | 'screen6';
+type AppScreen = 'screen1' | 'screen3' | 'screen4' | 'screen6';
 
 function AppContent() {
   const { isAuthenticated } = useAuthPrincipal();
@@ -21,6 +22,14 @@ function AppContent() {
   const resolvedChallengeId = useResolvedActiveChallengeId();
   const [currentScreen, setCurrentScreen] = useState<AppScreen>('screen1');
   const [isInitialized, setIsInitialized] = useState(false);
+
+  // Persist invitation params before authentication if present
+  useEffect(() => {
+    const urlParams = parseInvitationFromURL();
+    if (urlParams) {
+      persistInvitationParams(urlParams);
+    }
+  }, []);
 
   // Initialize screen from URL on mount
   useEffect(() => {
@@ -31,14 +40,12 @@ function AppContent() {
       // Determine base screen from challenge status
       let baseScreen: AppScreen = 'screen3';
       if (userStatusQuery.data.hasActiveChallenge && resolvedChallengeId !== null) {
-        baseScreen = 'screen5';
+        baseScreen = 'screen6';
       }
       
       // Restore URL-requested screen if valid
       if (requestedScreen === 'screen6' && userStatusQuery.data.hasActiveChallenge && resolvedChallengeId !== null) {
         setCurrentScreen('screen6');
-      } else if (requestedScreen === 'screen5' && userStatusQuery.data.hasActiveChallenge && resolvedChallengeId !== null) {
-        setCurrentScreen('screen5');
       } else if (requestedScreen === 'screen4') {
         setCurrentScreen('screen4');
       } else {
@@ -74,18 +81,17 @@ function AppContent() {
           // Determine the base screen based on challenge status and resolved ID
           let baseScreen: AppScreen = 'screen3';
           
-          // Only route to Screen 5/6 if we have both hasActiveChallenge AND a valid challengeId
+          // Only route to Screen 6 if we have both hasActiveChallenge AND a valid challengeId
           if (userStatus && userStatus.hasActiveChallenge && resolvedChallengeId !== null) {
-            baseScreen = 'screen5'; // Default to Manage Challenge (Step 6)
+            baseScreen = 'screen6';
           }
 
           // Allow navigation between screens
-          const effectiveScreen = currentScreen === 'screen4' || currentScreen === 'screen5' || currentScreen === 'screen6'
+          const effectiveScreen = currentScreen === 'screen4' || currentScreen === 'screen6'
             ? currentScreen 
             : baseScreen;
 
           const handleNavigateToScreen4 = () => setCurrentScreen('screen4');
-          const handleNavigateToScreen5 = () => setCurrentScreen('screen5');
           const handleNavigateToScreen6 = () => setCurrentScreen('screen6');
           
           const handleNavigateBackFromScreen4 = () => {
@@ -100,11 +106,16 @@ function AppContent() {
             setCurrentScreen('screen3');
           };
 
+          const handleJoinSuccess = () => {
+            setCurrentScreen('screen6');
+          };
+
           return (
             <>
               {effectiveScreen === 'screen3' && (
                 <Screen3Placeholder 
                   onNavigateToScreen4={handleNavigateToScreen4}
+                  onJoinSuccess={handleJoinSuccess}
                   hasInconsistentState={userStatus?.hasActiveChallenge === true && resolvedChallengeId === null}
                 />
               )}
@@ -115,15 +126,9 @@ function AppContent() {
                   onDeleteSuccess={handleDeleteSuccess}
                 />
               )}
-              {effectiveScreen === 'screen5' && (
-                <Screen5ManageChallenge 
-                  onClose={handleNavigateToScreen6}
-                  onLeaveSuccess={handleLeaveSuccess}
-                />
-              )}
               {effectiveScreen === 'screen6' && (
                 <Screen6InChallenge 
-                  onNavigateToManage={handleNavigateToScreen5}
+                  onNavigateToManage={handleNavigateToScreen4}
                 />
               )}
               <DevPanel />

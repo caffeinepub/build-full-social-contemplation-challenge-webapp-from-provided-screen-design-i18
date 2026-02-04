@@ -2,13 +2,10 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-implement-explicit-url-tokens-so-that-refreshing-the-page-restores-the-exact-current-screen-and-subview-state-including-screen-6-tab-selection-and-its-key-subview-selections-rather-than-falling-back-to-default-in-memory-navigation",
-      "featureTitle": "Implement explicit URL tokens so that refreshing the page restores the exact current screen and subview state (including Screen 6 tab selection and its key subview selections) rather than falling back to default in-memory navigation.",
+      "featureId": "feature-implement-a-working-manage-challenge-screen-flow-where-a-challenge-is-only-created-saved-via-an-explicit-save-action-under-the-start-date-section-and-invitations-are-only-available-after-a-successful-save",
+      "featureTitle": "Implement a working Manage Challenge screen flow where a challenge is only created/saved via an explicit **Save** action under the start-date section, and invitations are only available after a successful save.",
       "files": [
-        "frontend/src/App.tsx",
-        "frontend/src/screens/Screen6InChallenge.tsx",
-        "frontend/src/utils/appUrlState.ts",
-        "frontend/src/utils/invitationLinks.ts"
+        "frontend/src/screens/Screen4Placeholder.tsx"
       ],
       "components": [
         "authorization@4.0.0",
@@ -17,20 +14,20 @@
         "build-template-react@1.0.0",
         "initial-app@1.0.0",
         "github-export-icp-cli@1.0.0",
-        "blob-storage@4.0.0"
+        "blob-storage@4.0.0",
+        "invite-links@3.0.0"
       ],
       "testIds": [
-        "REQ-1"
+        "REQ-5"
       ],
       "confidence": "high"
     },
     {
-      "featureId": "feature-refactor-popup-dialog-usage-to-a-single-shared-popup-abstraction-so-popups-behave-identically-across-the-app-consistent-sizing-scroll-behavior-close-behavior-focus-behavior-and-rtl-alignment-and-update-existing-popup-usages-to-use-it",
-      "featureTitle": "Refactor popup/dialog usage to a single shared popup abstraction so popups behave identically across the app (consistent sizing, scroll behavior, close behavior, focus behavior, and RTL alignment), and update existing popup usages to use it.",
+      "featureId": "feature-fix-incorrect-managed-challenge-state-when-a-stale-persisted-challengeid-exists-but-no-real-challenge-exists-in-the-backend-so-the-ui-does-not-get-stuck-showing-participants-with-no-way-to-create-save",
+      "featureTitle": "Fix incorrect 'managed challenge' state when a stale/persisted challengeId exists but no real challenge exists in the backend, so the UI does not get stuck showing Participants with no way to create/save.",
       "files": [
-        "frontend/src/components/InfoPopups.tsx",
-        "frontend/src/components/SharedPopup.tsx",
-        "frontend/src/screens/Screen6InChallenge.tsx"
+        "frontend/src/screens/Screen4Placeholder.tsx",
+        "frontend/src/utils/sanitizeErrorMessage.ts"
       ],
       "components": [
         "authorization@4.0.0",
@@ -39,21 +36,19 @@
         "build-template-react@1.0.0",
         "initial-app@1.0.0",
         "github-export-icp-cli@1.0.0",
-        "blob-storage@4.0.0"
+        "blob-storage@4.0.0",
+        "invite-links@3.0.0"
       ],
       "testIds": [
-        "REQ-2"
+        "REQ-6"
       ],
       "confidence": "high"
     },
     {
-      "featureId": "feature-perform-final-responsive-mobile-first-layout-checks-across-mobile-tablet-and-desktop-and-adjust-layout-styles-where-needed-so-all-primary-screens-screens-1-3-4-5-6-are-readable-and-fully-usable-without-overflow-or-clipped-content-at-common-breakpoints",
-      "featureTitle": "Perform final responsive/mobile-first layout checks across mobile, tablet, and desktop, and adjust layout styles where needed so all primary screens (Screens 1, 3, 4, 5, 6) are readable and fully usable without overflow or clipped content at common breakpoints.",
+      "featureId": "feature-ensure-there-is-a-clear-working-create-challenge-entry-point-that-opens-manage-challenge-in-create-mode-no-challenge-created-until-save",
+      "featureTitle": "Ensure there is a clear, working 'Create challenge' entry point that opens Manage Challenge in create mode (no challenge created until Save).",
       "files": [
-        "frontend/src/components/AppShell.tsx",
-        "frontend/src/components/SharedPopup.tsx",
-        "frontend/src/index.css",
-        "frontend/src/screens/Screen6InChallenge.tsx"
+        "frontend/src/screens/Screen3Placeholder.tsx"
       ],
       "components": [
         "authorization@4.0.0",
@@ -62,10 +57,11 @@
         "build-template-react@1.0.0",
         "initial-app@1.0.0",
         "github-export-icp-cli@1.0.0",
-        "blob-storage@4.0.0"
+        "blob-storage@4.0.0",
+        "invite-links@3.0.0"
       ],
       "testIds": [
-        "REQ-3"
+        "REQ-7"
       ],
       "confidence": "high"
     }

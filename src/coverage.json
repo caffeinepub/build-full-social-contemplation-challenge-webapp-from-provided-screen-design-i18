@@ -1,7 +1,7 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-04T12:43:28.215Z",
+  "generatedAt": "2026-02-04T13:51:14.431Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
@@ -11,70 +11,55 @@
     "implemented": 3,
     "items": [
       {
-        "id": "REQ-1",
-        "summary": "Implement explicit URL tokens so that refreshing the page restores the exact current screen and subview state (including Screen 6 tab selection and its key subview selections) rather than falling back to default in-memory navigation.",
+        "id": "REQ-5",
+        "summary": "Implement a working Manage Challenge screen flow where a challenge is only created/saved via an explicit **Save** action under the start-date section, and invitations are only available after a successful save.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/utils/appUrlState.ts",
-          "frontend/src/App.tsx",
-          "frontend/src/screens/Screen6InChallenge.tsx",
-          "frontend/src/utils/invitationLinks.ts"
+          "frontend/src/screens/Screen4Placeholder.tsx",
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/utils/challengeContext.ts"
         ],
         "matchedFiles": [
-          "frontend/src/utils/appUrlState.ts",
-          "frontend/src/App.tsx",
-          "frontend/src/screens/Screen6InChallenge.tsx",
-          "frontend/src/utils/invitationLinks.ts"
+          "frontend/src/screens/Screen4Placeholder.tsx"
         ]
       },
       {
-        "id": "REQ-2",
-        "summary": "Refactor popup/dialog usage to a single shared popup abstraction so popups behave identically across the app (consistent sizing, scroll behavior, close behavior, focus behavior, and RTL alignment), and update existing popup usages to use it.",
+        "id": "REQ-6",
+        "summary": "Fix incorrect 'managed challenge' state when a stale/persisted challengeId exists but no real challenge exists in the backend, so the UI does not get stuck showing Participants with no way to create/save.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/components/SharedPopup.tsx",
-          "frontend/src/components/InfoPopups.tsx",
-          "frontend/src/screens/Screen6InChallenge.tsx"
+          "frontend/src/screens/Screen4Placeholder.tsx",
+          "frontend/src/utils/sanitizeErrorMessage.ts",
+          "frontend/src/hooks/useQueries.ts"
         ],
         "matchedFiles": [
-          "frontend/src/components/SharedPopup.tsx",
-          "frontend/src/components/InfoPopups.tsx",
-          "frontend/src/screens/Screen6InChallenge.tsx"
+          "frontend/src/screens/Screen4Placeholder.tsx",
+          "frontend/src/utils/sanitizeErrorMessage.ts"
         ]
       },
       {
-        "id": "REQ-3",
-        "summary": "Perform final responsive/mobile-first layout checks across mobile, tablet, and desktop, and adjust layout styles where needed so all primary screens (Screens 1, 3, 4, 5, 6) are readable and fully usable without overflow or clipped content at common breakpoints.",
+        "id": "REQ-7",
+        "summary": "Ensure there is a clear, working 'Create challenge' entry point that opens Manage Challenge in create mode (no challenge created until Save).",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/components/AppShell.tsx",
-          "frontend/src/screens/Screen6InChallenge.tsx",
-          "frontend/src/components/SharedPopup.tsx",
-          "frontend/src/index.css"
+          "frontend/src/screens/Screen3Placeholder.tsx",
+          "frontend/src/App.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/components/AppShell.tsx",
-          "frontend/src/screens/Screen6InChallenge.tsx",
-          "frontend/src/components/SharedPopup.tsx",
-          "frontend/src/index.css"
+          "frontend/src/screens/Screen3Placeholder.tsx"
         ]
       }
     ]
   },
   "changedFiles": [
     "build-request.json",
-    "caffeine.lock.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/App.tsx",
-    "frontend/src/components/AppShell.tsx",
-    "frontend/src/components/InfoPopups.tsx",
-    "frontend/src/components/SharedPopup.tsx",
-    "frontend/src/index.css",
-    "frontend/src/screens/Screen6InChallenge.tsx",
-    "frontend/src/utils/appUrlState.ts",
-    "frontend/src/utils/invitationLinks.ts",
+    "frontend/src/screens/Screen3Placeholder.tsx",
+    "frontend/src/screens/Screen4Placeholder.tsx",
+    "frontend/src/utils/sanitizeErrorMessage.ts",
+    "frontend/src/utils/urlParams.ts",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

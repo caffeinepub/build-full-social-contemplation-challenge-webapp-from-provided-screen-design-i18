@@ -1,51 +1,44 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-04T12:43:28.108Z",
-  "summary": "Diff adds URL-token utilities and partial screen restoration, plus a new SharedPopup wrapper used by InfoPopups and some responsive/RTL layout tweaks. Evidence for full Screen 6 subview token syncing and full app-wide responsive polish is incomplete in the provided diff excerpts.",
+  "generatedAt": "2026-02-04T13:51:14.403Z",
+  "summary": "Diff shows partial implementation toward the requested Manage Challenge save-to-create flow and create-mode entry point: Screen3 adds a navigation handler that clears any persisted activeChallengeId before opening Manage Challenge, and Screen4 introduces a confirmedChallengeId gate for downstream queries plus error utilities for “Challenge not found”. However, key acceptance criteria (explicit \"Save\" button label/placement, and conditional hiding of Invitations/Participants until post-save) are not clearly evidenced in the truncated diff.",
   "missing_requirements": [
     {
-      "id": "REQ-1",
-      "requirement": "Preserve Screen 6 subview selections (tab/day/participant/participantDay) across refresh via URL tokens, and update tokens on changes without full reload.",
-      "reason": "Screen6InChallenge.tsx shows reading tab/day/participant/participantDay from URL on mount, but the diff excerpt does not show any effects/handlers that write updated tab/day/participant selections back to the URL when the user changes them (only initial read is visible). App.tsx only writes {screen: currentScreen}.",
+      "id": "REQ-5",
+      "requirement": "Manage Challenge screen uses an explicit \"Save\" action under the Start Date section to create/update the challenge, and Invitations/Participants are hidden until save succeeds (confirmed active challenge ID).",
+      "reason": "Screen4Placeholder.tsx is truncated; while it introduces confirmedChallengeId and passes it to invitations/participants queries, the diff excerpt does not show the Start Date card UI, a primary button labeled exactly \"Save\", nor the conditional rendering that hides Invitations and Participants until save success.",
       "evidence": [
-        "frontend/src/screens/Screen6InChallenge.tsx",
-        "frontend/src/App.tsx",
-        "frontend/src/utils/appUrlState.ts"
+        "frontend/src/screens/Screen4Placeholder.tsx (truncated)"
       ]
     },
     {
-      "id": "REQ-2",
-      "requirement": "Refactor Screen 6 assignment detail popups to use the shared popup abstraction with consistent interaction behavior (overlay click, ESC, close button placement, sizing, ScrollArea behavior).",
-      "reason": "Screen6InChallenge.tsx imports SharedPopup, but the truncated diff does not show assignment detail popups being implemented/updated to use SharedPopup nor any explicit configuration for close button placement/interaction consistency.",
+      "id": "REQ-6",
+      "requirement": "If any Manage Challenge query/mutation returns a backend error equivalent to \"Challenge not found\" for the resolved challengeId, clear persisted active challenge context (sessionStorage) and re-render Manage Challenge in create-new mode (Start Date + Save only; no Invitations/Participants).",
+      "reason": "Although isChallengeNotFoundError and clearPersistedActiveChallengeId are imported in Screen4Placeholder.tsx and a helper is added in sanitizeErrorMessage.ts, the truncated diff does not show any actual error handling path that detects \"Challenge not found\" from queries/mutations and clears sessionStorage + forces create mode UI.",
       "evidence": [
-        "frontend/src/screens/Screen6InChallenge.tsx",
-        "frontend/src/components/SharedPopup.tsx"
+        "frontend/src/screens/Screen4Placeholder.tsx (truncated)",
+        "frontend/src/utils/sanitizeErrorMessage.ts"
       ]
     },
     {
-      "id": "REQ-3",
-      "requirement": "Responsive/mobile-first layout adjustments across Screens 1, 3, 4, 5, 6 to ensure no overflow/clipping and core actions remain usable at common breakpoints.",
-      "reason": "The diff shows general container changes (AppShell), global CSS tweaks, and popup sizing constraints, but does not provide evidence of screen-specific responsive fixes across all listed screens (e.g., Screen 6 controls/tabs/day selectors, and Screens 1/3/4/5 layouts).",
+      "id": "REQ-7",
+      "requirement": "Navigating to Manage Challenge in create mode must not auto-create a challenge; only the Save button creates it.",
+      "reason": "Screen3Placeholder adds a create-challenge navigation handler that clears persisted activeChallengeId before navigating, but the diff does not show how Screen4Placeholder ensures create mode does not auto-create (e.g., no create mutation on mount) because the relevant portions are truncated.",
       "evidence": [
-        "frontend/src/components/AppShell.tsx",
-        "frontend/src/index.css",
-        "frontend/src/components/SharedPopup.tsx"
+        "frontend/src/screens/Screen3Placeholder.tsx (truncated)",
+        "frontend/src/screens/Screen4Placeholder.tsx (truncated)"
       ]
     }
   ],
   "hallucinated_features": [],
-  "confidence": 0.62,
+  "confidence": 0.46,
   "changed_files": [
     "frontend-file-summaries.txt",
-    "frontend/src/App.tsx",
-    "frontend/src/components/AppShell.tsx",
-    "frontend/src/components/InfoPopups.tsx",
-    "frontend/src/components/SharedPopup.tsx",
-    "frontend/src/index.css",
-    "frontend/src/screens/Screen6InChallenge.tsx",
-    "frontend/src/utils/appUrlState.ts",
-    "frontend/src/utils/invitationLinks.ts",
+    "frontend/src/screens/Screen3Placeholder.tsx",
+    "frontend/src/screens/Screen4Placeholder.tsx",
+    "frontend/src/utils/sanitizeErrorMessage.ts",
+    "frontend/src/utils/urlParams.ts",
     "project_state.json"
   ]
 }

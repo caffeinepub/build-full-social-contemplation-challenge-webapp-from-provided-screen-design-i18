@@ -1,94 +1,78 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Step 9 Polish: URL-synced subviews, unified popups, and responsive consistency",
+  "title": "Manage Challenge: explicit Save-to-create flow + guard against stale challengeId",
   "requirements": [
     {
-      "id": "REQ-1",
-      "summary": "Synchronize screen + Screen 6 tab/subview selections to explicit URL tokens so refresh restores the exact in-app state without introducing a router framework.",
+      "id": "REQ-5",
+      "summary": "Make Manage Challenge create/update occur only via an explicit Save action and hide Invitations/Participants until save success yields a confirmed challenge ID.",
       "acceptanceCriteria": [
-        "When the user is on Screen 6 and refreshes, the app returns to Screen 6 (not Screen 5/3) if challenge status still permits it.",
-        "When the user selects a Screen 6 tab (My/Team/Coming Soon) and refreshes, the same tab remains selected after reload.",
-        "When the user changes key subview selections on Screen 6 (e.g., selected day; in Team tab, selected participant and participant day), those selections are preserved across refresh via URL tokens.",
-        "URL token updates do not require a full page reload (use history replace/push), and do not break existing invitation-link parsing behavior."
+        "On Manage Challenge, the Start Date card contains a primary button labeled exactly \"Save\" (English UI text).",
+        "If the user has no active challenge, clicking \"Save\" creates a new challenge using the selected start date.",
+        "If the user already has a managed challenge and is the creator, clicking \"Save\" updates the challenge start date (respecting the existing Day-1 backend restriction).",
+        "The Invitations section is hidden until the save action succeeds (i.e., until there is a confirmed active challenge ID).",
+        "The Participants section is hidden until a challenge exists (post-save)."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/utils/appUrlState.ts",
-          "operation": "create",
-          "description": "Add a small URL-token utility for reading/writing app navigation state (screen + Screen 6 subview tokens) via window.history.replaceState/pushState, merging with existing query params so invitation params (challengeId/code) remain intact until cleared."
+          "path": "frontend/src/screens/Screen4Placeholder.tsx",
+          "operation": "modify",
+          "description": "Refactor the Manage Challenge UI into an explicit Save-driven flow: (1) replace the create/update CTAs with a single primary button labeled exactly \"Save\" inside the Start Date card; (2) on Save, create a challenge when none exists, otherwise update the start date when the user is the creator; (3) gate rendering of Invitations and Participants so they remain hidden until Save succeeds and the screen has a confirmed managed challenge ID."
+        },
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Add/adjust query & mutation orchestration needed for the Save flow: ensure the Save action can reliably transition the UI from create-mode to managed-mode by invalidating/refetching active challenge resolution queries after create/update, and provide a way for the screen to distinguish a persisted/tentative challengeId from a backend-confirmed challengeId for gating Invitations/Participants."
+        },
+        {
+          "path": "frontend/src/utils/challengeContext.ts",
+          "operation": "modify",
+          "description": "Extend challenge context helpers to support the Save-driven create mode gating (e.g., enabling the UI to treat persisted IDs as tentative until confirmed, and to update/clear persisted state consistently after successful Save)."
+        }
+      ]
+    },
+    {
+      "id": "REQ-6",
+      "summary": "Detect backend 'Challenge not found' errors in Manage Challenge flows and clear stale persisted challenge context so the UI falls back to create mode.",
+      "acceptanceCriteria": [
+        "If any Manage Challenge query/mutation returns a backend error equivalent to \"Challenge not found\" for the currently resolved challengeId, the app clears the persisted active challenge context (sessionStorage) and re-renders Manage Challenge in 'create new challenge' mode.",
+        "In 'create new challenge' mode, the UI shows Start Date + Save, and does not show Invitations or Participants."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/screens/Screen4Placeholder.tsx",
+          "operation": "modify",
+          "description": "Add defensive state recovery in Manage Challenge: when any challenge-scoped query or mutation used by this screen fails with an error equivalent to \"Challenge not found\" for the current challengeId, clear the persisted active challenge ID and re-render the screen in create mode (show Start Date + Save only, hide Invitations/Participants)."
+        },
+        {
+          "path": "frontend/src/utils/sanitizeErrorMessage.ts",
+          "operation": "modify",
+          "description": "Add a stable mapping (or detection helper) for backend errors equivalent to \"Challenge not found\" so the UI can both display an appropriate message and trigger the stale-context recovery behavior consistently."
+        },
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Centralize handling for 'Challenge not found' in Manage-Challenge-related queries/mutations (where applicable) so stale persisted challenge IDs are cleared and relevant queries are invalidated, preventing the UI from getting stuck in a managed state with no real backend challenge."
+        }
+      ]
+    },
+    {
+      "id": "REQ-7",
+      "summary": "Ensure the 'Create challenge' entry point navigates to Manage Challenge in create mode without creating anything until Save is pressed.",
+      "acceptanceCriteria": [
+        "From the 'no active challenge' experience, the user can navigate to Manage Challenge in create mode.",
+        "Navigating to Manage Challenge in create mode does not create a challenge automatically; only the Save button does."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/screens/Screen3Placeholder.tsx",
+          "operation": "modify",
+          "description": "Ensure the 'Create challenge' button always opens Manage Challenge in create mode by clearing any persisted active challenge ID before navigation; confirm no challenge creation is triggered on navigation (creation happens only when the user presses Save in Manage Challenge)."
         },
         {
           "path": "frontend/src/App.tsx",
           "operation": "modify",
-          "description": "Initialize and keep currentScreen synchronized with URL tokens using the new URL state utility (no router). On load/refresh, restore the URL-requested screen when allowed by authenticated challenge status/resolvedChallengeId; on in-app navigation, update URL tokens without reloading."
-        },
-        {
-          "path": "frontend/src/screens/Screen6InChallenge.tsx",
-          "operation": "modify",
-          "description": "Make Screen 6 tab selection and key subview selections controlled (tab, selectedDay, selectedParticipant, selectedParticipantDay) and hydrate them from URL tokens on mount; update URL tokens on changes without full reload using the shared URL state utility."
-        },
-        {
-          "path": "frontend/src/utils/invitationLinks.ts",
-          "operation": "modify",
-          "description": "Ensure invitation parsing/clearing remains compatible with additional app URL tokens by continuing to remove only challengeId/code parameters while preserving any other query params used for screen/subview restoration."
-        }
-      ]
-    },
-    {
-      "id": "REQ-2",
-      "summary": "Unify all popup/dialog behavior behind a shared abstraction and migrate existing popups to it without editing shadcn/ui source files.",
-      "acceptanceCriteria": [
-        "Info popups rendered by the existing InfoPopups component behave identically on all screens where they appear (Screen 3 and Screen 5).",
-        "Assignment detail popups on Screen 6 use the same shared popup abstraction and match the same interaction behavior (overlay click, ESC, close button placement, max width/height, ScrollArea behavior).",
-        "No edits are made to shadcn component source files under frontend/src/components/ui; composition/wrapping is used instead."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/components/SharedPopup.tsx",
-          "operation": "create",
-          "description": "Create a shared popup/dialog wrapper component that composes existing shadcn Dialog primitives to enforce consistent sizing, viewport-bounded max height, scroll behavior, close behavior (overlay/ESC/close button), focus behavior defaults, and RTL-aligned header/layout. Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/components/InfoPopups.tsx",
-          "operation": "modify",
-          "description": "Refactor InfoPopups to use the new SharedPopup abstraction so both dialogs behave identically across Screen 3 and Screen 5 (consistent sizing, ScrollArea behavior, close behavior, and RTL alignment). Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/screens/Screen6InChallenge.tsx",
-          "operation": "modify",
-          "description": "Replace the assignment details Dialog/ScrollArea usage with SharedPopup so Screen 6 assignment detail popups match the same interaction and sizing behavior as other popups across the app. Verify the component's usage instructions before implementing."
-        }
-      ]
-    },
-    {
-      "id": "REQ-3",
-      "summary": "Polish responsive/mobile-first layouts across Screens 1, 3, 4, 5, 6 to prevent overflow/clipping and keep primary controls usable at common breakpoints.",
-      "acceptanceCriteria": [
-        "On small mobile widths, core actions remain visible and tappable (e.g., Screen 6 tabs, day selectors, record/play/delete controls).",
-        "Dialogs/popups remain within viewport bounds and their content is scrollable rather than overflowing off-screen.",
-        "On tablet/desktop widths, layouts do not appear stretched or awkward (content remains comfortably centered and spaced)."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/components/AppShell.tsx",
-          "operation": "modify",
-          "description": "Adjust the shell container to be mobile-first while supporting tablet/desktop comfortably (responsive max-width), and ensure the app content can scroll within the viewport (avoid clipped content due to fixed min-heights/overflow-hidden)."
-        },
-        {
-          "path": "frontend/src/screens/Screen6InChallenge.tsx",
-          "operation": "modify",
-          "description": "Tune Screen 6 small-width layout for tappability and no overflow (e.g., day selectors, recording controls, team recordings area) while keeping tablet/desktop spacing centered and not awkwardly stretched."
-        },
-        {
-          "path": "frontend/src/components/SharedPopup.tsx",
-          "operation": "modify",
-          "description": "Ensure the shared popup abstraction is viewport-safe at mobile/tablet/desktop (max width/height constraints and internal scroll area behavior) so dialogs never overflow off-screen. Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/index.css",
-          "operation": "modify",
-          "description": "Apply minimal global responsive polish where necessary (e.g., safe scrolling behavior/viewport constraints) while preserving existing RTL-aware base styles and avoiding new global stylesheet entry points."
+          "description": "Update screen navigation wiring if needed so that navigating from the no-active-challenge experience to Manage Challenge reliably enters create mode and does not rely on stale/persisted challenge state."
         }
       ]
     }
