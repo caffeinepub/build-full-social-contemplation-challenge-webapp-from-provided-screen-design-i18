@@ -174,6 +174,12 @@ export const translations = {
         delete: "Delete",
         noRecording: "No recording yet"
       },
+      recording: {
+        recLabel: "REC",
+        inProgress: "Recording in progress",
+        levelLabel: "Input Level",
+        reassurance: "Your recording is being captured. Speak naturally and take your time."
+      },
       team: {
         participants: "Participants",
         participantsDescription: "Select a participant to view their recordings",

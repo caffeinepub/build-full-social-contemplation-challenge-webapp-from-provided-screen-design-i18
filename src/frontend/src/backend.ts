@@ -126,6 +126,7 @@ export interface backendInterface {
     deleteRecording(challengeId: bigint, day: bigint, assignment: string): Promise<void>;
     generateInvitationCode(challengeId: bigint, code: string): Promise<void>;
     getActiveChallengeIdForCreator(): Promise<bigint | null>;
+    getActiveChallengeIdForParticipant(): Promise<bigint | null>;
     getAllChallengeParticipantProfiles(challengeId: bigint): Promise<Array<[Principal, UserProfile | null]>>;
     getAssignmentRecordings(challengeId: bigint, day: bigint, assignment: string): Promise<Array<[Principal, ExternalBlob | null]>>;
     getAvailableInvitationCodes(challengeId: bigint): Promise<Array<string>>;
@@ -133,6 +134,7 @@ export interface backendInterface {
     getCallerUserRole(): Promise<UserRole>;
     getChallengeAudioRecordings(challengeId: bigint): Promise<Array<Principal>>;
     getChallengeParticipants(challengeId: bigint): Promise<Array<Principal>>;
+    getChallengeStartTime(challengeId: bigint): Promise<Time>;
     getParticipantRecording(challengeId: bigint, participant: Principal, day: bigint, assignment: string): Promise<ExternalBlob>;
     getRecording(challengeId: bigint, day: bigint, assignment: string): Promise<ExternalBlob>;
     getUserChallengeStatus(): Promise<UserChallengeStatus>;
@@ -330,6 +332,20 @@ export class Backend implements backendInterface {
             return from_candid_opt_n7(this._uploadFile, this._downloadFile, result);
         }
     }
+    async getActiveChallengeIdForParticipant(): Promise<bigint | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getActiveChallengeIdForParticipant();
+                return from_candid_opt_n7(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getActiveChallengeIdForParticipant();
+            return from_candid_opt_n7(this._uploadFile, this._downloadFile, result);
+        }
+    }
     async getAllChallengeParticipantProfiles(arg0: bigint): Promise<Array<[Principal, UserProfile | null]>> {
         if (this.processError) {
             try {
@@ -425,6 +441,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.getChallengeParticipants(arg0);
+            return result;
+        }
+    }
+    async getChallengeStartTime(arg0: bigint): Promise<Time> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getChallengeStartTime(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getChallengeStartTime(arg0);
             return result;
         }
     }

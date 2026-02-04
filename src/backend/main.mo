@@ -5,13 +5,14 @@ import AccessControl "authorization/access-control";
 import Principal "mo:core/Principal";
 import Map "mo:core/Map";
 import Nat "mo:core/Nat";
+import Set "mo:core/Set";
 import Text "mo:core/Text";
+import Runtime "mo:core/Runtime";
+import Time "mo:core/Time";
 import Iter "mo:core/Iter";
 import Array "mo:core/Array";
-import Set "mo:core/Set";
-import Time "mo:core/Time";
-import VarArray "mo:core/VarArray";
-import Runtime "mo:core/Runtime";
+
+
 
 actor {
   let accessControlState = AccessControl.initState();
@@ -139,6 +140,26 @@ actor {
     };
 
     creatorToChallengeId.get(caller);
+  };
+
+  public query ({ caller }) func getActiveChallengeIdForParticipant() : async ?Nat {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can fetch challenge IDs");
+    };
+
+    var participantChallengeId : ?Nat = null;
+
+    let _ = challenges.values().any(
+      func(challenge) {
+        if (challenge.participants.contains(caller)) {
+          participantChallengeId := ?challenge.id;
+          true;
+        } else {
+          false;
+        };
+      }
+    );
+    participantChallengeId;
   };
 
   public shared ({ caller }) func generateInvitationCode(challengeId : Nat, code : Text) : async () {
@@ -328,8 +349,8 @@ actor {
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
       case (?challenge) {
-        if (challenge.creator != caller and not AccessControl.isAdmin(accessControlState, caller)) {
-          Runtime.trap("Only creator can view all participant profiles");
+        if (not challenge.participants.contains(caller)) {
+          Runtime.trap("Only participants can view participant profiles");
         };
 
         let allParticipants = challenge.participants.toArray();
@@ -412,6 +433,10 @@ actor {
         let existingDayRecordings = switch (existingUserRecordings.get(day)) {
           case (?dayRecordings) { dayRecordings };
           case (null) { Map.empty<Text, Storage.ExternalBlob>() };
+        };
+
+        if (existingDayRecordings.containsKey(assignment)) {
+          Runtime.trap("Recording already exists for this assignment. Delete the existing recording before uploading a new one. Users cannot overwrite an existing recording.");
         };
 
         let updatedDayRecordings = existingDayRecordings.clone();
@@ -560,6 +585,22 @@ actor {
             };
           };
         };
+      };
+    };
+  };
+
+  public query ({ caller }) func getChallengeStartTime(challengeId : Nat) : async Time.Time {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can fetch challenge start time");
+    };
+
+    switch (challenges.get(challengeId)) {
+      case (null) { Runtime.trap("Challenge not found") };
+      case (?challenge) {
+        if (not challenge.participants.contains(caller)) {
+          Runtime.trap("Only participants can fetch challenge start time");
+        };
+        challenge.startTime;
       };
     };
   };

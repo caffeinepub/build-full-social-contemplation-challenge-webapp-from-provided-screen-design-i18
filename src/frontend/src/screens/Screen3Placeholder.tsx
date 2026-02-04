@@ -5,9 +5,11 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { useRedeemInvitationCode } from '../hooks/useQueries';
 import { parseInvitationFromURL, clearInvitationFromURL } from '../utils/invitationLinks';
+import { sanitizeErrorMessage } from '../utils/sanitizeErrorMessage';
+import { useQueryClient } from '@tanstack/react-query';
 
 const INVITATION_STORAGE_KEY = 'social_contemplation_pending_invitation';
 
@@ -53,11 +55,13 @@ function clearPersistedInvitationParams(): void {
 
 interface Screen3PlaceholderProps {
   onNavigateToScreen4?: () => void;
+  hasInconsistentState?: boolean;
 }
 
-export function Screen3Placeholder({ onNavigateToScreen4 }: Screen3PlaceholderProps) {
+export function Screen3Placeholder({ onNavigateToScreen4, hasInconsistentState }: Screen3PlaceholderProps) {
   const { t, direction } = useTranslation();
   const isRTL = direction === 'rtl';
+  const queryClient = useQueryClient();
 
   const [showJoinForm, setShowJoinForm] = useState(false);
   const [challengeIdInput, setChallengeIdInput] = useState('');
@@ -113,6 +117,12 @@ export function Screen3Placeholder({ onNavigateToScreen4 }: Screen3PlaceholderPr
     }
   };
 
+  const handleRefreshState = () => {
+    queryClient.invalidateQueries({ queryKey: ['userChallengeStatus'] });
+    queryClient.invalidateQueries({ queryKey: ['activeChallengeIdCreator'] });
+    queryClient.invalidateQueries({ queryKey: ['activeChallengeIdParticipant'] });
+  };
+
   const isSubmitting = redeemMutation.isPending;
   const canSubmit = challengeIdInput.trim() !== '' && codeInput.trim() !== '' && !isSubmitting;
 
@@ -150,6 +160,31 @@ export function Screen3Placeholder({ onNavigateToScreen4 }: Screen3PlaceholderPr
                 </div>
               </div>
             </div>
+
+            {/* Recovery UI for inconsistent state */}
+            {hasInconsistentState && (
+              <Card className="border-warning/20 bg-warning/5">
+                <CardHeader>
+                  <CardTitle className={`text-warning text-sm ${isRTL ? 'text-right' : ''}`}>
+                    State Recovery
+                  </CardTitle>
+                  <CardDescription className={isRTL ? 'text-right' : ''}>
+                    Your challenge state needs to be refreshed. Click below to reload.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    onClick={handleRefreshState}
+                    variant="outline"
+                    className="w-full"
+                    size="sm"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
+                    Refresh State
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Info Dialogs */}
             <InfoPopups />
@@ -227,7 +262,9 @@ export function Screen3Placeholder({ onNavigateToScreen4 }: Screen3PlaceholderPr
                 {redeemMutation.isError && (
                   <div className={`p-3 rounded-md bg-destructive/10 text-destructive text-sm flex items-start gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                     <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                    <span className={isRTL ? 'text-right' : ''}>{t('screen3.join.error')}</span>
+                    <span className={isRTL ? 'text-right' : ''}>
+                      {sanitizeErrorMessage(redeemMutation.error)}
+                    </span>
                   </div>
                 )}
 

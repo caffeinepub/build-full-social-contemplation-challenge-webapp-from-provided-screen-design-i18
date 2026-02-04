@@ -51,6 +51,7 @@ export interface _SERVICE {
   'deleteRecording' : ActorMethod<[bigint, bigint, string], undefined>,
   'generateInvitationCode' : ActorMethod<[bigint, string], undefined>,
   'getActiveChallengeIdForCreator' : ActorMethod<[], [] | [bigint]>,
+  'getActiveChallengeIdForParticipant' : ActorMethod<[], [] | [bigint]>,
   'getAllChallengeParticipantProfiles' : ActorMethod<
     [bigint],
     Array<[Principal, [] | [UserProfile]]>
@@ -64,6 +65,7 @@ export interface _SERVICE {
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getChallengeAudioRecordings' : ActorMethod<[bigint], Array<Principal>>,
   'getChallengeParticipants' : ActorMethod<[bigint], Array<Principal>>,
+  'getChallengeStartTime' : ActorMethod<[bigint], Time>,
   'getParticipantRecording' : ActorMethod<
     [bigint, Principal, bigint, string],
     ExternalBlob

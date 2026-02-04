@@ -3,7 +3,7 @@ import { useActor } from './useActor';
 import { useAuthPrincipal } from './useAuthPrincipal';
 import type { UserProfile, UserChallengeStatus, ExternalBlob } from '../backend';
 import type { Principal } from '@icp-sdk/core/principal';
-import { persistActiveChallengeId, clearPersistedActiveChallengeId } from '../utils/challengeContext';
+import { persistActiveChallengeId, clearPersistedActiveChallengeId, getPersistedActiveChallengeId } from '../utils/challengeContext';
 
 // ============================================================================
 // User Profile Queries
@@ -66,6 +66,63 @@ export function useUserChallengeStatus() {
 }
 
 // ============================================================================
+// Challenge ID Resolution
+// ============================================================================
+
+export function useGetActiveChallengeIdForCreator() {
+  const { actor, isFetching: actorFetching } = useActor();
+  const { isAuthenticated } = useAuthPrincipal();
+
+  return useQuery<bigint | null>({
+    queryKey: ['activeChallengeIdCreator'],
+    queryFn: async () => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.getActiveChallengeIdForCreator();
+    },
+    enabled: !!actor && !actorFetching && isAuthenticated,
+    staleTime: 10000, // 10 seconds
+  });
+}
+
+export function useGetActiveChallengeIdForParticipant() {
+  const { actor, isFetching: actorFetching } = useActor();
+  const { isAuthenticated } = useAuthPrincipal();
+
+  return useQuery<bigint | null>({
+    queryKey: ['activeChallengeIdParticipant'],
+    queryFn: async () => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.getActiveChallengeIdForParticipant();
+    },
+    enabled: !!actor && !actorFetching && isAuthenticated,
+    staleTime: 10000, // 10 seconds
+  });
+}
+
+/**
+ * Unified hook that resolves the active challenge ID from multiple sources:
+ * 1. Creator's active challenge
+ * 2. Participant's active challenge
+ * 3. Persisted challenge ID (sessionStorage)
+ */
+export function useResolvedActiveChallengeId(): bigint | null {
+  const creatorQuery = useGetActiveChallengeIdForCreator();
+  const participantQuery = useGetActiveChallengeIdForParticipant();
+  const persistedId = getPersistedActiveChallengeId();
+
+  // Priority: creator > participant > persisted
+  if (creatorQuery.data !== null && creatorQuery.data !== undefined) {
+    return creatorQuery.data;
+  }
+  
+  if (participantQuery.data !== null && participantQuery.data !== undefined) {
+    return participantQuery.data;
+  }
+  
+  return persistedId;
+}
+
+// ============================================================================
 // Challenge Mutations
 // ============================================================================
 
@@ -83,23 +140,9 @@ export function useCreateChallenge() {
       persistActiveChallengeId(challengeId);
       queryClient.invalidateQueries({ queryKey: ['userChallengeStatus'] });
       queryClient.invalidateQueries({ queryKey: ['challengeDetails'] });
-      queryClient.invalidateQueries({ queryKey: ['activeChallengeId'] });
+      queryClient.invalidateQueries({ queryKey: ['activeChallengeIdCreator'] });
+      queryClient.invalidateQueries({ queryKey: ['activeChallengeIdParticipant'] });
     },
-  });
-}
-
-export function useGetActiveChallengeIdForCreator() {
-  const { actor, isFetching: actorFetching } = useActor();
-  const { isAuthenticated } = useAuthPrincipal();
-
-  return useQuery<bigint | null>({
-    queryKey: ['activeChallengeId'],
-    queryFn: async () => {
-      if (!actor) throw new Error('Actor not available');
-      return actor.getActiveChallengeIdForCreator();
-    },
-    enabled: !!actor && !actorFetching && isAuthenticated,
-    staleTime: 10000, // 10 seconds
   });
 }
 
@@ -138,6 +181,8 @@ export function useRedeemInvitationCode() {
       queryClient.invalidateQueries({ queryKey: ['userChallengeStatus'] });
       queryClient.invalidateQueries({ queryKey: ['challengeDetails'] });
       queryClient.invalidateQueries({ queryKey: ['challengeParticipants'] });
+      queryClient.invalidateQueries({ queryKey: ['activeChallengeIdCreator'] });
+      queryClient.invalidateQueries({ queryKey: ['activeChallengeIdParticipant'] });
     },
   });
 }
@@ -154,6 +199,9 @@ export function useUpdateStartTime() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ 
         queryKey: ['challengeDetails', variables.challengeId.toString()] 
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['challengeStartTime', variables.challengeId.toString()] 
       });
     },
   });
@@ -174,7 +222,8 @@ export function useLeaveChallenge() {
       queryClient.invalidateQueries({ queryKey: ['userChallengeStatus'] });
       queryClient.invalidateQueries({ queryKey: ['challengeDetails'] });
       queryClient.invalidateQueries({ queryKey: ['challengeParticipants'] });
-      queryClient.invalidateQueries({ queryKey: ['activeChallengeId'] });
+      queryClient.invalidateQueries({ queryKey: ['activeChallengeIdCreator'] });
+      queryClient.invalidateQueries({ queryKey: ['activeChallengeIdParticipant'] });
     },
   });
 }
@@ -194,7 +243,8 @@ export function useDeleteChallenge() {
       queryClient.invalidateQueries({ queryKey: ['userChallengeStatus'] });
       queryClient.invalidateQueries({ queryKey: ['challengeDetails'] });
       queryClient.invalidateQueries({ queryKey: ['challengeParticipants'] });
-      queryClient.invalidateQueries({ queryKey: ['activeChallengeId'] });
+      queryClient.invalidateQueries({ queryKey: ['activeChallengeIdCreator'] });
+      queryClient.invalidateQueries({ queryKey: ['activeChallengeIdParticipant'] });
     },
   });
 }
@@ -317,6 +367,28 @@ export function useGetAllChallengeParticipantProfiles(challengeId: bigint | null
 }
 
 // ============================================================================
+// Challenge Start Time Query
+// ============================================================================
+
+export function useGetChallengeStartTime(challengeId: bigint | null | undefined) {
+  const { actor, isFetching: actorFetching } = useActor();
+  const { isAuthenticated } = useAuthPrincipal();
+
+  const isValidChallengeId = challengeId !== null && challengeId !== undefined && typeof challengeId === 'bigint';
+
+  return useQuery<bigint>({
+    queryKey: ['challengeStartTime', isValidChallengeId ? challengeId.toString() : 'none'],
+    queryFn: async () => {
+      if (!actor) throw new Error('Actor not available');
+      if (!isValidChallengeId) throw new Error('Invalid challenge ID');
+      return actor.getChallengeStartTime(challengeId);
+    },
+    enabled: !!actor && !actorFetching && isAuthenticated && isValidChallengeId,
+    staleTime: 60000, // 60 seconds - start time rarely changes
+  });
+}
+
+// ============================================================================
 // Per-Assignment Recording Queries and Mutations
 // ============================================================================
 
@@ -350,6 +422,10 @@ export function useSaveRecording() {
       // Invalidate all recordings for this day/assignment (for Team tab)
       queryClient.invalidateQueries({ 
         queryKey: ['assignmentRecordings', variables.challengeId.toString(), variables.day.toString(), variables.assignment] 
+      });
+      // Invalidate participant recordings
+      queryClient.invalidateQueries({ 
+        queryKey: ['participantRecording'] 
       });
     },
   });
@@ -417,6 +493,10 @@ export function useDeleteRecording() {
       // Invalidate all recordings for this day/assignment (for Team tab)
       queryClient.invalidateQueries({ 
         queryKey: ['assignmentRecordings', variables.challengeId.toString(), variables.day.toString(), variables.assignment] 
+      });
+      // Invalidate participant recordings
+      queryClient.invalidateQueries({ 
+        queryKey: ['participantRecording'] 
       });
     },
   });

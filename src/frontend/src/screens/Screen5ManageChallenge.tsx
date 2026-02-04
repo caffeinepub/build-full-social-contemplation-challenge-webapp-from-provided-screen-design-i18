@@ -3,8 +3,8 @@ import { useTranslation } from '../i18n/I18nContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { InfoPopups } from '../components/InfoPopups';
-import { useGetActiveChallengeIdForCreator, useGetChallengeParticipants, useLeaveChallenge } from '../hooks/useQueries';
-import { getPersistedActiveChallengeId } from '../utils/challengeContext';
+import { useResolvedActiveChallengeId, useGetChallengeParticipants, useLeaveChallenge } from '../hooks/useQueries';
+import { sanitizeErrorMessage } from '../utils/sanitizeErrorMessage';
 
 interface Screen5ManageChallengeProps {
   onClose?: () => void;
@@ -15,10 +15,8 @@ export function Screen5ManageChallenge({ onClose, onLeaveSuccess }: Screen5Manag
   const { t, direction } = useTranslation();
   const isRTL = direction === 'rtl';
 
-  // Get challenge ID
-  const activeChallengeQuery = useGetActiveChallengeIdForCreator();
-  const persistedChallengeId = getPersistedActiveChallengeId();
-  const challengeId = activeChallengeQuery.data ?? persistedChallengeId;
+  // Get challenge ID using unified resolver
+  const challengeId = useResolvedActiveChallengeId();
 
   // Fetch participants
   const participantsQuery = useGetChallengeParticipants(challengeId);
@@ -41,6 +39,46 @@ export function Screen5ManageChallenge({ onClose, onLeaveSuccess }: Screen5Manag
   const handleRefresh = () => {
     participantsQuery.refetch();
   };
+
+  // Show recovery state if no challengeId is available
+  if (!challengeId) {
+    return (
+      <div className="flex flex-col min-h-[600px]">
+        <div className="bg-gradient-to-b from-primary/5 to-transparent px-6 pt-12 pb-8">
+          <div className={`flex items-center gap-3 mb-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            {onClose && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                className="flex-shrink-0"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            )}
+            <h1 className={`text-2xl font-bold tracking-tight ${isRTL ? 'text-right' : 'text-center'} flex-1`}>
+              {t('screen5.title')}
+            </h1>
+          </div>
+        </div>
+        <div className="flex-1 px-6 py-8 flex items-center justify-center">
+          <Card className="border-warning/20 bg-warning/5">
+            <CardHeader>
+              <CardTitle className="text-warning">Challenge Not Found</CardTitle>
+              <CardDescription>
+                Unable to load challenge context. Please refresh or navigate back.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={onClose} variant="outline" className="w-full">
+                Go Back
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-[600px]">
@@ -111,6 +149,11 @@ export function Screen5ManageChallenge({ onClose, onLeaveSuccess }: Screen5Manag
             <CardDescription>{t('screen5.leave.description')}</CardDescription>
           </CardHeader>
           <CardContent>
+            {leaveMutation.isError && (
+              <div className={`mb-4 p-3 rounded-md bg-destructive/10 text-destructive text-sm ${isRTL ? 'text-right' : ''}`}>
+                {sanitizeErrorMessage(leaveMutation.error)}
+              </div>
+            )}
             <Button
               variant="destructive"
               className="w-full"

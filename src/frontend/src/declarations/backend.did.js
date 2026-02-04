@@ -69,6 +69,11 @@ export const idlService = IDL.Service({
       [IDL.Opt(IDL.Nat)],
       ['query'],
     ),
+  'getActiveChallengeIdForParticipant' : IDL.Func(
+      [],
+      [IDL.Opt(IDL.Nat)],
+      ['query'],
+    ),
   'getAllChallengeParticipantProfiles' : IDL.Func(
       [IDL.Nat],
       [IDL.Vec(IDL.Tuple(IDL.Principal, IDL.Opt(UserProfile)))],
@@ -96,6 +101,7 @@ export const idlService = IDL.Service({
       [IDL.Vec(IDL.Principal)],
       ['query'],
     ),
+  'getChallengeStartTime' : IDL.Func([IDL.Nat], [Time], ['query']),
   'getParticipantRecording' : IDL.Func(
       [IDL.Nat, IDL.Principal, IDL.Nat, IDL.Text],
       [ExternalBlob],
@@ -187,6 +193,11 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Opt(IDL.Nat)],
         ['query'],
       ),
+    'getActiveChallengeIdForParticipant' : IDL.Func(
+        [],
+        [IDL.Opt(IDL.Nat)],
+        ['query'],
+      ),
     'getAllChallengeParticipantProfiles' : IDL.Func(
         [IDL.Nat],
         [IDL.Vec(IDL.Tuple(IDL.Principal, IDL.Opt(UserProfile)))],
@@ -214,6 +225,7 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(IDL.Principal)],
         ['query'],
       ),
+    'getChallengeStartTime' : IDL.Func([IDL.Nat], [Time], ['query']),
     'getParticipantRecording' : IDL.Func(
         [IDL.Nat, IDL.Principal, IDL.Nat, IDL.Text],
         [ExternalBlob],

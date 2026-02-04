@@ -1,332 +1,359 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 3,
-  "summary": "Social Contemplation is an ICP full-stack dapp (Motoko canister backend + React/TypeScript frontend) where users authenticate via Internet Identity, can create or join exactly one challenge via single-use invitation codes, and complete a 7-day journey with 5 fixed assignments per day (Awareness, Utopia, Small steps, Support strategies, Other contemplations). Per participant × day × assignment, users can record/play/delete audio; all participants can listen to each other’s recordings in a Team view. Challenge management includes start-date selection with a strict edit window (creator may adjust the start date only until the end of Day 1 of the originally chosen start date), participant listing visible to all, self-leave for everyone, creator moderation (remove participants) and hard delete of the entire challenge (challenge + participants + audio). The UI is a responsive, mobile-like webapp; Screens 1/3/5 must match a provided design exactly and include two consistent scrollable info popups (Social Contemplation + About the challenge). Global i18n includes RTL support and multiple seeded locales. Navigation is state-based (not URL-router driven) based on login + challenge membership; challenge context is persisted across refresh.",
+  "projectStateVersion": 9,
+  "summary": "Social Contemplation is an Internet Computer (ICP) full‑stack dapp (Motoko canister backend + React/TypeScript frontend) where users authenticate via Internet Identity, create or join a shared “challenge” with a chosen start **date** (date-only, no start time), invite others via **single‑use invitation codes/links**, and complete a fixed 7‑day journey consisting of 5 fixed reflection assignments per day (Awareness, Utopia, Small steps, Support strategies, Other contemplations). Participants can record short browser audio reflections (one recording per day+assignment per user), upload them as blobs to the canister, delete and re-record their own audio, and play back their own and **all other participants’** recordings for all days/assignments. Start date may be adjusted by the creator only until the end of Day 1 of the originally chosen start date; after Day 1 ends, start date is locked and no new participants may join (codes become unusable). Challenge creator (admin) can remove participants and permanently delete the challenge (including all audio); any participant can always leave. The frontend uses TanStack React Query for backend calls, state-based navigation (no router), shared scrollable info popups (Social Contemplation/About the challenge) on key screens, and global i18n with RTL support (10 common languages + Dutch seeded via machine translations).",
   "existing_features": [
     {
       "id": "IF-1",
-      "title": "ICP full-stack dapp scaffold (Motoko canister + React/TypeScript frontend)",
+      "title": "Motoko canister backend for challenges, profiles, invites, and recordings",
       "synonyms": [
-        "ICP dapp scaffold",
-        "canister + web UI"
+        "backend canister",
+        "application actor API"
       ],
-      "description": "Implements a Motoko backend canister exposing profile/challenge/recording APIs and a React/TypeScript frontend that communicates via generated actor bindings created through a configurable actor factory.",
+      "description": "Implements core domain APIs for user profiles, challenge lifecycle (create/delete/leave), participant membership, invitation codes, challenge start time, and per-user/day/assignment audio recording storage and retrieval on the Internet Computer.",
       "reqIds": [],
       "version": 1
     },
     {
       "id": "IF-2",
-      "title": "Internet Identity authentication provider (login/logout + identity restore)",
+      "title": "Role-based access control (RBAC) with admin bootstrap",
       "synonyms": [
-        "Internet Identity integration",
-        "AuthClient context"
+        "authorization mixin",
+        "access-control"
       ],
-      "description": "Provides an `InternetIdentityProvider` based on `@dfinity/auth-client` that restores persisted sessions on mount, supports login/logout flows, and exposes detailed login status flags used by UI components.",
+      "description": "Provides access control state and methods to initialize roles using an env-provided admin token plus a user-provided secret, query caller role/admin status, and assign roles with admin-only enforcement.",
       "reqIds": [],
       "version": 1
     },
     {
       "id": "IF-3",
-      "title": "Identity-bound backend actor creation with access-control initialization",
+      "title": "Internet Identity authentication provider",
       "synonyms": [
-        "useActor",
-        "actor lifecycle"
+        "AuthClient integration",
+        "InternetIdentityProvider"
       ],
-      "description": "Creates an anonymous actor when logged out and an identity-bound actor when logged in. On authenticated actor creation, calls `_initializeAccessControlWithSecret()` (using a secret read from URL hash) and invalidates/refetches non-actor React Query caches when the actor changes.",
+      "description": "React context/provider wrapping `@dfinity/auth-client` to manage identity persistence across refresh, login/logout, and login lifecycle status flags and errors.",
       "reqIds": [],
       "version": 1
     },
     {
       "id": "IF-4",
-      "title": "Role-based access control (admin/user/guest) bootstrap and management APIs",
+      "title": "Identity-bound canister actor lifecycle with access-control initialization",
       "synonyms": [
-        "RBAC",
-        "authorization mixin"
+        "useActor",
+        "actor factory"
       ],
-      "description": "Backend assigns roles per principal, bootstrapped via env var `CAFFEINE_ADMIN_TOKEN` and a caller-provided secret. Exposes APIs to query caller role/admin status and assign roles (admin-only).",
+      "description": "Creates anonymous or identity-bound canister actors based on auth state, calls `_initializeAccessControlWithSecret` for authenticated identities, and invalidates/refetches dependent queries when the actor identity changes.",
       "reqIds": [],
       "version": 1
     },
     {
       "id": "IF-5",
-      "title": "User profile storage and permissioned retrieval",
+      "title": "React Query data access layer for backend operations",
       "synonyms": [
-        "UserProfile",
-        "display name"
+        "TanStack React Query hooks",
+        "query/mutation hooks"
       ],
-      "description": "Stores a per-principal profile (currently `{ name }`). Callers can fetch/save their own profile; fetching others is permitted for admins and for challenge creators viewing participants in their challenge (otherwise traps).",
+      "description": "Centralizes backend reads and writes into React Query hooks with stable query keys, `enabled` gating, retries/staleness control, and targeted cache invalidation after mutations.",
       "reqIds": [],
       "version": 1
     },
     {
       "id": "IF-6",
-      "title": "User challenge membership status query",
+      "title": "User profile storage and retrieval",
       "synonyms": [
-        "getUserChallengeStatus",
-        "hasActiveChallenge"
+        "UserProfile",
+        "saveCallerUserProfile/getCallerUserProfile"
       ],
-      "description": "Backend exposes `getUserChallengeStatus()` indicating whether the authenticated caller is currently a participant in any challenge; frontend uses it for screen routing and state resolution.",
+      "description": "Supports saving and fetching the caller’s profile and fetching other users’ profiles (subject to backend permissions); frontend exposes hooks to read/update the caller profile.",
       "reqIds": [],
       "version": 1
     },
     {
       "id": "IF-7",
-      "title": "Challenge creation and creator-to-challenge mapping",
+      "title": "Challenge membership status API and UI gating",
       "synonyms": [
-        "createChallenge",
-        "getActiveChallengeIdForCreator"
+        "getUserChallengeStatus",
+        "hasActiveChallenge"
       ],
-      "description": "Allows a user to create a challenge with a start time, automatically adds the creator as a participant, and stores a creator→challengeId mapping so creators can manage their active challenge.",
+      "description": "Backend reports whether the caller participates in any active challenge; frontend queries this status and gates navigation so users only enter challenge screens with consistent state.",
       "reqIds": [],
       "version": 1
     },
     {
       "id": "IF-8",
-      "title": "Invitation code lifecycle (generate, list unused, redeem) with Day 1 restrictions",
+      "title": "Challenge creation with selectable start date/time",
       "synonyms": [
-        "invitation codes",
-        "challenge invites"
+        "createChallenge",
+        "challenge startTime"
       ],
-      "description": "Creators can generate invitation codes and list unused codes; users can redeem codes to join. Backend restricts generation and redemption to before the end of Day 1 (relative to challenge start time).",
+      "description": "Authenticated users can create a challenge specifying a start time (nanoseconds); creator is added as a participant and is tracked as the challenge creator.",
       "reqIds": [],
       "version": 1
     },
     {
       "id": "IF-9",
-      "title": "Invitation link building/parsing and invite parameter persistence",
+      "title": "Active challenge ID lookup for creators and participants",
       "synonyms": [
-        "shareable invite links",
-        "URL invite parsing"
+        "getActiveChallengeIdForCreator",
+        "getActiveChallengeIdForParticipant"
       ],
-      "description": "Frontend can build shareable invitation URLs (challengeId + code), parse invitation parameters from the URL, clear them from the URL, and persist pending invite params in sessionStorage to survive navigation/refresh.",
+      "description": "Backend exposes active challenge id lookup for creators via a mapping and for participants via membership scan; used by the frontend to recover challenge context.",
       "reqIds": [],
       "version": 1
     },
     {
       "id": "IF-10",
-      "title": "Challenge management UI (create/manage screen)",
+      "title": "Session persistence and resolution of active challenge context",
       "synonyms": [
-        "Screen 4",
-        "challenge admin screen"
+        "persistActiveChallengeId",
+        "useResolvedActiveChallengeId"
       ],
-      "description": "Implements a create/manage challenge screen: creators can create a challenge, generate codes, copy codes/links, view participants with profiles, remove participants (with confirmation), refresh participant lists, and delete the challenge (with confirmation). Non-creators can view participants and leave the challenge.",
+      "description": "Stores the last known active `challengeId` in sessionStorage, clears it on leave/delete, and resolves active challenge context by prioritizing creator id, then participant id, then persisted id.",
       "reqIds": [],
       "version": 1
     },
     {
       "id": "IF-11",
-      "title": "Challenge context persistence across refresh",
+      "title": "Invitation link parsing and join-by-code persistence",
       "synonyms": [
-        "persist active challenge ID",
-        "sessionStorage challenge context"
+        "invitationLinks",
+        "join-by-link"
       ],
-      "description": "Persists the active/joined `challengeId` in sessionStorage so the in-challenge UI and management screen can recover context after refresh, and clears it on leave/delete.",
+      "description": "Builds shareable invitation URLs with `challengeId` and `code`, parses and clears these parameters from the URL, and persists pending invitation params in sessionStorage to prefill the join form after refresh.",
       "reqIds": [],
       "version": 1
     },
     {
       "id": "IF-12",
-      "title": "Participant listing and profile aggregation helpers",
+      "title": "Invitation code lifecycle (generate/list/redeem) with Day-1 rules",
       "synonyms": [
-        "getChallengeParticipants",
-        "participant profile lookup"
+        "challenge invites",
+        "single-use codes"
       ],
-      "description": "Backend exposes participant listing and (creator/admin) full participant profile retrieval. Frontend includes hooks to fetch principals, fetch aggregated `(principal, profile)` tuples, and a fallback profile fetcher that tolerates errors and yields `Unknown User`.",
+      "description": "Creators can generate invitation codes and list unused ones; users can redeem a code to join; backend enforces single-use and restricts generate/redeem to before the end of Day 1 relative to startTime.",
       "reqIds": [],
       "version": 1
     },
     {
       "id": "IF-13",
-      "title": "Challenge participant moderation (remove participant)",
+      "title": "Challenge lifecycle and moderation operations",
       "synonyms": [
-        "kick participant",
-        "removeParticipant"
+        "leaveChallenge",
+        "deleteChallenge",
+        "removeParticipant",
+        "updateStartTime"
       ],
-      "description": "Creator can remove other participants (creator cannot remove themselves). Removal also deletes that participant’s stored recordings for the challenge.",
+      "description": "Supports leaving a challenge (removes participant and their recordings), creator-only deletion, creator-only participant removal, and creator-only start time updates (restricted to before end of Day 1). Frontend exposes mutation hooks with cache invalidation and context cleanup.",
       "reqIds": [],
       "version": 1
     },
     {
       "id": "IF-14",
-      "title": "Challenge lifecycle operations (leave, delete, update start time)",
+      "title": "Participant listing and participant profile resolution",
       "synonyms": [
-        "leaveChallenge",
-        "deleteChallenge",
-        "updateStartTime"
+        "getChallengeParticipants",
+        "getAllChallengeParticipantProfiles",
+        "getUserProfile"
       ],
-      "description": "Supports leaving a challenge (removes participant and their recordings), deleting a challenge (creator-only), and updating start time (creator-only, only before the end of Day 1). Frontend provides mutation hooks and UI flows for leave/delete.",
+      "description": "Backend supports listing participants and returning (principal, profile) pairs for participants; frontend can either use the aggregated API or fall back to per-principal profile fetch with tolerant error handling.",
       "reqIds": [],
       "version": 1
     },
     {
       "id": "IF-15",
-      "title": "Fixed assignment model for the 7-day journey",
+      "title": "Fixed 7-day / 5-assignment journey model utilities",
       "synonyms": [
         "FIXED_ASSIGNMENTS",
-        "assignment definitions"
+        "assignment helpers"
       ],
-      "description": "Defines exactly five fixed reflection assignments that appear every day, with helper utilities to retrieve assignments and validate/clamp day values to the 1–7 range.",
+      "description": "Defines the five fixed reflection assignments and provides helpers to validate/clamp day values (1–7) and fetch assignment metadata by id.",
       "reqIds": [],
       "version": 1
     },
     {
       "id": "IF-16",
-      "title": "Browser audio recording hook (MediaRecorder)",
+      "title": "Browser microphone recording hook",
       "synonyms": [
         "useAudioRecording",
-        "microphone capture"
+        "MediaRecorder capture"
       ],
-      "description": "Implements microphone recording start/stop with chunk buffering, produces an `audio/webm` blob, exposes error state, and includes a `clearRecording()` helper to reset recorded data.",
+      "description": "Captures audio via `getUserMedia` + `MediaRecorder`, produces an `audio/webm` Blob, and exposes start/stop/clear methods plus recording state and errors.",
       "reqIds": [],
       "version": 1
     },
     {
       "id": "IF-17",
-      "title": "Per-day × per-assignment recording CRUD (save/get/delete)",
+      "title": "Per-user/day/assignment recording save, fetch, and delete with overwrite prevention",
       "synonyms": [
-        "recordings API",
-        "audio reflection storage"
+        "saveRecording/getRecording/deleteRecording",
+        "one-recording-per-assignment"
       ],
-      "description": "Backend stores recordings per participant→day→assignment as blobs. Frontend provides hooks to save, fetch, and delete the caller’s recording for a selected day and assignment, with targeted React Query cache invalidation.",
+      "description": "Backend stores audio blobs keyed by participant → day → assignment and rejects overwrites; frontend saves recordings, fetches recordings (mapping not-found traps to `null`), and deletes recordings with targeted query invalidation.",
       "reqIds": [],
       "version": 1
     },
     {
       "id": "IF-18",
-      "title": "Team recordings views (assignment recordings + participant recordings)",
+      "title": "Team audio access (listen to other participants)",
       "synonyms": [
-        "Team tab",
-        "listen to others"
+        "getParticipantRecording",
+        "getAssignmentRecordings"
       ],
-      "description": "Backend can return recordings per assignment across participants and fetch a specific participant’s recording. Frontend includes hooks and UI to select a participant, select a day, and play available recordings per assignment.",
+      "description": "Backend allows challenge participants to fetch a specific participant’s recording for any day/assignment and to fetch all participants’ recordings for a day/assignment; frontend provides hooks and UI playback integration.",
       "reqIds": [],
       "version": 1
     },
     {
       "id": "IF-19",
-      "title": "In-challenge screen with My/Team/Coming Soon tabs",
+      "title": "Challenge start time retrieval and client-side day header formatting",
       "synonyms": [
-        "Screen 6",
-        "in-challenge experience"
+        "getChallengeStartTime",
+        "formatDayHeader"
       ],
-      "description": "Provides the primary in-challenge UI: day selection, assignment cards with view-details dialogs, record/stop/save/play/delete flows for the current user, participant browsing and playback in Team tab, and a Coming Soon placeholder tab.",
+      "description": "Backend exposes `getChallengeStartTime`; frontend queries it and formats a clear day header including day number, weekday, and calendar date derived from the start time.",
       "reqIds": [],
       "version": 1
     },
     {
       "id": "IF-20",
-      "title": "Screen 6 day selectors render separate 'Day' label and numeric-only 1–7 buttons",
+      "title": "In-challenge experience UI (Screen 6) with My/Team/Coming Soon tabs",
       "synonyms": [
-        "day selector UI update",
-        "7-column numeric buttons"
+        "Screen6InChallenge",
+        "tabbed in-challenge UI"
       ],
-      "description": "Both My-tab and Team-tab day selectors show a separate 'Day' label outside the grid and render a 7-column grid of buttons labeled only with numbers 1–7, preserving selection behavior and improving small-screen readability.",
+      "description": "Implements a 3-tab layout: My tab for selecting a day (1–7), viewing the day header, seeing per-assignment recorded status, recording and auto-saving audio, playing and deleting personal recordings; Team tab for selecting a participant and day and playing their recordings; Coming Soon placeholder tab.",
       "reqIds": [],
       "version": 1
     },
     {
       "id": "IF-21",
-      "title": "State-based screen routing and app shell layout",
+      "title": "Create/Manage Challenge UI (Screen 4)",
       "synonyms": [
-        "AppShell",
-        "screen gating"
+        "Screen4Placeholder",
+        "challenge creation & management"
       ],
-      "description": "Routes between screens based on auth and `hasActiveChallenge` status (logged out → Screen 1; logged in without a challenge → Screen 3; in challenge → Screen 6) with optional navigation to Screen 4 management. All screens render inside a centered, card-like shell with direction-aware language switcher placement.",
+      "description": "Provides challenge start date selection and creation, creator-only invitation code generation, copy-code and copy-link actions, participants list with refresh, creator-only participant removal and challenge deletion confirmation, and non-creator leave challenge flow with sanitized error display.",
       "reqIds": [],
       "version": 1
     },
     {
       "id": "IF-22",
-      "title": "React Query loading/error boundary with retry and error sanitization",
+      "title": "Manage Challenge UI (Screen 5) with recovery state",
       "synonyms": [
-        "QueryStateGate",
-        "query boundary"
+        "Screen5ManageChallenge",
+        "participant management view"
       ],
-      "description": "Provides consistent loading and error UI for React Query results, including retry and sanitization that suppresses a specific erroneous “Migrating your project…” message in displayed errors.",
+      "description": "Shows participants count with refresh controls, destructive leave action, and a recovery UI when challenge context cannot be resolved (e.g., missing challengeId).",
       "reqIds": [],
       "version": 1
     },
     {
       "id": "IF-23",
-      "title": "Custom i18n context with language persistence and RTL/LTR direction support",
+      "title": "State-based app navigation (no router) with safe gating",
       "synonyms": [
-        "I18nProvider",
-        "LanguageSwitcher"
+        "App.tsx screen state routing",
+        "screen gating"
       ],
-      "description": "Implements an i18n React context with `t(key)` lookup, language persistence in localStorage, and automatic document `dir`/`lang` updates. Includes a dropdown language switcher with RTL-aware menu alignment.",
+      "description": "Selects between logged-out landing and authenticated flows (no-challenge, create/manage, manage, in-challenge) based on auth state, challenge status, and resolved challenge id; prevents entering challenge screens when challengeId is unavailable.",
       "reqIds": [],
       "version": 1
     },
     {
       "id": "IF-24",
-      "title": "Developer diagnostics panel",
+      "title": "Standardized loading/error UI with error sanitization",
       "synonyms": [
-        "DevPanel",
-        "debug panel"
+        "QueryStateGate",
+        "sanitizeErrorMessage"
       ],
-      "description": "Displays authentication status and principal, provides login/logout controls, and includes a button to invalidate cached challenge status for quick state refresh during development.",
+      "description": "Reusable query boundary for loading/error states with retry actions; sanitizes a known bogus “Migrating…” message and maps common backend trap messages to user-friendly strings.",
       "reqIds": [],
       "version": 1
     },
     {
       "id": "IF-25",
-      "title": "Blob-storage maintenance/ops endpoints (gateway auth, dead blob pruning, cashier refill)",
+      "title": "Custom i18n context with language persistence and RTL support",
       "synonyms": [
-        "storage ops mixin",
-        "dead blob GC"
+        "I18nProvider",
+        "useTranslation"
       ],
-      "description": "Backend exposes maintenance APIs to update authorized gateway principals, list dead blobs for deletion, confirm/prune dead blobs with forced GC, check blob liveness, and refill a cashier canister with cycles (guarded by authorization and env configuration).",
+      "description": "Translation lookup via nested keys, language persistence in localStorage with validation against supported codes, and automatic updates to `document.dir` and `document.lang` for RTL/LTR rendering.",
       "reqIds": [],
       "version": 1
     },
     {
       "id": "IF-26",
-      "title": "URL parameter utilities for secure secret handling (hash → sessionStorage)",
+      "title": "Language switcher dropdown",
       "synonyms": [
-        "getSecretParameter",
-        "URL/session param persistence"
+        "LanguageSwitcher",
+        "locale picker"
       ],
-      "description": "Provides utilities to read URL params from query or hash, persist them to sessionStorage, and specifically read secrets from the hash (then clear them from the URL) to reduce leakage (used for admin token bootstrap).",
+      "description": "Dropdown menu listing available languages with direction-aware alignment and visual selection state; updates the i18n context language.",
       "reqIds": [],
       "version": 1
     },
     {
-      "id": "feature-finish-step-6-by-implementing-the-in-active-challenge-manage-challenge-screen-to-match-the-uploaded-reference-screenshot-1-1-title-subtitle-spacing-card-styling-icons-and-layout-including-a-a-top-left-close-x-affordance-b-a-participants-card-with-a-refresh-button-and-an-empty-state-message-when-there-are-no-participants-and-c-a-destructive-styled-leave-challenge-card-with-a-prominent-full-width-leave-challenge-button",
-      "title": "Finish Step 6 by implementing the in-active-challenge Manage Challenge screen to match the uploaded reference screenshot 1:1 (title, subtitle, spacing, card styling, icons, and layout), including: (a) a top-left close (X) affordance, (b) a Participants card with a refresh button and an empty-state message when there are no participants, and (c) a destructive-styled Leave Challenge card with a prominent full-width Leave Challenge button.",
+      "id": "IF-27",
+      "title": "Landing/onboarding screen and informational dialogs",
+      "synonyms": [
+        "Screen1Placeholder",
+        "InfoPopups"
+      ],
+      "description": "Logged-out landing screen with translated app intro, feature highlights, info dialogs explaining the method/challenge, and authentication CTA within the app shell.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-28",
+      "title": "Developer diagnostics panel",
+      "synonyms": [
+        "DevPanel",
+        "debug panel"
+      ],
+      "description": "Displays authentication status and principal and provides quick actions for login/logout and invalidating cached user challenge status to support development/testing.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-29",
+      "title": "Blob-storage operational endpoints mixin",
+      "synonyms": [
+        "_caffeineStorage* APIs",
+        "storage ops"
+      ],
+      "description": "Exposes canister operational endpoints for gateway principal refresh, dead blob discovery/pruning (with forced GC), blob liveness checks, and cashier refill with cycles based on env configuration.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "feature-add-a-prominent-in-recording-focus-ui-in-screen-6-my-tab-that-becomes-visible-while-the-user-is-actively-recording-an-assignment-showing-1-a-live-animated-waveform-or-level-meter-driven-by-microphone-input-2-a-clear-rec-state-indicator-3-an-elapsed-timer-and-4-short-reassuring-microcopy-that-confirms-recording-is-working",
+      "title": "Add a prominent in-recording focus UI in Screen 6 (My tab) that becomes visible while the user is actively recording an assignment, showing (1) a live animated waveform or level meter driven by microphone input, (2) a clear REC state indicator, (3) an elapsed timer, and (4) short reassuring microcopy that confirms recording is working.",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
     },
     {
-      "id": "feature-ensure-step-6-has-the-same-popup-behavior-as-screens-1-3-by-rendering-the-existing-two-scrollable-info-dialogs-social-contemplation-about-the-challenge-on-the-step-6-manage-challenge-screen-using-the-shared-infopopups-component",
-      "title": "Ensure Step 6 has the same popup behavior as Screens 1 & 3 by rendering the existing two scrollable info dialogs (Social Contemplation + About the Challenge) on the Step 6 Manage Challenge screen using the shared InfoPopups component.",
+      "id": "feature-extend-the-existing-useaudiorecording-hook-to-expose-the-minimal-additional-state-needed-for-live-feedback-e-g-current-input-level-and-elapsed-recording-seconds-using-the-web-audio-api-analysernode-while-recording-and-ensure-all-media-resources-tracks-audio-context-analyser-are-cleaned-up-on-stop-and-on-component-unmount",
+      "title": "Extend the existing `useAudioRecording` hook to expose the minimal additional state needed for live feedback (e.g., current input level and elapsed recording seconds) using the Web Audio API (AnalyserNode) while recording, and ensure all media resources (tracks/audio context/analyser) are cleaned up on stop and on component unmount.",
       "reqIds": [
         "REQ-2"
       ],
       "version": 1
     },
     {
-      "id": "feature-correct-state-based-routing-so-that-when-a-user-is-authenticated-and-has-an-active-challenge-the-app-routes-to-step-6-manage-challenge-as-the-default-screen-and-provides-a-clear-navigation-path-from-step-6-to-step-7-the-in-challenge-tabs-experience-and-back",
-      "title": "Correct state-based routing so that when a user is authenticated and has an active challenge, the app routes to Step 6 (Manage Challenge) as the default screen, and provides a clear navigation path from Step 6 to Step 7 (the in-challenge tabs experience) and back.",
+      "id": "feature-integrate-the-new-recording-feedback-ui-into-the-existing-screen-6-recording-flow-so-that-it-is-tied-to-the-currently-recording-assignment-using-the-existing-recordingassignment-state-does-not-interfere-with-saving-upload-behavior-and-does-not-require-any-backend-changes",
+      "title": "Integrate the new recording feedback UI into the existing Screen 6 recording flow so that it is tied to the currently-recording assignment (using the existing `recordingAssignment` state), does not interfere with saving/upload behavior, and does not require any backend changes.",
       "reqIds": [
         "REQ-3"
       ],
       "version": 1
     },
     {
-      "id": "feature-build-finish-step-7-by-completing-the-screen-6-in-challenge-structure-as-a-clean-tabbed-shell-with-exactly-three-tabs-my-team-coming-soon-and-styling-consistent-with-screens-1-3-5-typography-card-treatment-spacing-and-header-style",
-      "title": "Build/finish Step 7 by completing the Screen 6 in-challenge structure as a clean tabbed shell with exactly three tabs (My / Team / Coming Soon) and styling consistent with Screens 1/3/5 (typography, card treatment, spacing, and header style).",
+      "id": "feature-move-any-new-user-facing-strings-introduced-by-the-recording-feedback-ui-e-g-recording-speak-naturally-tap-stop-when-done-into-the-i18n-translation-system-and-ensure-english-text-is-present-for-all-newly-referenced-keys",
+      "title": "Move any new user-facing strings introduced by the recording feedback UI (e.g., 'Recording…', 'Speak naturally', 'Tap Stop when done') into the i18n translation system and ensure English text is present for all newly referenced keys.",
       "reqIds": [
         "REQ-4"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-remove-disable-the-erroneous-recurring-ui-message-migrating-your-project-to-the-new-structure-hold-tight-this-is-a-one-time-operation-so-it-never-appears-during-normal-app-usage-replace-any-occurrences-that-might-surface-via-error-rendering-with-a-generic-user-friendly-error-message-instead",
-      "title": "Remove/disable the erroneous recurring UI message “Migrating your project to the new structure. Hold tight — this is a one-time operation.” so it never appears during normal app usage. Replace any occurrences that might surface via error rendering with a generic, user-friendly error message instead.",
-      "reqIds": [
-        "REQ-5"
       ],
       "version": 1
     }
@@ -334,58 +361,87 @@
   "new_feature_requests": [
     {
       "id": "AR-1",
-      "summary": "Finish Step 6: finalize Screen 5 (in-challenge / manage challenge) to match design 1:1, ensure routing (logged in + in challenge → Screen 5), and ensure same popup behavior as Screens 1 & 3.",
+      "summary": "Add clear in-recording feedback UI (e.g., visible waveform/level meter + recording indicator) so users can tell audio recording is active and working",
       "reqIds": [],
       "status": "pending"
     },
     {
       "id": "AR-2",
-      "summary": "Build/finish Step 7: implement Screen 6 structure shell with three tabs (My / Team / Coming Soon) and styling consistent with Screens 1/3/5 (structure-only for this step).",
+      "summary": "Improve in-recording feedback during audio capture: provide live animated waveform/level-meter plus an emotionally reassuring recording state (e.g., REC/timer/confirming copy), presented as a larger focus component while recording so users clearly see it’s working",
       "reqIds": [],
       "status": "pending"
     },
     {
       "id": "AR-3",
-      "summary": "Remove/disable the erroneous recurring UI message “Migrating your project to the new structure. Hold tight — this is a one-time operation.” so it no longer appears during normal use/builds.",
+      "summary": "Implement strict challenge rule enforcement: date-only start date adjustable until end of Day 1 of originally chosen start date; after Day 1 no joins (invites disabled); creator can remove participants and permanently delete challenge; participants can always leave",
       "reqIds": [],
-      "status": "pending"
+      "status": "in_progress"
+    },
+    {
+      "id": "AR-4",
+      "summary": "Create/Manage Challenge (Screen 4) UI: date-only picker, explicit generate/list/copy single-use invitation codes + shareable invitation links, participant list visibility, and navigation via an Edit action",
+      "reqIds": [],
+      "status": "in_progress"
+    },
+    {
+      "id": "AR-5",
+      "summary": "Expand i18n to a standard list of 10 most common languages + Dutch, seeded with high-quality machine translations, with full RTL support",
+      "reqIds": [],
+      "status": "in_progress"
+    },
+    {
+      "id": "AR-6",
+      "summary": "Screen 6: hard-limit journey to 7 days across My/Team, improve day selector UI (no calendar icon; all 7 days visible; compact numeric-only day buttons with separate 'Day' label)",
+      "reqIds": [],
+      "status": "in_progress"
+    },
+    {
+      "id": "AR-7",
+      "summary": "Screen 6: enforce 5 fixed assignments per day (Awareness/Utopia/Small steps/Support strategies/Other contemplations) with per-assignment text popup plus record/play/delete controls; persist audio per participant×day×assignment and allow all participants to listen to all recordings in Team view",
+      "reqIds": [],
+      "status": "in_progress"
+    },
+    {
+      "id": "AR-8",
+      "summary": "Screen 6: replace tab text labels (My/Team/Coming Soon) with icon-only tabs (single person / multiple people / chat) while keeping behavior unchanged and using a consistent icon set; keep active-state highlight subtle",
+      "reqIds": [],
+      "status": "in_progress"
     }
   ],
   "architectural_notes": [
-    "Backend is a single Motoko canister actor composed via `include` mixins (authorization/RBAC + blob-storage maintenance endpoints).",
-    "RBAC is bootstrapped by comparing a caller-provided secret against the server-side env var `CAFFEINE_ADMIN_TOKEN`; first matching caller becomes admin; other registered callers become users.",
-    "Backend uses in-memory `Map`/`Set` structures for profiles, challenges, creator→challenge mapping, invitation codes, and nested recording maps (participant → day → assignment → blob).",
-    "Frontend actor creation is centralized in `useActor`; actor is recreated on identity changes and triggers broad React Query cache invalidation/refetch for non-actor keys.",
-    "TanStack React Query is the primary client data layer; mutations explicitly invalidate targeted query keys for consistency (status, participants, invitation codes, recordings).",
-    "Navigation is state-based (not URL router driven): the app chooses screens based on authentication status and `getUserChallengeStatus()`; Screen 4 is an overlay-like management screen reachable from other states.",
-    "Challenge context recovery uses sessionStorage to persist last-known `challengeId` so the in-challenge UI can reload after refresh (especially for non-creators who can’t derive it from creator mapping).",
-    "Audio capture uses the browser `MediaRecorder` API, stores `audio/webm`, converts it into an ICP `ExternalBlob`, and uses blob direct URLs for playback.",
-    "UI is Tailwind + shadcn/ui components; layout is a centered phone-like card (`AppShell`) with a direction-aware language switcher placement.",
-    "Error handling includes a reusable `QueryStateGate` boundary and ad-hoc sanitization to suppress a specific “Migrating your project…” message.",
-    "Challenge start date is adjustable by the creator only until the end of Day 1 of the originally selected start date; after that, the start date is locked and no new participants may join (invite codes become non-redeemable).",
-    "Screen 6 day range is hard-limited to 7 days (Day 1–Day 7) consistently in both My and Team; day selector UI is designed to show all 7 days without horizontal scrolling (numeric-only buttons with a separate 'Day' label).",
-    "The app uses a fixed set of 5 assignments for every day for every participant (Awareness, Utopia, Small steps, Support strategies, Other contemplations) with per-assignment text popups and per-assignment record/play/delete controls; recordings are stored per participant × day × assignment and shared within the challenge (Team tab).",
-    "i18n scope expanded to multiple seeded locales with RTL support (e.g., Arabic) in addition to English, with all UI strings (including popups) wired through i18n."
+    "Backend is a single Motoko actor composed via mixins (authorization + blob-storage operational endpoints) with a placeholder migration entrypoint.",
+    "Backend data is stored in-memory using `Map`/`Set` structures; updates are typically done by cloning and re‑adding updated records (persistent data structure style).",
+    "Role-based access control (RBAC) is centralized in `authorization/access-control.mo` and exposed via a mixin; initialization is driven by an env-provided admin token and a user-provided secret.",
+    "Frontend creates an identity-bound canister actor via a React Query-cached hook (`useActor`) keyed by principal; when the actor changes, all non-actor queries are invalidated/refetched.",
+    "Frontend data access is centralized in TanStack React Query hooks with explicit query keys, `enabled` gating based on auth/actor readiness, and targeted cache invalidation after mutations.",
+    "Navigation is state-based in `App.tsx` (no URL router): the active screen is derived from authentication + `getUserChallengeStatus()` + resolved challenge context, with safety gating to avoid entering in-challenge screens without a valid challengeId.",
+    "Challenge context recovery uses multi-source resolution: backend lookup (creator and participant) plus a sessionStorage fallback for last-known `challengeId`.",
+    "Audio capture uses the browser `MediaRecorder` API; audio is stored as `audio/webm` and uploaded as an `ExternalBlob` to the canister, then played back via `ExternalBlob.getDirectURL()`.",
+    "UI is built with Tailwind CSS + shadcn/ui primitives and lucide-react icons; the app is presented in a centered, mobile-sized card shell.",
+    "Custom i18n is implemented via a React Context that persists language selection to localStorage and updates `document.dir` / `document.lang` for RTL/LTR rendering.",
+    "Challenge start is date-only (no start time); day headers should show day number + weekday + calendar date derived from start date.",
+    "Start date is editable by creator only until the end of Day 1 of the originally chosen start date; after that the start date is locked and invitation redemption is disabled (no joins after Day 1).",
+    "Challenge creator acts as admin for that challenge: can remove participants and permanently delete the challenge (including recordings); any participant can always leave.",
+    "Invitation links are derived from single-use invitation codes; codes/links are only redeemable before Day 1 ends and are removed/invalidated after redemption."
   ],
   "known_issues": [
-    "Duplicate hook name: `useUserChallengeStatus` exists in both `frontend/src/hooks/useQueries.ts` and `frontend/src/hooks/useUserChallengeStatus.ts`, increasing the chance of inconsistent imports/behavior.",
-    "i18n is effectively English-only at runtime: `translations` only defines `en`, but the language switcher lists many languages; selecting another language makes `t()` fall back to returning keys (missing translations).",
-    "`frontend/src/i18n/locales/en.json` and `frontend/src/i18n/locales/es.json` are empty; there is partially-migrated/placeholder i18n scaffolding (`frontend/src/i18n/index.ts` and `frontend/src/i18n/i18n.ts` are empty).",
-    "Two Tailwind CSS entry files exist (`frontend/index.css` and `frontend/src/index.css`) with different token sets; this can cause theme drift/confusion over the canonical stylesheet.",
-    "`buildInvitationLink()` uses only `window.location.origin` and does not preserve sub-path deployments (links may be wrong when hosted under a non-root base path).",
-    "Invitation code generation uses `Math.random()` (not cryptographically secure).",
-    "Challenge creation UI constructs start time using local time (`new Date('${YYYY-MM-DD}T00:00:00')`), which can shift intended start times across time zones.",
-    "Backend authorization initialization traps if `CAFFEINE_ADMIN_TOKEN` is not set; missing env configuration breaks authenticated flows.",
-    "Blob-storage env var appears misspelled as `CAFFFEINE_STORAGE_CASHIER_PRINCIPAL` (triple “F”), making configuration error-prone.",
-    "Backend allows creator to call `leaveChallenge` without clearing `creatorToChallengeId`, potentially leaving a stale creator→challenge mapping if the creator leaves their own challenge.",
-    "Backend does not validate recording `day` bounds or `assignment` keys; clients can write arbitrary days/assignment strings.",
-    "`Challenge.isActive` exists in backend state but is not used for any logic (activeness is effectively inferred from participant membership).",
-    "Frontend contains hardcoded sanitization of the message “Migrating your project to the new structure...” in multiple places, indicating a workaround rather than a true migration-status mechanism.",
-    "Erroneous status message “Migrating your project to the new structure. Hold tight — this is a one-time operation.” repeatedly appears despite no real migration running; should be removed or only shown when an actual migration is occurring."
+    "Backend state is not stored in stable variables; canister upgrades/reinstalls will lose profiles, challenges, invitation codes, and recordings.",
+    "`_initializeAccessControlWithSecret` traps if `CAFFEINE_ADMIN_TOKEN` is not set, which can prevent authenticated actor initialization in misconfigured deployments.",
+    "Blob storage env var is spelled `CAFFFEINE_STORAGE_CASHIER_PRINCIPAL` (triple “F”), which is error-prone and easy to misconfigure.",
+    "`_caffeineStorageUpdateGatewayPrincipals` has no caller authorization check; any caller can trigger a refresh of authorized gateway principals.",
+    "Frontend invitation code generation uses `Math.random()` and is not cryptographically secure.",
+    "Challenge start time is built from a local `YYYY-MM-DDT00:00:00` string; semantics can vary across user time zones, and day headers may differ for participants in different locales/time zones.",
+    "`formatDayHeader` always formats using the hard-coded `en-US` locale rather than the currently selected app language.",
+    "Backend recording APIs do not validate day bounds (1–7) or restrict assignment IDs; arbitrary `day`/`assignment` values can be stored.",
+    "Duplicate hook name exists (`useUserChallengeStatus`) in both `frontend/src/hooks/useQueries.ts` and `frontend/src/hooks/useUserChallengeStatus.ts`, increasing the risk of inconsistent imports.",
+    "Two Tailwind entry CSS files exist (`frontend/index.css` and `frontend/src/index.css`) with different token sets; build entry uses `src/index.css`, but duplication is confusing and can cause inconsistencies if the entrypoint changes.",
+    "i18n language list includes many languages, but `translations.ts` currently defines only `en`; selecting other languages will mostly return untranslated keys. `frontend/src/i18n/locales/en.json` and `es.json` are empty placeholders and appear unused.",
+    "UI repeatedly shows the status message “Migrating your project to the new structure. Hold tight — this is a one-time operation.” even when no migration is running (misleading/ghost message).",
+    "i18n regression observed where non-English languages display translation keys and RTL rendering breaks; needs stabilization to ensure all configured locales render real strings and correct dir/layout."
   ],
-  "isFixRequest": false,
+  "isFixRequest": true,
   "gameProjectType": "none",
   "projectName": "Social Contemplation",
-  "clarification_mode": "instant",
+  "clarification_mode": "pro",
   "clarification_rounds": 0
 }

@@ -10,12 +10,14 @@ import { Screen3Placeholder } from './screens/Screen3Placeholder';
 import { Screen4Placeholder } from './screens/Screen4Placeholder';
 import { Screen5ManageChallenge } from './screens/Screen5ManageChallenge';
 import { Screen6InChallenge } from './screens/Screen6InChallenge';
+import { useResolvedActiveChallengeId } from './hooks/useQueries';
 
 type AppScreen = 'screen1' | 'screen3' | 'screen4' | 'screen5' | 'screen6';
 
 function AppContent() {
   const { isAuthenticated } = useAuthPrincipal();
   const userStatusQuery = useUserChallengeStatus();
+  const resolvedChallengeId = useResolvedActiveChallengeId();
   const [currentScreen, setCurrentScreen] = useState<AppScreen>('screen1');
 
   // Show loading/error states while resolving auth and user state
@@ -33,9 +35,11 @@ function AppContent() {
     <AppShell>
       <QueryStateGate query={userStatusQuery}>
         {(userStatus) => {
-          // Determine the base screen based on challenge status
+          // Determine the base screen based on challenge status and resolved ID
           let baseScreen: AppScreen = 'screen3';
-          if (userStatus && userStatus.hasActiveChallenge) {
+          
+          // Only route to Screen 5/6 if we have both hasActiveChallenge AND a valid challengeId
+          if (userStatus && userStatus.hasActiveChallenge && resolvedChallengeId !== null) {
             baseScreen = 'screen5'; // Default to Manage Challenge (Step 6)
           }
 
@@ -65,6 +69,7 @@ function AppContent() {
               {effectiveScreen === 'screen3' && (
                 <Screen3Placeholder 
                   onNavigateToScreen4={handleNavigateToScreen4}
+                  hasInconsistentState={userStatus?.hasActiveChallenge === true && resolvedChallengeId === null}
                 />
               )}
               {effectiveScreen === 'screen4' && (

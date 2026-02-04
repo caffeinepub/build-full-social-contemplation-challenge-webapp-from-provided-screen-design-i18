@@ -5,20 +5,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Settings, Mic, Play, Trash2, Loader2, Users, Info, Square } from 'lucide-react';
+import { Badge } from '../components/ui/badge';
+import { Settings, Mic, Play, Trash2, Loader2, Users, Info, Square, User, MessageCircle, CheckCircle2 } from 'lucide-react';
 import { 
-  useGetActiveChallengeIdForCreator, 
+  useResolvedActiveChallengeId,
   useGetAllChallengeParticipantProfiles,
   useSaveRecording,
   useGetRecording,
   useDeleteRecording,
-  useGetParticipantRecording
+  useGetParticipantRecording,
+  useGetChallengeStartTime
 } from '../hooks/useQueries';
-import { getPersistedActiveChallengeId } from '../utils/challengeContext';
 import { useAudioRecording } from '../hooks/useAudioRecording';
+import { RecordingFeedback } from '../components/RecordingFeedback';
 import { ExternalBlob } from '../backend';
 import { FIXED_ASSIGNMENTS, clampDay } from '../utils/assignments';
 import { sanitizeErrorMessage } from '../utils/sanitizeErrorMessage';
+import { formatDayHeader } from '../utils/challengeDayFormat';
 import type { Principal } from '@icp-sdk/core/principal';
 
 interface Screen6InChallengeProps {
@@ -42,16 +45,17 @@ export function Screen6InChallenge({ onNavigateToManage }: Screen6InChallengePro
   const [playingAssignment, setPlayingAssignment] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Get challenge ID
-  const activeChallengeQuery = useGetActiveChallengeIdForCreator();
-  const persistedChallengeId = getPersistedActiveChallengeId();
-  const challengeId = activeChallengeQuery.data ?? persistedChallengeId;
+  // Get challenge ID using unified resolver
+  const challengeId = useResolvedActiveChallengeId();
+
+  // Fetch challenge start time
+  const startTimeQuery = useGetChallengeStartTime(challengeId);
 
   // Fetch participant profiles
-  const participantProfilesQuery = useGetAllChallengeParticipantProfiles(challengeId ?? null);
+  const participantProfilesQuery = useGetAllChallengeParticipantProfiles(challengeId);
 
-  // Audio recording hook
-  const { startRecording, stopRecording, clearRecording, recordedBlob, isRecording, error: recordingError } = useAudioRecording();
+  // Audio recording hook with live feedback
+  const { startRecording, stopRecording, clearRecording, recordedBlob, isRecording, error: recordingError, audioLevel, elapsedSeconds } = useAudioRecording();
 
   // Mutations
   const saveRecordingMutation = useSaveRecording();
@@ -168,6 +172,10 @@ export function Screen6InChallenge({ onNavigateToManage }: Screen6InChallengePro
 
   const participantProfiles = participantProfilesQuery.data || [];
 
+  // Format day header with weekday and date
+  const dayHeader = formatDayHeader(startTimeQuery.data, selectedDay);
+  const participantDayHeader = formatDayHeader(startTimeQuery.data, selectedParticipantDay);
+
   return (
     <div className="flex flex-col min-h-[600px]">
       {/* Header Section */}
@@ -196,13 +204,27 @@ export function Screen6InChallenge({ onNavigateToManage }: Screen6InChallengePro
       <div className="flex-1 px-6 py-8">
         <Tabs defaultValue="my" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="my">{t('screen6.tabs.my')}</TabsTrigger>
-            <TabsTrigger value="team">{t('screen6.tabs.team')}</TabsTrigger>
-            <TabsTrigger value="coming">{t('screen6.tabs.coming')}</TabsTrigger>
+            <TabsTrigger value="my" aria-label="My">
+              <User className="w-5 h-5" />
+              <span className="sr-only">My</span>
+            </TabsTrigger>
+            <TabsTrigger value="team" aria-label="Team">
+              <Users className="w-5 h-5" />
+              <span className="sr-only">Team</span>
+            </TabsTrigger>
+            <TabsTrigger value="coming" aria-label="Coming Soon">
+              <MessageCircle className="w-5 h-5" />
+              <span className="sr-only">Coming Soon</span>
+            </TabsTrigger>
           </TabsList>
 
           {/* My Tab */}
           <TabsContent value="my" className="space-y-4 mt-6">
+            {/* Day Header with weekday and date */}
+            <div className={`text-center ${isRTL ? 'text-right' : ''}`}>
+              <h2 className="text-lg font-semibold">{dayHeader}</h2>
+            </div>
+
             {/* Day Selector - Separate label with numeric-only buttons */}
             <div className="space-y-2">
               <p className={`text-sm font-medium ${isRTL ? 'text-right' : 'text-left'}`}>
@@ -236,6 +258,8 @@ export function Screen6InChallenge({ onNavigateToManage }: Screen6InChallengePro
                   playingAssignment={playingAssignment}
                   isRecording={isRecording}
                   recordingError={recordingError}
+                  audioLevel={audioLevel}
+                  elapsedSeconds={elapsedSeconds}
                   onStartRecording={handleStartRecording}
                   onStopRecording={handleStopRecording}
                   onPlayRecording={handlePlayRecording}
@@ -304,6 +328,11 @@ export function Screen6InChallenge({ onNavigateToManage }: Screen6InChallengePro
                   <CardDescription>{t('screen6.team.recordingsDescription')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Day Header with weekday and date */}
+                  <div className={`text-center ${isRTL ? 'text-right' : ''}`}>
+                    <h3 className="text-base font-semibold">{participantDayHeader}</h3>
+                  </div>
+
                   {/* Day Selector for Team - Separate label with numeric-only buttons */}
                   <div className="space-y-2">
                     <p className={`text-sm font-medium ${isRTL ? 'text-right' : 'text-left'}`}>
@@ -391,6 +420,8 @@ interface AssignmentCardProps {
   playingAssignment: string | null;
   isRecording: boolean;
   recordingError: string | null;
+  audioLevel: number;
+  elapsedSeconds: number;
   onStartRecording: (assignmentId: string) => void;
   onStopRecording: () => void;
   onPlayRecording: (blob: ExternalBlob, assignmentId: string) => void;
@@ -408,6 +439,8 @@ function AssignmentCard({
   playingAssignment,
   isRecording,
   recordingError,
+  audioLevel,
+  elapsedSeconds,
   onStartRecording,
   onStopRecording,
   onPlayRecording,
@@ -430,7 +463,15 @@ function AssignmentCard({
     <Card>
       <CardHeader className="pb-3">
         <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
-          <CardTitle className="text-base">{assignment.title}</CardTitle>
+          <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <CardTitle className="text-base">{assignment.title}</CardTitle>
+            {hasRecording && (
+              <Badge variant="default" className="flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3" />
+                <span className="text-xs">Recorded</span>
+              </Badge>
+            )}
+          </div>
           <Dialog>
             <DialogTrigger asChild>
               <Button variant="ghost" size="sm">
@@ -453,6 +494,15 @@ function AssignmentCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
+        {/* Recording Feedback - Large, prominent component when recording */}
+        {isThisAssignmentRecording && (
+          <RecordingFeedback
+            audioLevel={audioLevel}
+            elapsedSeconds={elapsedSeconds}
+            isVisible={isThisAssignmentRecording}
+          />
+        )}
+
         {/* Recording Controls */}
         <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
           {!isThisAssignmentRecording ? (
@@ -461,7 +511,7 @@ function AssignmentCard({
               size="sm"
               variant="outline"
               className="flex-1"
-              disabled={isRecording || isSaving}
+              disabled={isRecording || isSaving || hasRecording}
             >
               <Mic className={`w-4 h-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
               {t('screen6.my.record')}
@@ -513,6 +563,11 @@ function AssignmentCard({
         {recordingError && isThisAssignmentRecording && (
           <p className="text-xs text-destructive">{sanitizeErrorMessage(recordingError)}</p>
         )}
+        {hasRecording && !isThisAssignmentRecording && !isSaving && (
+          <p className="text-xs text-muted-foreground">
+            You must delete this recording before recording again.
+          </p>
+        )}
         {!hasRecording && !isThisAssignmentRecording && !isSaving && (
           <p className="text-xs text-muted-foreground">{t('screen6.my.noRecording')}</p>
         )}
@@ -552,7 +607,14 @@ function ParticipantAssignmentCard({
     <div
       className={`flex items-center justify-between p-3 rounded-md bg-muted/30 ${isRTL ? 'flex-row-reverse' : ''}`}
     >
-      <span className="text-sm font-medium">{assignment.title}</span>
+      <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <span className="text-sm font-medium">{assignment.title}</span>
+        {hasRecording && (
+          <Badge variant="outline" className="flex items-center gap-1">
+            <CheckCircle2 className="w-3 h-3" />
+          </Badge>
+        )}
+      </div>
       <Button
         onClick={() => recordingQuery.data && onPlayRecording(recordingQuery.data, `${participant.toString()}-${assignment.id}`)}
         size="sm"

@@ -8,7 +8,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ArrowLeft, Calendar, Plus, Copy, Check, Loader2, Users, RefreshCw, X, Link as LinkIcon, Trash2, UserX } from 'lucide-react';
 import { 
   useCreateChallenge, 
-  useGetActiveChallengeIdForCreator,
+  useResolvedActiveChallengeId,
   useGenerateInvitationCode,
   useGetAvailableInvitationCodes,
   useGetChallengeParticipants,
@@ -16,13 +16,14 @@ import {
   useLeaveChallenge,
   useDeleteChallenge,
   useRemoveParticipant,
-  useGetAllChallengeParticipantProfiles
+  useGetAllChallengeParticipantProfiles,
+  useGetActiveChallengeIdForCreator
 } from '../hooks/useQueries';
 import { generateInvitationCode } from '../utils/invitationCodes';
 import { buildInvitationLink } from '../utils/invitationLinks';
-import { getPersistedActiveChallengeId } from '../utils/challengeContext';
 import { useAuthPrincipal } from '../hooks/useAuthPrincipal';
 import { Principal } from '@icp-sdk/core/principal';
+import { sanitizeErrorMessage } from '../utils/sanitizeErrorMessage';
 
 interface Screen4PlaceholderProps {
   onNavigateBack?: () => void;
@@ -41,23 +42,12 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
 
   // Queries and mutations
   const createChallengeMutation = useCreateChallenge();
-  const activeChallengeQuery = useGetActiveChallengeIdForCreator();
+  const creatorChallengeQuery = useGetActiveChallengeIdForCreator();
+  const managedChallengeId = useResolvedActiveChallengeId();
   const generateCodeMutation = useGenerateInvitationCode();
   const leaveMutation = useLeaveChallenge();
   const deleteMutation = useDeleteChallenge();
   const removeParticipantMutation = useRemoveParticipant();
-
-  // Resolve challenge ID: creator's active challenge or persisted ID
-  const creatorChallengeId = activeChallengeQuery.data;
-  const persistedChallengeId = getPersistedActiveChallengeId();
-  
-  // Normalize to strict bigint | null (no undefined)
-  const managedChallengeId: bigint | null = 
-    (creatorChallengeId !== null && creatorChallengeId !== undefined) 
-      ? creatorChallengeId 
-      : (persistedChallengeId !== null && persistedChallengeId !== undefined)
-        ? persistedChallengeId
-        : null;
 
   const invitationCodesQuery = useGetAvailableInvitationCodes(managedChallengeId);
   const participantsQuery = useGetChallengeParticipants(managedChallengeId);
@@ -65,7 +55,7 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
   const allParticipantProfilesQuery = useGetAllChallengeParticipantProfiles(managedChallengeId);
 
   // Determine if user is the creator
-  const isCreator = creatorChallengeId !== null && creatorChallengeId !== undefined;
+  const isCreator = creatorChallengeQuery.data !== null && creatorChallengeQuery.data !== undefined;
   const isChallengeManaged = managedChallengeId !== null;
 
   // Set default date to tomorrow
@@ -253,7 +243,7 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
                 {/* Error Message */}
                 {createChallengeMutation.isError && (
                   <div className={`p-3 rounded-md bg-destructive/10 text-destructive text-sm ${isRTL ? 'text-right' : ''}`}>
-                    {t('screen4.form.error')}
+                    {sanitizeErrorMessage(createChallengeMutation.error)}
                   </div>
                 )}
 
@@ -324,7 +314,7 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
                   {/* Error Message */}
                   {generateCodeMutation.isError && (
                     <div className={`mb-4 p-3 rounded-md bg-destructive/10 text-destructive text-sm ${isRTL ? 'text-right' : ''}`}>
-                      {t('screen4.codes.error')}
+                      {sanitizeErrorMessage(generateCodeMutation.error)}
                     </div>
                   )}
 
@@ -524,7 +514,7 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
                 <CardContent>
                   {deleteMutation.isError && (
                     <div className={`mb-4 p-3 rounded-md bg-destructive/10 text-destructive text-sm ${isRTL ? 'text-right' : ''}`}>
-                      {t('screen4.delete.error')}
+                      {sanitizeErrorMessage(deleteMutation.error)}
                     </div>
                   )}
                   <AlertDialog>
@@ -583,7 +573,7 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
                 <CardContent>
                   {leaveMutation.isError && (
                     <div className={`mb-4 p-3 rounded-md bg-destructive/10 text-destructive text-sm ${isRTL ? 'text-right' : ''}`}>
-                      {t('screen4.leave.error')}
+                      {sanitizeErrorMessage(leaveMutation.error)}
                     </div>
                   )}
                   <Button

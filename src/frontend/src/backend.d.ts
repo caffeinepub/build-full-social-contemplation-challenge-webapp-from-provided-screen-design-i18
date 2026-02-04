@@ -33,6 +33,7 @@ export interface backendInterface {
     deleteRecording(challengeId: bigint, day: bigint, assignment: string): Promise<void>;
     generateInvitationCode(challengeId: bigint, code: string): Promise<void>;
     getActiveChallengeIdForCreator(): Promise<bigint | null>;
+    getActiveChallengeIdForParticipant(): Promise<bigint | null>;
     getAllChallengeParticipantProfiles(challengeId: bigint): Promise<Array<[Principal, UserProfile | null]>>;
     getAssignmentRecordings(challengeId: bigint, day: bigint, assignment: string): Promise<Array<[Principal, ExternalBlob | null]>>;
     getAvailableInvitationCodes(challengeId: bigint): Promise<Array<string>>;
@@ -40,6 +41,7 @@ export interface backendInterface {
     getCallerUserRole(): Promise<UserRole>;
     getChallengeAudioRecordings(challengeId: bigint): Promise<Array<Principal>>;
     getChallengeParticipants(challengeId: bigint): Promise<Array<Principal>>;
+    getChallengeStartTime(challengeId: bigint): Promise<Time>;
     getParticipantRecording(challengeId: bigint, participant: Principal, day: bigint, assignment: string): Promise<ExternalBlob>;
     getRecording(challengeId: bigint, day: bigint, assignment: string): Promise<ExternalBlob>;
     getUserChallengeStatus(): Promise<UserChallengeStatus>;
