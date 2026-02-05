@@ -11,7 +11,7 @@ export interface Assignment {
 
 /**
  * The 5 fixed assignments that appear every day.
- * Content transcribed from the provided screenshots.
+ * Content updated with new copy provided by the user.
  */
 export const FIXED_ASSIGNMENTS: Assignment[] = [
   {
@@ -24,7 +24,7 @@ Step 2: Reflect, Compare, and Record
 Make a short audio recording (1–3 minutes) in which you reflect on what you noticed. Compare your current screen behavior with your goals or intended behavior. Where do they align? Where do they differ? Describe your observations, feelings, and any surprises. Upload your recording in this step.
 
 Step 3: Review and Deepen
-During your contemplation ritual, repeat this exercise. Listen to your previous recordings and, if relevant, to those of others. Then make a new recording, reflecting on any changes or new insights. This iterative process helps deepen your awareness and understanding over time.`,
+During your contemplation ritual, repeat this exercise. Listen to your previous recordings and to those of others. Then make a new recording, reflecting on any changes or new insights. This iterative process helps deepen your awareness and understanding over time.`,
   },
   {
     id: 'utopia',
@@ -42,7 +42,7 @@ Listen back to your recording during your contemplation ritual. Let this vision 
     id: 'small-steps',
     title: 'Small Steps',
     content: `Step 1: Assess Your Current State
-Look at your current drawing of your screen habits. Give yourself a rating from 0 to 10 that reflects how satisfied you are with your current screen behavior.
+Think of your current screen habits. Give yourself a rating from 0 to 10 that reflects how satisfied you are with your current screen behavior.
 
 Step 2: Reflect and Record
 Make a short audio recording (1–3 minutes) in which you reflect on how you could increase this rating by just a small step. For example, if you rate yourself a 5, what would a 5.5 or 6 look like in practice? Focus on small, realistic changes rather than big transformations.
@@ -54,9 +54,7 @@ Listen back to your recording during your contemplation ritual. Let these small 
     id: 'support-strategies',
     title: 'Support Strategies',
     content: `Step 1: Identify Support Strategies
-Support strategies are small changes to your environment that make your desired screen behavior easier and more natural.
-
-Instead of relying on willpower, you design your physical, social, and digital surroundings to support you.
+Support strategies are small changes to your environment that make your desired screen behavior easier and more natural. Instead of relying on willpower, you design your physical, social, and digital surroundings to support you.
 
 Reflect on moments when you automatically reach for your screen — where could your environment help you act differently?
 

@@ -2,12 +2,12 @@ import { createContext, useContext, useEffect, type ReactNode } from 'react';
 import { translations } from './translations';
 
 interface I18nContextType {
-  t: (key: string) => string;
+  t: <T = string>(key: string) => T;
 }
 
 const I18nContext = createContext<I18nContextType | undefined>(undefined);
 
-function getNestedValue(obj: any, path: string): string {
+function getNestedValue(obj: any, path: string): any {
   const keys = path.split('.');
   let result = obj;
   
@@ -19,7 +19,7 @@ function getNestedValue(obj: any, path: string): string {
     }
   }
   
-  return typeof result === 'string' ? result : path;
+  return result;
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
@@ -29,8 +29,9 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     document.documentElement.dir = 'ltr';
   }, []);
 
-  const t = (key: string): string => {
-    return getNestedValue(translations.en, key);
+  const t = <T = string,>(key: string): T => {
+    const value = getNestedValue(translations.en, key);
+    return value as T;
   };
 
   return (

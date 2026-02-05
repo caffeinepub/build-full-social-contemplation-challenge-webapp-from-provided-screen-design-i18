@@ -1,70 +1,73 @@
 {
   "kind": "build_request",
-  "title": "Fix recording upload failures by aligning assignment IDs and day indexing (frontend 1–7 vs backend 0–6)",
+  "title": "Replace assignment + info popup copy and bold headings within the new text blocks",
   "priority": "normal",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Update the backend recording validation to recognize the frontend assignment IDs (at minimum: \"awareness\" and \"utopia\", plus the other fixed assignments currently used by the frontend) so that recording save/get/delete operations no longer trap with \"Invalid assignment: awareness\".",
-      "target": "backend",
+      "text": "Replace the instructional text for the 5 fixed daily assignments (Awareness, Utopia, Small Steps, Support Strategies, Other Contemplations) with the exact new English copy provided by the user, fully replacing the existing assignment copy used in the in-challenge assignment detail popups.",
+      "target": "frontend",
       "source": {
         "messageIds": [
           "msg-1"
         ],
         "quotes": [
-          "bij  assignment-ID awareness bij de oefening awareness, maar kan ook bij andere assignments zoals utopia."
+          "ze zijn volledig te vervangen.",
+          "Hier zijn alle teksten opnieuw. ... Daarom moeten de nieuwe teksten erin."
         ]
       },
       "acceptanceCriteria": [
-        "Backend methods that validate assignment IDs for recordings accept the frontend assignment IDs used in frontend/src/utils/assignments.ts (including \"awareness\" and \"utopia\").",
-        "Uploading a recording for assignmentId \"awareness\" no longer traps with \"Invalid assignment: awareness\"."
+        "Opening any assignment detail popup in the in-challenge screen shows the updated copy exactly matching the user-provided text for that assignment (including punctuation and the 1–3 minutes range).",
+        "The Small Steps Step 1 text reads: \"Think of your current screen habits. Give yourself a rating from 0 to 10 that reflects how satisfied you are with your current screen behavior.\" (not the previous \"drawing\" wording).",
+        "The Awareness Step 3 paragraph includes: \"Listen to your previous recordings and to those of others.\" (not \"and, if relevant, to those of others\")."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Fix the day-index mismatch end-to-end so the app can use Day 1–7 in the UI while the backend can safely store/validate against its Day 0–6 model; ensure all recording-related operations (save/get/delete/getParticipantRecording/getAssignmentRecordings) consistently use the same normalized day index.",
-      "target": "both",
+      "text": "Update the assignment detail popup rendering so that within these assignment text blocks, the subheadings are bold: specifically, each \"Step 1:\", \"Step 2:\", and \"Step 3:\" line label must be rendered in bold while the step body text remains normal weight.",
+      "target": "frontend",
       "source": {
         "messageIds": [
           "msg-1"
         ],
         "quotes": [
-          "neem de  tegelijk de dag‑mismatch (frontend 1–7 vs backend 0–6) mee"
+          "Ik wil dat de titels van de teksten en de tussenkopjes bold zijn.",
+          "Alleen in de nieuwe tekstblokken."
         ]
       },
       "acceptanceCriteria": [
-        "The UI continues to display and allow selecting days 1 through 7.",
-        "Recording upload for Day 1 succeeds (backend receives/stores it under day 0 or otherwise validates without trapping).",
-        "Recording upload for Day 7 succeeds (backend validates without trapping and stores under the correct final-day index).",
-        "Fetching/playing and deleting recordings uses the same day normalization as saving, so a saved recording is retrievable and deletable from the same Day/Assignment selection."
+        "In each assignment detail popup, the text \"Step 1: ...\", \"Step 2: ...\", and \"Step 3: ...\" headings are visually bold.",
+        "Only the new assignment detail text blocks are affected; no global typography change is introduced for other screens/components."
       ]
     },
     {
       "id": "REQ-3",
-      "text": "Make the backend tolerant to both legacy and current client inputs by normalizing (a) day values and (b) assignment IDs at the backend boundary before validation/storage, to reduce the risk of future mismatches causing traps.",
-      "target": "backend",
+      "text": "Replace the content of the two info popups (Social Contemplation and About the challenge) with the exact new English copy provided by the user, fully replacing the existing popup copy, while keeping the existing popup structure (title/description + sectioned body).",
+      "target": "frontend",
       "source": {
         "messageIds": [
           "msg-1"
         ],
         "quotes": [
-          "bij  assignment-ID awareness bij de oefening awareness, maar kan ook bij andere assignments zoals utopia.",
-          "neem de  tegelijk de dag‑mismatch (frontend 1–7 vs backend 0–6) mee"
+          "ze zijn volledig te vervangen.",
+          "Social Contemplation ... About the challenge ... (full text provided)"
         ]
       },
       "acceptanceCriteria": [
-        "Backend recording methods accept day input in either 0–6 or 1–7 form and handle it deterministically (normalize to a single internal representation).",
-        "Backend assignment validation accepts the current frontend IDs without requiring frontend changes to assignment identifiers."
+        "The Social Contemplation info popup includes the user-provided sections: \"What is social contemplation\", \"Solution-focused psychology\", and \"Making meaning together\", with their provided paragraphs.",
+        "The About the challenge info popup includes the user-provided intro line \"Contemplate for about 15 to 30 minutes a day and let others inspire you\" plus Step 1/2/3 and Privacy & Security content exactly as provided, including the final sentence: \"If you end your participation in the challenge, all your data will be deleted\".",
+        "Popup section headings in these info popups render bold (consistent with existing section heading styling)."
       ]
     }
   ],
   "constraints": [
-    "Backend must remain a single-actor Motoko architecture with all logic in backend/main.mo.",
-    "Do not edit any frontend files under frontend/src/components/ui or any path listed in frontend.immutablePaths."
+    "Do not edit files under the immutable frontend paths listed in SYSTEM_CONTEXT.frontend.immutablePaths.",
+    "Keep the change scoped to the new text blocks only; do not introduce app-wide heading/font-weight changes."
   ],
   "nonGoals": [
-    "Do not introduce new assignments or change assignment content beyond fixing ID compatibility.",
-    "Do not redesign the UI/UX; only adjust logic needed to resolve assignment/day mismatches for recordings."
+    "No backend schema or Motoko canister logic changes.",
+    "No redesign of the popup system beyond updating copy and bolding headings/subheadings within the specified new text blocks.",
+    "No language-switching or i18n feature expansion as part of this request."
   ],
   "imageRequirements": {
     "required": [],

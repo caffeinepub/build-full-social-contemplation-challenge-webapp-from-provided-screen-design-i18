@@ -1,11 +1,11 @@
 # Specification
 
 ## Summary
-**Goal:** Fix recording upload/save/get/delete failures by making backend recording logic compatible with the frontend’s assignment IDs and day selection (UI Day 1–7 vs backend Day 0–6).
+**Goal:** Update in-app assignment and info popup copy with the user-provided English text, and bold the specified headings within those new text blocks.
 
 **Planned changes:**
-- Update backend recording assignment validation to accept the frontend assignment IDs used by the app (including at least `awareness` and `utopia`, plus other fixed frontend assignment IDs), preventing “Invalid assignment” traps.
-- Normalize day input at the backend boundary so recording operations accept both 0–6 and 1–7 day values and convert to one consistent internal representation.
-- Ensure all recording-related backend operations (save/get/delete/getParticipantRecording/getAssignmentRecordings) apply the same day and assignment normalization so saved recordings can be fetched/played and deleted using the same Day/Assignment selection.
+- Replace the instructional text for the 5 fixed daily assignments (Awareness, Utopia, Small Steps, Support Strategies, Other Contemplations) shown in the in-challenge assignment detail popups with the new provided English copy (full replacement).
+- Adjust assignment detail popup rendering so that the “Step 1:”, “Step 2:”, and “Step 3:” labels within the new assignment text blocks are bold, while the body text remains normal weight.
+- Replace the content of the two info popups (Social Contemplation and About the challenge) with the new provided English copy (full replacement), keeping the existing popup structure and bold section-heading styling.
 
-**User-visible outcome:** Users can upload recordings for any supported assignment (e.g., “awareness”, “utopia”) and for UI Days 1–7 without errors, and those recordings can be reliably retrieved/played and deleted from the same selections.
+**User-visible outcome:** Opening any assignment detail popup or the Social Contemplation / About the challenge info popups shows the updated English text, with step labels and section headings displayed in bold as specified.

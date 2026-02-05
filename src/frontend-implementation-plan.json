@@ -1,32 +1,57 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Normalize recording day index at frontend/backend boundary (UI Day 1–7 vs backend Day 0–6)",
+  "title": "Update assignment + info popup copy and bold step subheadings in assignment detail popups",
   "requirements": [
     {
-      "id": "REQ-2",
-      "summary": "Normalize day indexing for all recording save/get/delete flows so UI remains Day 1–7 while backend calls consistently use a single normalized day index.",
+      "id": "REQ-1",
+      "summary": "Replace the instructional text for the 5 fixed daily assignments in the in-challenge assignment detail popups with the user-provided new English copy.",
       "acceptanceCriteria": [
-        "The UI continues to display and allow selecting days 1 through 7.",
-        "Recording upload for Day 1 succeeds (backend receives/stores it under day 0 or otherwise validates without trapping).",
-        "Recording upload for Day 7 succeeds (backend validates without trapping and stores under the correct final-day index).",
-        "Fetching/playing and deleting recordings uses the same day normalization as saving, so a saved recording is retrievable and deletable from the same Day/Assignment selection."
+        "Opening any assignment detail popup in the in-challenge screen shows the updated copy exactly matching the user-provided text for that assignment (including punctuation and the 1–3 minutes range).",
+        "The Small Steps Step 1 text reads: \"Think of your current screen habits. Give yourself a rating from 0 to 10 that reflects how satisfied you are with your current screen behavior.\" (not the previous \"drawing\" wording).",
+        "The Awareness Step 3 paragraph includes: \"Listen to your previous recordings and to those of others.\" (not \"and, if relevant, to those of others\")."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/utils/recordingDayIndex.ts",
-          "operation": "create",
-          "description": "Add a small utility that converts UI day selection (1–7) to the backend day model (0–6) deterministically (and optionally supports pass-through when already normalized) for use by all recording-related backend calls."
-        },
-        {
-          "path": "frontend/src/hooks/useQueries.ts",
+          "path": "frontend/src/utils/assignments.ts",
           "operation": "modify",
-          "description": "Update all recording-related hooks (save/get/delete/getParticipantRecording/getAssignmentRecordings) to normalize the provided day value via frontend/src/utils/recordingDayIndex.ts before calling backend recording capabilities, and to use the normalized day value consistently in React Query keys/invalidation so save/get/delete align."
+          "description": "Fully replace the `content` strings for the 5 `FIXED_ASSIGNMENTS` (Awareness, Utopia, Small Steps, Support Strategies, Other Contemplations) with the exact new English copy provided by the user, ensuring the in-popup assignment details reflect the new text verbatim (including punctuation, line breaks, and the 1–3 minutes range)."
+        }
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "summary": "Render Step 1/2/3 subheading labels in bold within the new assignment detail text blocks, without changing typography globally.",
+      "acceptanceCriteria": [
+        "In each assignment detail popup, the text \"Step 1: ...\", \"Step 2: ...\", and \"Step 3: ...\" headings are visually bold.",
+        "Only the new assignment detail text blocks are affected; no global typography change is introduced for other screens/components."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/AssignmentDetailText.tsx",
+          "operation": "create",
+          "description": "Create a small, scoped renderer for assignment detail popup text that preserves existing whitespace/newlines while rendering only the step labels (\"Step 1:\", \"Step 2:\", \"Step 3:\") in bold and keeping the step body text normal weight."
         },
         {
           "path": "frontend/src/screens/Screen6InChallenge.tsx",
           "operation": "modify",
-          "description": "Ensure Screen6 continues to display/select days 1–7, while all recording interactions (upload, fetch/play, delete, participant recording fetches) pass the UI day to the updated hooks so normalization is applied consistently across My and Team tabs."
+          "description": "Update the assignment detail popup body rendering (currently a plain `whitespace-pre-wrap` block) to use the new `AssignmentDetailText` renderer so step labels are bolded only inside these assignment detail popups, without altering any global text styles."
+        }
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "summary": "Replace the Social Contemplation and About the challenge info popup content with the user-provided new English copy while keeping existing popup structure and bold section headings.",
+      "acceptanceCriteria": [
+        "The Social Contemplation info popup includes the user-provided sections: \"What is social contemplation\", \"Solution-focused psychology\", and \"Making meaning together\", with their provided paragraphs.",
+        "The About the challenge info popup includes the user-provided intro line \"Contemplate for about 15 to 30 minutes a day and let others inspire you\" plus Step 1/2/3 and Privacy & Security content exactly as provided, including the final sentence: \"If you end your participation in the challenge, all your data will be deleted\".",
+        "Popup section headings in these info popups render bold (consistent with existing section heading styling)."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/i18n/translations.ts",
+          "operation": "modify",
+          "description": "Fully replace the English copy for `infoPopups.socialContemplation` and `infoPopups.aboutChallenge` (trigger/title/description/sections) with the exact new English text provided by the user, preserving the current structure (title/description + sectioned body) and ensuring section headings match the specified headings verbatim."
         }
       ]
     }

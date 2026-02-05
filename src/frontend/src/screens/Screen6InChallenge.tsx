@@ -10,6 +10,7 @@ import { Progress } from '../components/ui/progress';
 import { Settings, Upload, Play, Trash2, Loader2, Users, Info, User, MessageCircle, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { AuthIconButton } from '../components/AuthIconButton';
+import { AssignmentDetailText } from '../components/AssignmentDetailText';
 import { 
   useGetUnifiedChallengeId,
   useGetAllChallengeParticipantProfiles,
@@ -657,9 +658,7 @@ function AssignmentCard({
               title={assignment.title}
               description={t('screen6.my.assignmentDescription')}
             >
-              <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                {assignment.content}
-              </div>
+              <AssignmentDetailText content={assignment.content} />
             </SharedPopup>
           </div>
 

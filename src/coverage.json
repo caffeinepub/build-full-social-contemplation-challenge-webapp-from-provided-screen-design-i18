@@ -1,55 +1,61 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-05T00:05:45.007Z",
+  "generatedAt": "2026-02-05T00:55:01.814Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
     "total": 3,
-    "implemented": 1,
+    "implemented": 3,
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Update the backend recording validation to recognize the frontend assignment IDs (at minimum: \"awareness\" and \"utopia\", plus the other fixed assignments currently used by the frontend) so that recording save/get/delete operations no longer trap with \"Invalid assignment: awareness\".",
-        "status": "unknown",
-        "plannedFiles": [],
-        "matchedFiles": []
+        "summary": "Replace the instructional text for the 5 fixed daily assignments (Awareness, Utopia, Small Steps, Support Strategies, Other Contemplations) with the exact new English copy provided by the user, fully replacing the existing assignment copy used in the in-challenge assignment detail popups.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/utils/assignments.ts"
+        ],
+        "matchedFiles": [
+          "frontend/src/utils/assignments.ts"
+        ]
       },
       {
         "id": "REQ-2",
-        "summary": "Fix the day-index mismatch end-to-end so the app can use Day 1–7 in the UI while the backend can safely store/validate against its Day 0–6 model; ensure all recording-related operations (save/get/delete/getParticipantRecording/getAssignmentRecordings) consistently use the same normalized day index.",
+        "summary": "Update the assignment detail popup rendering so that within these assignment text blocks, the subheadings are bold: specifically, each \"Step 1:\", \"Step 2:\", and \"Step 3:\" line label must be rendered in bold while the step body text remains normal weight.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/utils/recordingDayIndex.ts",
-          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/components/AssignmentDetailText.tsx",
           "frontend/src/screens/Screen6InChallenge.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/utils/recordingDayIndex.ts",
-          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/components/AssignmentDetailText.tsx",
           "frontend/src/screens/Screen6InChallenge.tsx"
         ]
       },
       {
         "id": "REQ-3",
-        "summary": "Make the backend tolerant to both legacy and current client inputs by normalizing (a) day values and (b) assignment IDs at the backend boundary before validation/storage, to reduce the risk of future mismatches causing traps.",
-        "status": "unknown",
-        "plannedFiles": [],
-        "matchedFiles": []
+        "summary": "Replace the content of the two info popups (Social Contemplation and About the challenge) with the exact new English copy provided by the user, fully replacing the existing popup copy, while keeping the existing popup structure (title/description + sectioned body).",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/i18n/translations.ts"
+        ],
+        "matchedFiles": [
+          "frontend/src/i18n/translations.ts"
+        ]
       }
     ]
   },
   "changedFiles": [
-    "backend/main.mo",
     "build-request.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/components/AssignmentDetailText.tsx",
+    "frontend/src/i18n/translations.ts",
     "frontend/src/screens/Screen6InChallenge.tsx",
-    "frontend/src/utils/recordingDayIndex.ts",
+    "frontend/src/utils/assignments.ts",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

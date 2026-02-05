@@ -1,44 +1,52 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-05T00:05:44.981Z",
-  "summary": "Diff shows partial progress toward aligning recording assignment IDs and day indexing: backend/main.mo adds a new validAssignments list including \"awareness\"/\"utopia\" and a legacy mapping, and frontend adds a day-index normalization utility and imports it in useQueries. However, the diff summary does not provide evidence that all recording-related backend entrypoints (save/get/delete/getParticipantRecording/getAssignmentRecordings) consistently normalize both day and assignment IDs at the boundary, so end-to-end consistency and backward tolerance cannot be fully verified from the provided excerpts.",
+  "generatedAt": "2026-02-05T00:55:01.769Z",
+  "summary": "Diff adds an AssignmentDetailText component to bold “Step X:” labels and updates FIXED_ASSIGNMENTS copy for several assignments. However, evidence for updating the two info popups and for fully updating all 5 assignment texts (and wiring the bold rendering into the actual popup) is incomplete or missing in the provided diff summary.",
   "missing_requirements": [
     {
+      "id": "REQ-1",
+      "requirement": "Replace the instructional text for all 5 fixed daily assignments (Awareness, Utopia, Small Steps, Support Strategies, Other Contemplations) with the exact new English copy provided by the user.",
+      "reason": "The diff shows updated content for Awareness, Utopia, Small Steps, and Support Strategies, but the `other-contemplations` assignment content is truncated and not shown, so full replacement for all 5 assignments cannot be verified from the provided diff summary.",
+      "evidence": [
+        "frontend/src/utils/assignments.ts (truncated at `id: 'other-contemplations'`)"
+      ]
+    },
+    {
       "id": "REQ-2",
-      "requirement": "Ensure all recording-related operations (save/get/delete/getParticipantRecording/getAssignmentRecordings) consistently use the same normalized day index end-to-end (UI 1–7, backend 0–6).",
-      "reason": "While a frontend normalization helper is added and imported into useQueries, the diff summary does not show actual usage across all recording operations, nor does it show backend-side normalization being applied consistently across all recording methods.",
+      "requirement": "Update the assignment detail popup rendering so that within these assignment text blocks, the “Step 1:”, “Step 2:”, and “Step 3:” labels are rendered in bold while the step body remains normal weight.",
+      "reason": "A new component exists to render bold step labels, and Screen6 imports it, but the diff excerpt does not show it being used in the assignment detail popup rendering (i.e., replacement of the prior rendering in the popup body). Therefore, the required UI behavior in the actual popup cannot be confirmed from the provided summary.",
       "evidence": [
-        "frontend/src/utils/recordingDayIndex.ts",
-        "frontend/src/hooks/useQueries.ts (truncated)",
-        "backend/main.mo (truncated)"
+        "frontend/src/components/AssignmentDetailText.tsx",
+        "frontend/src/screens/Screen6InChallenge.tsx (imports AssignmentDetailText; usage not shown due to truncation)"
       ]
     },
     {
       "id": "REQ-3",
-      "requirement": "Backend must accept day input in either 0–6 or 1–7 form and normalize deterministically at the backend boundary before validation/storage for all recording methods.",
-      "reason": "backend/main.mo excerpt shows assignment lists/mapping but does not show any normalizeDay logic or its application to all recording entrypoints; due to truncation, there is insufficient evidence that day normalization is implemented at the backend boundary.",
+      "requirement": "Replace the content of the two info popups (Social Contemplation and About the challenge) with the exact new English copy provided by the user, keeping the existing popup structure and bold section headings.",
+      "reason": "No diff evidence shows the Social Contemplation/About popups’ sectioned copy being replaced with the user-provided text. The modified `translations.ts` excerpt shown does not include the info popup content/sections, and `InfoPopups.tsx` is only mentioned in a separate file summary (not a diff).",
       "evidence": [
-        "backend/main.mo (truncated)"
-      ]
-    },
-    {
-      "id": "REQ-3",
-      "requirement": "Backend must normalize assignment IDs at the backend boundary to tolerate legacy/current client inputs before validation/storage (so frontend IDs work without frontend changes).",
-      "reason": "A legacy mapping is introduced, but the diff summary does not show it being applied inside save/get/delete/getParticipantRecording/getAssignmentRecordings prior to validation/storage; due to truncation, this cannot be confirmed.",
-      "evidence": [
-        "backend/main.mo (truncated)"
+        "frontend/src/i18n/translations.ts (truncated; no info popup section copy shown)",
+        "frontend-file-summaries.txt (mentions InfoPopups.tsx but does not show changes)"
       ]
     }
   ],
-  "hallucinated_features": [],
-  "confidence": 0.46,
+  "hallucinated_features": [
+    {
+      "description": "Unrequested changes/additions to general translation content and language-list commentary (including a “Plus: Dutch (nl) - requested addition” note and unrelated UI strings like a footer line).",
+      "reason": "The BuildRequest is narrowly scoped to updating assignment detail popup copy, bolding step labels within those blocks, and updating two specific info popups’ copy—explicitly stating no i18n expansion. The diff shows unrelated translation content/metadata changes in `translations.ts` beyond the specified popups/assignment blocks.",
+      "evidence": [
+        "frontend/src/i18n/translations.ts (commentary about top 10 languages + Dutch; unrelated strings such as footer text)"
+      ]
+    }
+  ],
+  "confidence": 0.56,
   "changed_files": [
-    "backend/main.mo",
     "frontend-file-summaries.txt",
-    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/components/AssignmentDetailText.tsx",
+    "frontend/src/i18n/translations.ts",
     "frontend/src/screens/Screen6InChallenge.tsx",
-    "frontend/src/utils/recordingDayIndex.ts",
+    "frontend/src/utils/assignments.ts",
     "project_state.json"
   ]
 }

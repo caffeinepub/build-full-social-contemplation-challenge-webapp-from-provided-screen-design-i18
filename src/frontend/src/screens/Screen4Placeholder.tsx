@@ -8,6 +8,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ArrowLeft, Calendar, Plus, Check, Loader2, Users, RefreshCw, X, Link as LinkIcon, Trash2, UserX } from 'lucide-react';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { AuthIconButton } from '../components/AuthIconButton';
+import { PopupBodySections, type Section } from '../components/PopupBodySections';
 import { 
   useCreateChallenge, 
   useGetUnifiedChallengeId,
@@ -513,8 +514,10 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
                               <AlertDialogContent>
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>{t('screen4.leave.title')}</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    {t('screen4.leave.description')}
+                                  <AlertDialogDescription asChild>
+                                    <div>
+                                      <PopupBodySections sections={t<Section[]>('screen4.leave.sections')} />
+                                    </div>
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
@@ -542,8 +545,10 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
                               <AlertDialogContent>
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>{t('screen4.remove.title')}</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    {t('screen4.remove.description')}
+                                  <AlertDialogDescription asChild>
+                                    <div>
+                                      <PopupBodySections sections={t<Section[]>('screen4.remove.sections')} />
+                                    </div>
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
@@ -607,8 +612,10 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>{t('screen4.delete.confirmTitle')}</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        {t('screen4.delete.confirmDescription')}
+                      <AlertDialogDescription asChild>
+                        <div>
+                          <PopupBodySections sections={t<Section[]>('screen4.delete.sections')} />
+                        </div>
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

@@ -2,12 +2,32 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-fix-the-day-index-mismatch-end-to-end-so-the-app-can-use-day-1-7-in-the-ui-while-the-backend-can-safely-store-validate-against-its-day-0-6-model-ensure-all-recording-related-operations-save-get-delete-getparticipantrecording-getassignmentrecordings-consistently-use-the-same-normalized-day-index",
-      "featureTitle": "Fix the day-index mismatch end-to-end so the app can use Day 1–7 in the UI while the backend can safely store/validate against its Day 0–6 model; ensure all recording-related operations (save/get/delete/getParticipantRecording/getAssignmentRecordings) consistently use the same normalized day index.",
+      "featureId": "feature-replace-the-instructional-text-for-the-5-fixed-daily-assignments-awareness-utopia-small-steps-support-strategies-other-contemplations-with-the-exact-new-english-copy-provided-by-the-user-fully-replacing-the-existing-assignment-copy-used-in-the-in-challenge-assignment-detail-popups",
+      "featureTitle": "Replace the instructional text for the 5 fixed daily assignments (Awareness, Utopia, Small Steps, Support Strategies, Other Contemplations) with the exact new English copy provided by the user, fully replacing the existing assignment copy used in the in-challenge assignment detail popups.",
       "files": [
-        "frontend/src/hooks/useQueries.ts",
-        "frontend/src/screens/Screen6InChallenge.tsx",
-        "frontend/src/utils/recordingDayIndex.ts"
+        "frontend/src/utils/assignments.ts"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0",
+        "invite-links@3.0.0"
+      ],
+      "testIds": [
+        "REQ-1"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-update-the-assignment-detail-popup-rendering-so-that-within-these-assignment-text-blocks-the-subheadings-are-bold-specifically-each-step-1-step-2-and-step-3-line-label-must-be-rendered-in-bold-while-the-step-body-text-remains-normal-weight",
+      "featureTitle": "Update the assignment detail popup rendering so that within these assignment text blocks, the subheadings are bold: specifically, each \"Step 1:\", \"Step 2:\", and \"Step 3:\" line label must be rendered in bold while the step body text remains normal weight.",
+      "files": [
+        "frontend/src/components/AssignmentDetailText.tsx",
+        "frontend/src/screens/Screen6InChallenge.tsx"
       ],
       "components": [
         "authorization@4.0.0",
@@ -21,6 +41,27 @@
       ],
       "testIds": [
         "REQ-2"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-replace-the-content-of-the-two-info-popups-social-contemplation-and-about-the-challenge-with-the-exact-new-english-copy-provided-by-the-user-fully-replacing-the-existing-popup-copy-while-keeping-the-existing-popup-structure-title-description-sectioned-body",
+      "featureTitle": "Replace the content of the two info popups (Social Contemplation and About the challenge) with the exact new English copy provided by the user, fully replacing the existing popup copy, while keeping the existing popup structure (title/description + sectioned body).",
+      "files": [
+        "frontend/src/i18n/translations.ts"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0",
+        "invite-links@3.0.0"
+      ],
+      "testIds": [
+        "REQ-3"
       ],
       "confidence": "high"
     }

@@ -1,4 +1,6 @@
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { useTranslation } from '../i18n/I18nContext';
+import { PopupBodySections, type Section } from './PopupBodySections';
 
 interface ChallengeDeletedNoticeProps {
   open: boolean;
@@ -10,18 +12,22 @@ interface ChallengeDeletedNoticeProps {
  * Informs the user that the challenge no longer exists and they have been disconnected.
  */
 export function ChallengeDeletedNotice({ open, onDismiss }: ChallengeDeletedNoticeProps) {
+  const { t } = useTranslation();
+
   return (
     <AlertDialog open={open}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Challenge Deleted</AlertDialogTitle>
-          <AlertDialogDescription>
-            The challenge you were participating in has been deleted by the creator. You are no longer connected to this challenge.
+          <AlertDialogTitle>{t('challengeDeleted.title')}</AlertDialogTitle>
+          <AlertDialogDescription asChild>
+            <div>
+              <PopupBodySections sections={t<Section[]>('challengeDeleted.sections')} />
+            </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogAction onClick={onDismiss}>
-            Continue
+            {t('challengeDeleted.button')}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
