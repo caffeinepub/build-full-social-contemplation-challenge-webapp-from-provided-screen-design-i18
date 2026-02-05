@@ -7,6 +7,7 @@ import { AppShell } from './components/AppShell';
 import { ProfileCompletionGate } from './components/ProfileCompletionGate';
 import { AutoInvitationRedeemGate } from './components/AutoInvitationRedeemGate';
 import { ChallengeDeletedNotice } from './components/ChallengeDeletedNotice';
+import { AppUpdatingNotice } from './components/AppUpdatingNotice';
 import { UnifiedEntryMenu } from './screens/UnifiedEntryMenu';
 import { Screen3Placeholder } from './screens/Screen3Placeholder';
 import { Screen4Placeholder } from './screens/Screen4Placeholder';
@@ -15,6 +16,7 @@ import { useGetUnifiedChallengeId } from './hooks/useQueries';
 import { readAppUrlState, writeAppUrlState } from './utils/appUrlState';
 import { parseInvitationFromURL, persistInvitationParams } from './utils/invitationLinks';
 import { hasChallengeDeletedNotice, clearChallengeDeletedNotice } from './utils/challengeDeletedNotice';
+import { useAppUpdateGuard } from './hooks/useAppUpdateGuard';
 
 type AppScreen = 'menu' | 'screen3' | 'screen4' | 'screen6';
 
@@ -25,6 +27,9 @@ function AppContent() {
   const [currentScreen, setCurrentScreen] = useState<AppScreen>('menu');
   const [isInitialized, setIsInitialized] = useState(false);
   const [showDeletedNotice, setShowDeletedNotice] = useState(false);
+  
+  // Check for app updates and force refresh if needed
+  const { isUpdating } = useAppUpdateGuard();
 
   // Persist invitation params before authentication if present
   useEffect(() => {
@@ -75,6 +80,11 @@ function AppContent() {
     // Ensure we're on the menu screen
     setCurrentScreen('menu');
   };
+
+  // Show updating notice if app is refreshing
+  if (isUpdating) {
+    return <AppUpdatingNotice />;
+  }
 
   // Show unified entry menu when not authenticated
   if (!isAuthenticated) {

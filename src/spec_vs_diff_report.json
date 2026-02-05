@@ -1,46 +1,42 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-05T03:19:00.291Z",
-  "summary": "REQ-2 appears to be addressed by adding a frontend hook that hides the specific migration banner text and wiring it into AppShell. REQ-1 is only partially evidenced: canonical assignment normalization is added on the frontend and there is a backend migration module that lowercases existing recording keys, but the diff summary does not show backend recording save/get/list/delete paths being updated to consistently canonicalize/validate assignment identifiers across all operations as required. The diff also introduces a new backend file/module despite constraints stating logic should remain in backend/main.mo and the backend must remain a single-actor canister with all logic in backend/main.mo.",
+  "generatedAt": "2026-02-05T15:01:21.660Z",
+  "summary": "Diff implements a shared cache-busted hard refresh utility, strengthens the version check with no-store + query-param cache busting, and adds loop protection plus mismatch diagnostics in the update guard. It also adds upload diagnostics (including app version + assignment) and error classification for invalid-assignment errors. However, the diff does not show implementation of a non-placeholder build-time app version meta tag / runtime version reader, nor does it clearly show the required user-facing invalid-assignment recovery UI with an in-app hard refresh action.",
   "missing_requirements": [
     {
       "id": "REQ-1",
-      "requirement": "Ensure assignment identifiers are consistently canonicalized across all recording operations (save, get, list/team fetch, delete) and cannot diverge between frontend and backend so audio uploads do not fail with \"Invalid assignment\" for the 5 daily assignments.",
-      "reason": "The diff shows a new frontend normalizer (trim+lowercase) and a backend migration that lowercases existing stored keys, but it does not show changes to the backend recording APIs (save/get/list/team/delete) to canonicalize incoming assignment IDs and use canonical IDs for lookups/validation. backend/main.mo is truncated and contains no visible recording-operation changes in the provided excerpt.",
+      "requirement": "Ensure every production build deploys a unique, non-placeholder app version identifier and that the running app can reliably read it at runtime (used for update detection and cache-busting).",
+      "reason": "The diff references getRunningAppVersion() and extractVersionFromHTML(), but does not show any change that injects a non-placeholder <meta name=\"app-version\"> into the rendered HTML or guarantees a unique build version per production deploy.",
       "evidence": [
-        "frontend/src/utils/recordingIds.ts",
-        "backend/migration.mo",
-        "backend/main.mo"
-      ]
-    }
-  ],
-  "hallucinated_features": [
-    {
-      "description": "Added a backend migration module (backend/migration.mo) and wired it into backend/main.mo via `(with migration = Migration.run)` to mutate/transform stored challenge recordings data by lowercasing assignment keys.",
-      "reason": "The BuildRequest asks to fix assignment identifier consistency to prevent \"Invalid assignment\" errors, but does not request adding a separate migration module/file. This also appears to conflict with stated constraints to keep all backend logic in backend/main.mo and remain a single-actor Motoko canister without splitting logic into additional backend files.",
-      "evidence": [
-        "backend/migration.mo",
-        "backend/main.mo"
+        "frontend/src/utils/versionCheck.ts",
+        "frontend/src/utils/recordingDiagnostics.ts",
+        "frontend/src/hooks/useQueries.ts (truncated)"
       ]
     },
     {
-      "description": "Implemented migration-banner removal by scanning and mutating the DOM (querySelectorAll('*') + MutationObserver) to hide any element containing the banner text.",
-      "reason": "REQ-2 requires stopping the erroneous banner from appearing, but does not specify DOM-level suppression; this is an extra implementation approach that could hide unrelated UI containing the same text and is not explicitly requested.",
+      "id": "REQ-3",
+      "requirement": "When a recording upload fails with a backend error indicating an invalid assignment, show a clear English recovery message and provide an in-app action to perform a hard refresh (cache-busted reload).",
+      "reason": "While invalid-assignment error detection (isInvalidAssignmentError) and a hard refresh utility (performHardRefresh) exist, the diff does not provide evidence of UI that (a) displays a clear English instruction to refresh and try again specifically on invalid-assignment upload errors, and (b) renders a button/link that triggers performHardRefresh(). The Screen6InChallenge file is truncated before any upload-error rendering can be confirmed.",
       "evidence": [
-        "frontend/src/hooks/useSuppressMigrationBanner.ts",
-        "frontend/src/components/AppShell.tsx"
+        "frontend/src/utils/hardRefresh.ts",
+        "frontend/src/utils/sanitizeErrorMessage.ts (truncated)",
+        "frontend/src/screens/Screen6InChallenge.tsx (truncated)",
+        "frontend/src/hooks/useQueries.ts (truncated)"
       ]
     }
   ],
+  "hallucinated_features": [],
   "confidence": 0.62,
   "changed_files": [
-    "backend/main.mo",
-    "backend/migration.mo",
     "frontend-file-summaries.txt",
-    "frontend/src/components/AppShell.tsx",
-    "frontend/src/hooks/useSuppressMigrationBanner.ts",
-    "frontend/src/utils/recordingIds.ts",
+    "frontend/src/hooks/useAppUpdateGuard.ts",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/screens/Screen6InChallenge.tsx",
+    "frontend/src/utils/hardRefresh.ts",
+    "frontend/src/utils/recordingDiagnostics.ts",
+    "frontend/src/utils/sanitizeErrorMessage.ts",
+    "frontend/src/utils/versionCheck.ts",
     "project_state.json"
   ]
 }

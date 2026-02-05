@@ -14,9 +14,10 @@ import Time "mo:core/Time";
 import Iter "mo:core/Iter";
 import Principal "mo:core/Principal";
 import Array "mo:core/Array";
-import Migration "migration";
+import Debug "mo:core/Debug";
 
-(with migration = Migration.run)
+
+
 actor {
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
@@ -67,13 +68,19 @@ actor {
 
   let userProfiles = Map.empty<Principal, UserProfile>();
 
-  let validAssignments = [
-    "awareness",
-    "utopia",
-    "small-steps",
-    "support-strategies",
-    "other-contemplations",
-  ];
+  // Set of valid assignments (including legacy variants from first deployment)
+  let validAssignments = Set.fromIter(
+    [
+      "awareness",
+      "utopia",
+      "small-steps",
+      "small_steps",
+      "support-strategies",
+      "support_strategies",
+      "other-contemplations",
+      "other_contemplations",
+    ].values()
+  );
 
   let maxNameLength = 30;
   let maxMessageLength = 250;
@@ -81,12 +88,12 @@ actor {
   let maxRSVPNameLength = 100;
 
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
-    validateUserRole(caller);
+    validateAuthenticatedUser(caller);
     userProfiles.get(caller);
   };
 
   public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
-    validateUserRole(caller);
+    validateAuthenticatedUser(caller);
 
     if (caller == user or AccessControl.isAdmin(accessControlState, caller)) {
       return userProfiles.get(user);
@@ -104,7 +111,7 @@ actor {
   };
 
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
-    validateUserRole(caller);
+    validateAuthenticatedUser(caller);
     if (profile.name.trim(#char ' ').size() == 0) {
       Runtime.trap("Profile name cannot be empty or whitespace only");
     };
@@ -115,23 +122,23 @@ actor {
   };
 
   public query ({ caller }) func getUserChallengeStatus() : async UserChallengeStatus {
-    validateUserRole(caller);
+    validateAuthenticatedUser(caller);
     let hasActiveChallenge = participantToChallengeId.containsKey(caller);
     { hasActiveChallenge };
   };
 
   public query ({ caller }) func getActiveChallengeIdForCreator() : async ?Nat {
-    validateUserRole(caller);
+    validateAuthenticatedUser(caller);
     creatorToChallengeId.get(caller);
   };
 
   public query ({ caller }) func getActiveChallengeIdForParticipant() : async ?Nat {
-    validateUserRole(caller);
+    validateAuthenticatedUser(caller);
     participantToChallengeId.get(caller);
   };
 
   public shared ({ caller }) func createChallenge(startTime : Time.Time) : async Nat {
-    validateUserRole(caller);
+    validateAuthenticatedUser(caller);
 
     if (participantToChallengeId.containsKey(caller)) {
       Runtime.trap("User already has an active challenge");
@@ -163,7 +170,7 @@ actor {
   };
 
   public shared ({ caller }) func generateInvitationCode(challengeId : Nat, code : Text) : async () {
-    validateUserRole(caller);
+    validateAuthenticatedUser(caller);
 
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
@@ -186,7 +193,7 @@ actor {
   };
 
   public shared ({ caller }) func redeemInvitationCode(challengeId : Nat, code : Text) : async () {
-    validateUserRole(caller);
+    validateAuthenticatedUser(caller);
     if (participantToChallengeId.containsKey(caller)) {
       Runtime.trap("User already has an active challenge");
     };
@@ -226,7 +233,7 @@ actor {
   };
 
   public shared ({ caller }) func updateStartTime(challengeId : Nat, newStartTime : Time.Time) : async () {
-    validateUserRole(caller);
+    validateAuthenticatedUser(caller);
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
       case (?challenge) {
@@ -245,7 +252,7 @@ actor {
   };
 
   public shared ({ caller }) func leaveChallenge(challengeId : Nat) : async () {
-    validateUserRole(caller);
+    validateAuthenticatedUser(caller);
 
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
@@ -277,7 +284,7 @@ actor {
   };
 
   public query ({ caller }) func getChallengeParticipants(challengeId : Nat) : async [Principal] {
-    validateUserRole(caller);
+    validateAuthenticatedUser(caller);
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
       case (?challenge) {
@@ -291,7 +298,7 @@ actor {
   };
 
   public query ({ caller }) func getAvailableInvitationCodes(challengeId : Nat) : async [Text] {
-    validateUserRole(caller);
+    validateAuthenticatedUser(caller);
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
       case (?challenge) {
@@ -314,7 +321,7 @@ actor {
   };
 
   public query ({ caller }) func getChallengeAudioRecordings(challengeId : Nat) : async [Principal] {
-    validateUserRole(caller);
+    validateAuthenticatedUser(caller);
 
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
@@ -330,7 +337,7 @@ actor {
   };
 
   public query ({ caller }) func getAllChallengeParticipantProfiles(challengeId : Nat) : async [(Principal, ?UserProfile)] {
-    validateUserRole(caller);
+    validateAuthenticatedUser(caller);
 
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
@@ -349,7 +356,7 @@ actor {
   };
 
   public shared ({ caller }) func deleteChallenge(challengeId : Nat) : async () {
-    validateUserRole(caller);
+    validateAuthenticatedUser(caller);
 
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
@@ -365,7 +372,7 @@ actor {
   };
 
   public shared ({ caller }) func removeParticipant(challengeId : Nat, participant : Principal) : async () {
-    validateUserRole(caller);
+    validateAuthenticatedUser(caller);
 
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
@@ -397,11 +404,13 @@ actor {
   };
 
   public shared ({ caller }) func saveRecording(challengeId : Nat, day : Nat, assignment : Text, recording : Storage.ExternalBlob) : async () {
-    validateUserRole(caller);
+    validateAuthenticatedUser(caller);
     checkDay(day);
 
     let canonicalAssignment = canonicalizeAssignment(assignment);
-    checkAssignment(canonicalAssignment);
+    validateAssignment(canonicalAssignment);
+
+    Debug.print("MC: saveRecording day=" # day.toText() # " assignment=" # assignment # " canonicalAssignment=" # canonicalAssignment);
 
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
@@ -446,9 +455,11 @@ actor {
     checkDay(day);
 
     let canonicalAssignment = canonicalizeAssignment(assignment);
-    checkAssignment(canonicalAssignment);
+    validateAssignment(canonicalAssignment);
 
-    validateUserRole(caller);
+    Debug.print("MC: getRecording day=" # day.toText() # " assignment=" # assignment # " canonicalAssignment=" # canonicalAssignment);
+
+    validateAuthenticatedUser(caller);
 
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
@@ -479,9 +490,11 @@ actor {
     checkDay(day);
 
     let canonicalAssignment = canonicalizeAssignment(assignment);
-    checkAssignment(canonicalAssignment);
+    validateAssignment(canonicalAssignment);
 
-    validateUserRole(caller);
+    Debug.print("MC: deleteRecording day=" # day.toText() # " assignment=" # assignment # " canonicalAssignment=" # canonicalAssignment);
+
+    validateAuthenticatedUser(caller);
 
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
@@ -523,9 +536,11 @@ actor {
     checkDay(day);
 
     let canonicalAssignment = canonicalizeAssignment(assignment);
-    checkAssignment(canonicalAssignment);
+    validateAssignment(canonicalAssignment);
 
-    validateUserRole(caller);
+    Debug.print("MC: getAssignmentRecordings day=" # day.toText() # " assignment=" # assignment # " canonicalAssignment=" # canonicalAssignment);
+
+    validateAuthenticatedUser(caller);
 
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
@@ -560,9 +575,11 @@ actor {
     checkDay(day);
 
     let canonicalAssignment = canonicalizeAssignment(assignment);
-    checkAssignment(canonicalAssignment);
+    validateAssignment(canonicalAssignment);
 
-    validateUserRole(caller);
+    Debug.print("MC: getParticipantRecording day=" # day.toText() # " assignment=" # assignment # " canonicalAssignment=" # canonicalAssignment);
+
+    validateAuthenticatedUser(caller);
 
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
@@ -590,7 +607,7 @@ actor {
   };
 
   public query ({ caller }) func getChallengeStartTime(challengeId : Nat) : async Time.Time {
-    validateUserRole(caller);
+    validateAuthenticatedUser(caller);
 
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
@@ -604,7 +621,7 @@ actor {
   };
 
   public shared query ({ caller }) func getMessage(challengeId : Nat, messageId : Nat) : async ChatMessage {
-    validateUserRole(caller);
+    validateAuthenticatedUser(caller);
 
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
@@ -626,7 +643,7 @@ actor {
   };
 
   public shared ({ caller }) func postMessage(challengeId : Nat, text : Text, replyTo : ?Nat) : async Nat {
-    validateUserRole(caller);
+    validateAuthenticatedUser(caller);
     validateMessageContent(text);
 
     switch (challenges.get(challengeId)) {
@@ -668,7 +685,7 @@ actor {
   };
 
   public shared ({ caller }) func editMessage(challengeId : Nat, messageId : Nat, newText : Text) : async () {
-    validateUserRole(caller);
+    validateAuthenticatedUser(caller);
     validateMessageContent(newText);
 
     switch (challenges.get(challengeId)) {
@@ -716,7 +733,7 @@ actor {
   };
 
   public shared query ({ caller }) func getMessages(challengeId : Nat) : async [ChatMessage] {
-    validateUserRole(caller);
+    validateAuthenticatedUser(caller);
 
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
@@ -732,7 +749,7 @@ actor {
   };
 
   public shared ({ caller }) func generateInviteCode() : async Text {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+    if (not (AccessControl.isAdmin(accessControlState, caller))) {
       Runtime.trap("Unauthorized: Only admins can generate invite codes");
     };
     let code = "dummy-invite-code";
@@ -754,22 +771,22 @@ actor {
   };
 
   public query ({ caller }) func getAllRSVPs() : async [InviteLinksModule.RSVP] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+    if (not (AccessControl.isAdmin(accessControlState, caller))) {
       Runtime.trap("Unauthorized: Only admins can view RSVPs");
     };
     InviteLinksModule.getAllRSVPs(inviteLinksState);
   };
 
   public query ({ caller }) func getInviteCodes() : async [InviteLinksModule.InviteCode] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+    if (not (AccessControl.isAdmin(accessControlState, caller))) {
       Runtime.trap("Unauthorized: Only admins can view invite codes");
     };
     InviteLinksModule.getInviteCodes(inviteLinksState);
   };
 
-  func validateUserRole(caller : Principal) {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can perform this action");
+  func validateAuthenticatedUser(caller : Principal) {
+    if (caller.isAnonymous()) {
+      Runtime.trap("Unauthorized: Authentication required");
     };
   };
 
@@ -779,13 +796,18 @@ actor {
     };
   };
 
-  func checkAssignment(assignment : Text) {
-    switch (validAssignments.find(func(a) { a == assignment })) {
-      case (null) {
-        Runtime.trap("Invalid assignment: " # assignment);
-      };
-      case (?_) {};
+  func validateAssignment(assignment : Text) {
+    if (not validAssignments.contains(assignment)) {
+      Debug.print(
+        "MobileCompanion: Assignment validation failed, rejected assignment=" # assignment #
+        " accepted assignments=" # validAssignments.toArray().toText()
+      );
+      Runtime.trap("Invalid assignment: " # assignment # " Please refresh the page and try again.");
     };
+  };
+
+  func canonicalizeAssignment(assignment : Text) : Text {
+    assignment.trim(#char ' ').toLower();
   };
 
   func validateMessageContent(text : Text) {
@@ -795,10 +817,6 @@ actor {
     if (text.size() > maxMessageLength) {
       Runtime.trap("Message cannot exceed " # maxMessageLength.toText() # " characters");
     };
-  };
-
-  func canonicalizeAssignment(assignment : Text) : Text {
-    assignment.toLower();
   };
 
   func removeParticipantsFromChallenge(challengeId : Nat, challenge : Challenge) {
@@ -815,3 +833,4 @@ actor {
     };
   };
 };
+

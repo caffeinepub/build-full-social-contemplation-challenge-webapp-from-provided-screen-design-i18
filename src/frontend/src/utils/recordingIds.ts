@@ -3,7 +3,7 @@
  * Ensures consistent day and assignment identifiers across all recording operations.
  * 
  * CRITICAL: Assignment IDs must exactly match backend's validAssignments array.
- * Backend canonicalizes by calling .toLower() on all assignment strings.
+ * Backend canonicalizes by calling .trim().toLower() on all assignment strings.
  */
 
 import { uiDayToBackendDay } from './recordingDayIndex';
@@ -12,10 +12,15 @@ import { uiDayToBackendDay } from './recordingDayIndex';
  * Canonical assignment IDs used by the backend.
  * These MUST match the validAssignments array in backend/main.mo exactly.
  * 
- * Backend validAssignments:
+ * Backend validAssignments (canonical IDs only):
  * ["awareness", "utopia", "small-steps", "support-strategies", "other-contemplations"]
  * 
- * Backend canonicalizes all assignments with .toLower()
+ * Backend canonicalizes all assignments with .trim().toLower()
+ * 
+ * IMPORTANT: Only these hyphenated IDs should be used in the frontend.
+ * Legacy underscore variants (small_steps, support_strategies, other_contemplations)
+ * are accepted by the backend for backward compatibility but should NOT be used
+ * in new code.
  */
 export const CANONICAL_ASSIGNMENT_IDS = [
   'awareness',
@@ -36,35 +41,35 @@ export function normalizeRecordingDay(uiDay: number): number {
 }
 
 /**
- * Normalize an assignment identifier to the canonical ID used by the backend.
- * Applies the same canonicalization as the backend: trim and lowercase.
+ * Validate that a value is a canonical assignment ID.
+ * Use this to ensure only valid IDs are passed to recording operations.
  * 
- * @param assignment - The assignment identifier to normalize
- * @returns The canonical assignment ID
- * @throws Error if the assignment ID is invalid after normalization
+ * @param assignment - The value to check
+ * @returns True if the value is a canonical assignment ID
  */
-export function normalizeAssignmentId(assignment: string): CanonicalAssignmentId {
-  // Apply backend's canonicalization: trim and lowercase
-  const normalized = assignment.trim().toLowerCase();
-  
-  // Check if it's a canonical ID after normalization
-  if (CANONICAL_ASSIGNMENT_IDS.includes(normalized as CanonicalAssignmentId)) {
-    return normalized as CanonicalAssignmentId;
-  }
-  
-  // Invalid assignment ID - provide clear error with valid options
-  throw new Error(
-    `Invalid assignment ID: "${assignment}" (normalized: "${normalized}"). Must be one of: ${CANONICAL_ASSIGNMENT_IDS.join(', ')}`
-  );
+export function isCanonicalAssignmentId(assignment: string): assignment is CanonicalAssignmentId {
+  return CANONICAL_ASSIGNMENT_IDS.includes(assignment as CanonicalAssignmentId);
 }
 
 /**
- * Validate that an assignment ID is canonical after normalization.
- * Returns true if the ID is in the canonical list after trim and lowercase.
+ * Assert that a value is a canonical assignment ID.
+ * Throws an error if the value is not canonical.
+ * 
+ * Development-time safety check to catch bugs before they reach the backend.
+ * 
+ * @param assignment - The value to check
+ * @param context - Optional context string for better error messages (e.g., "saveRecording", "deleteRecording")
+ * @returns The value as a CanonicalAssignmentId
+ * @throws Error if the value is not a canonical assignment ID
  */
-export function isCanonicalAssignmentId(assignment: string): assignment is CanonicalAssignmentId {
-  const normalized = assignment.trim().toLowerCase();
-  return CANONICAL_ASSIGNMENT_IDS.includes(normalized as CanonicalAssignmentId);
+export function assertCanonicalAssignmentId(assignment: string, context?: string): CanonicalAssignmentId {
+  if (!isCanonicalAssignmentId(assignment)) {
+    const contextStr = context ? ` (${context})` : '';
+    throw new Error(
+      `Invalid assignment ID${contextStr}: "${assignment}". Must be one of: ${CANONICAL_ASSIGNMENT_IDS.join(', ')}. Please refresh the page and try again.`
+    );
+  }
+  return assignment;
 }
 
 /**

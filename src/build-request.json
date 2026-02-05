@@ -1,57 +1,94 @@
 {
   "kind": "build_request",
-  "title": "Fix audio upload 'Invalid assignment' errors and remove erroneous migration banner",
+  "title": "Fix production stale-asset caching causing invalid assignment errors (hard cache-bust + forced refresh)",
   "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Fix the audio upload failures that show backend errors like \"Invalid assignment\" for the 5 daily assignments by ensuring assignment identifiers are consistently canonicalized across all recording operations (save, get, list/team fetch, delete) and cannot diverge between frontend and backend.",
-      "target": "both",
+      "text": "Ensure every production build deploys a unique, non-placeholder app version identifier and that the running app can reliably read it at runtime (used for update detection and cache-busting).",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-6",
-          "msg-8"
+          "msg-1",
+          "msg-2"
         ],
         "quotes": [
-          "Ik heb net alle bij  5 de assignments een audio fragment geprobeerd te uploaden, maar het is niet gelukt",
-          "fix maar"
+          "build",
+          "Nu heb ik dit weer"
         ]
       },
       "acceptanceCriteria": [
-        "Uploading an audio file succeeds for each of the 5 assignments (awareness, utopia, small-steps, support-strategies, other-contemplations) on any valid day (1–7 in UI).",
-        "After a successful upload, the recording is immediately visible in the \"My\" tab for that assignment/day and playable.",
-        "The same uploaded recordings are visible and playable in the \"Team\" tab for other participants when selected.",
-        "Deleting a recording succeeds for each of the 5 assignments and removes it from both \"My\" and \"Team\" views after refresh/refetch.",
-        "No backend error containing \"Invalid assignment\" occurs for the canonical assignment IDs used by the UI."
+        "The rendered HTML contains a non-placeholder value for <meta name=\"app-version\" ...> (not \"BUILD_VERSION_PLACEHOLDER\").",
+        "getRunningAppVersion() returns a non-null string in production builds.",
+        "After a new production deploy, the app-version value differs from the previous deploy."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Remove/stop the erroneous recurring UI status banner/message \"Migrating your project to the new structure. Hold tight — this is a one-time operation.\" so it does not appear during normal app usage when no migration is actually occurring.",
+      "text": "Harden the app’s forced-refresh mechanism so that when a version mismatch is detected, the app performs a one-time hard refresh that bypasses caches as aggressively as possible and avoids refresh loops.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-6"
+          "msg-1",
+          "msg-2"
         ],
         "quotes": [
-          "Remove/stop the erroneous recurring UI status banner/message: “Migrating your project to the new structure. Hold tight — this is a one-time operation.”"
+          "build",
+          "Nu heb ik dit weer"
         ]
       },
       "acceptanceCriteria": [
-        "The message \"Migrating your project to the new structure. Hold tight — this is a one-time operation.\" is not shown anywhere in the UI during normal navigation and use (including audio upload flows).",
-        "No other loading/error UI is removed or degraded; genuine loading states still display appropriate messages (e.g., \"Loading...\")."
+        "When shouldForceRefresh() detects runningVersion != latestVersion, the UI shows the existing updating overlay and then navigates to a URL with a cache-busting query param.",
+        "The forced refresh is only attempted once per session per running version (no infinite reload loops).",
+        "The version check request uses cache-busting (no-store + unique query param) and does not rely on any previously cached HTML."
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "text": "When a recording upload fails with a backend error indicating an invalid assignment (e.g., \"Invalid assignment: \\\"awareness\\\"\"), show a clear English user-facing recovery message and provide an in-app action to perform a hard refresh (cache-busted reload).",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-2"
+        ],
+        "quotes": [
+          "Nu heb ik dit weer"
+        ]
+      },
+      "acceptanceCriteria": [
+        "If the backend returns an error containing \"Invalid assignment\", the UI displays an English message instructing the user to refresh and try again.",
+        "The UI provides a button/link that triggers a cache-busted reload (similar to the update guard reload).",
+        "After using the in-app hard refresh action, a user on the latest deploy can upload using canonical assignment IDs without seeing the invalid-assignment error caused by stale frontend assets."
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "text": "Add lightweight diagnostics to help confirm stale-asset situations in production by logging the running app version and the latest fetched app version when a mismatch is detected, and logging the running app version when an invalid-assignment upload error occurs (no sensitive data).",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-2"
+        ],
+        "quotes": [
+          "Nu heb ik dit weer"
+        ]
+      },
+      "acceptanceCriteria": [
+        "On version mismatch detection, console logs include runningVersion and latestVersion.",
+        "On invalid-assignment upload errors, console logs include the running app version (if available) and the assignment value being attempted.",
+        "Logs do not include principals, tokens, invite codes, or raw recording blobs."
       ]
     }
   ],
   "constraints": [
-    "Backend must remain a single-actor Motoko canister; keep all logic in backend/main.mo.",
+    "Backend must remain a single Motoko actor in backend/main.mo (no additional backend services).",
     "Do not edit files under frontend/src/components/ui (compose them instead).",
-    "Do not edit immutable paths: frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, frontend/src/components/ui."
+    "Do not edit frontend immutable paths: frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, frontend/src/components/ui."
   ],
   "nonGoals": [
-    "Do not add new authentication providers beyond Internet Identity.",
-    "Do not introduce external databases or off-chain storage systems.",
-    "Do not redesign unrelated screens or change challenge/chat behavior beyond what is required to fix assignment identifier consistency and remove the erroneous migration banner."
+    "Changing the set of canonical assignment IDs or challenge content.",
+    "Adding third-party caching/CDN configuration outside the codebase.",
+    "Introducing service-worker-based offline caching."
   ],
   "imageRequirements": {
     "required": [],

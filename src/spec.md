@@ -1,11 +1,12 @@
 # Specification
 
 ## Summary
-**Goal:** Make audio uploads work reliably for all five daily assignments by preventing assignment ID mismatches, and remove the erroneous “Migrating your project…” banner from normal app usage.
+**Goal:** Fix production stale-asset caching that causes invalid assignment upload errors by ensuring unique build versioning, robust update detection, and a safe one-time hard refresh flow.
 
 **Planned changes:**
-- Canonicalize assignment identifiers end-to-end so the same canonical IDs are used in frontend and backend for all recording operations (save/upload, get, list incl. team fetch, delete) across the 5 assignments.
-- Update backend validation/handling to only accept the canonical assignment IDs used by the UI and eliminate “Invalid assignment” errors for valid uploads.
-- Remove/disable the recurring UI banner message “Migrating your project to the new structure. Hold tight — this is a one-time operation.” while preserving legitimate loading/error states.
+- Ensure each production build injects a unique, non-placeholder app version into the rendered HTML (e.g., via `<meta name="app-version" ...>`) and make it reliably readable at runtime for update detection.
+- Harden the version-mismatch forced-refresh flow to perform an aggressive, cache-busted one-time reload (including cache-busted version-check requests) while preventing refresh loops.
+- On upload failures where the backend error contains “Invalid assignment”, show a clear English recovery message and provide an in-app “hard refresh” action that triggers a cache-busted reload.
+- Add lightweight, non-sensitive diagnostics: log running app version and latest fetched app version on mismatch; log running app version (if available) and the attempted assignment value on invalid-assignment upload errors.
 
-**User-visible outcome:** Users can upload, see, play, and delete audio recordings for awareness, utopia, small-steps, support-strategies, and other-contemplations for any day (1–7). Recordings appear in “My” and are visible/playable in “Team” for others. The migration status banner no longer appears during normal use.
+**User-visible outcome:** After a new deploy, users reliably receive the latest frontend without getting stuck on stale cached assets; if a stale-asset “Invalid assignment” upload error occurs, the app clearly instructs the user and provides an in-app hard refresh button to recover.

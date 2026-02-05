@@ -39,6 +39,14 @@ export function isChallengeNotFoundError(error: unknown): boolean {
 }
 
 /**
+ * Check if an error is an invalid assignment error (stale frontend assets).
+ */
+export function isInvalidAssignmentError(error: unknown): boolean {
+  const message = extractErrorMessage(error).toLowerCase();
+  return message.includes('invalid assignment');
+}
+
+/**
  * Check if an error is related to invalid recording parameters.
  */
 export function isRecordingParameterError(error: unknown): boolean {
@@ -54,6 +62,13 @@ export function sanitizeErrorMessage(error: unknown): string {
   const rawMessage = extractErrorMessage(error);
   const lowerMessage = rawMessage.toLowerCase();
   
+  // Access control / permission errors (including CORS-like errors from failed bootstrap)
+  if (lowerMessage.includes('access control checks') || 
+      lowerMessage.includes('fetch api cannot load') ||
+      lowerMessage.includes('due to access control')) {
+    return 'You do not have permission to perform this action.';
+  }
+  
   // Challenge-related errors
   if (lowerMessage.includes('challenge not found')) {
     return 'Challenge not found. It may have been deleted.';
@@ -67,14 +82,14 @@ export function sanitizeErrorMessage(error: unknown): string {
     return 'You already have an active challenge.';
   }
   
-  // Recording-related errors
+  // Recording-related errors - invalid assignment (stale frontend)
   if (lowerMessage.includes('invalid assignment')) {
     // Extract the invalid assignment name if present
-    const match = rawMessage.match(/invalid assignment[:\s]+([a-z-]+)/i);
+    const match = rawMessage.match(/invalid assignment[:\s]+([a-z_-]+)/i);
     if (match) {
-      return `Invalid assignment: "${match[1]}". Please refresh the page and try again.`;
+      return `Invalid assignment: "${match[1]}". Your app may be out of date.`;
     }
-    return 'Invalid assignment. Please refresh the page and try again.';
+    return 'Invalid assignment. Your app may be out of date.';
   }
   
   if (lowerMessage.includes('invalid day')) {

@@ -1,53 +1,114 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Fix recording assignment ID canonicalization and suppress erroneous migration banner",
+  "title": "Fix stale-asset caching via deploy-unique app version + hardened forced refresh + invalid-assignment recovery",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Ensure assignment identifiers are consistently canonicalized across all recording operations to prevent upload/playback/list/delete mismatches that trigger backend “Invalid assignment” errors.",
+      "summary": "Embed a deploy-unique app version into production HTML and ensure runtime code can always read it.",
       "acceptanceCriteria": [
-        "Uploading an audio file succeeds for each of the 5 assignments (awareness, utopia, small-steps, support-strategies, other-contemplations) on any valid day (1–7 in UI).",
-        "After a successful upload, the recording is immediately visible in the \"My\" tab for that assignment/day and playable.",
-        "The same uploaded recordings are visible and playable in the \"Team\" tab for other participants when selected.",
-        "Deleting a recording succeeds for each of the 5 assignments and removes it from both \"My\" and \"Team\" views after refresh/refetch.",
-        "No backend error containing \"Invalid assignment\" occurs for the canonical assignment IDs used by the UI."
+        "The rendered HTML contains a non-placeholder value for <meta name=\"app-version\" ...> (not \"BUILD_VERSION_PLACEHOLDER\").",
+        "getRunningAppVersion() returns a non-null string in production builds.",
+        "After a new production deploy, the app-version value differs from the previous deploy."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/utils/recordingIds.ts",
+          "path": "frontend/index.html",
           "operation": "modify",
-          "description": "Harden assignment ID normalization so all recording operations use a single canonical form: trim, lowercase, and normalize common unicode dash variants and legacy separators (e.g., underscores/spaces) into the canonical IDs used by the UI. Add a safe normalization helper (e.g., tryNormalizeAssignmentId) to avoid runtime crashes and to make it impossible for non-canonical strings to reach recording calls."
+          "description": "Replace the static BUILD_VERSION_PLACEHOLDER meta tag content with a build-time injected value (e.g., Vite/templating env substitution) so every production build renders a unique app-version in HTML."
         },
         {
-          "path": "frontend/src/hooks/useQueries.ts",
+          "path": "frontend/src/utils/appVersion.ts",
           "operation": "modify",
-          "description": "Ensure save/get/list(team fetch)/delete recording query hooks consistently derive the assignment argument and query keys from the same canonicalization utility (from recordingIds.ts). Where assignment normalization could fail, prevent the query/mutation from calling the backend and surface a controlled, user-safe error instead of throwing during render."
-        },
-        {
-          "path": "frontend/src/screens/Screen6InChallenge.tsx",
-          "operation": "modify",
-          "description": "Plumb canonical assignment IDs through all recording-related UI actions (upload, play, delete, team playback) by typing assignment IDs to the canonical union type and normalizing any external inputs before invoking recording hooks. Ensure internal state keys (uploadStates, playingAssignment identifiers) cannot diverge from the canonical ID representation."
+          "description": "Harden getRunningAppVersion() to support reading the injected production version reliably (trim/validate), and add a small fallback strategy (e.g., alternate meta attribute or injected global) while still rejecting placeholders."
         }
       ]
     },
     {
       "id": "REQ-2",
-      "summary": "Remove/suppress the erroneous recurring migration status banner so it never appears during normal app usage while preserving genuine loading UI.",
+      "summary": "Make version-mismatch forced refresh aggressively bypass caches while preventing reload loops.",
       "acceptanceCriteria": [
-        "The message \"Migrating your project to the new structure. Hold tight — this is a one-time operation.\" is not shown anywhere in the UI during normal navigation and use (including audio upload flows).",
-        "No other loading/error UI is removed or degraded; genuine loading states still display appropriate messages (e.g., \"Loading...\")."
+        "When shouldForceRefresh() detects runningVersion != latestVersion, the UI shows the existing updating overlay and then navigates to a URL with a cache-busting query param.",
+        "The forced refresh is only attempted once per session per running version (no infinite reload loops).",
+        "The version check request uses cache-busting (no-store + unique query param) and does not rely on any previously cached HTML."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/hooks/useSuppressMigrationBanner.ts",
-          "operation": "create",
-          "description": "Create a small client-side suppression hook that, on mount, scans the DOM for elements containing the exact migration banner text and removes/hides them, and also installs a MutationObserver to catch and suppress re-insertions without impacting other UI."
+          "path": "frontend/src/utils/versionCheck.ts",
+          "operation": "modify",
+          "description": "Change version checking to return structured diagnostics (runningVersion/latestVersion/needsRefresh) and ensure the latest-version fetch uses aggressive cache-busting (no-store + unique query param) and avoids relying on cached HTML."
         },
         {
-          "path": "frontend/src/components/AppShell.tsx",
+          "path": "frontend/src/utils/hardRefresh.ts",
+          "operation": "create",
+          "description": "Add a shared hard-refresh helper that performs a cache-busted navigation (unique query param, preserves existing URL state) using a method that minimizes back-button and caching issues (e.g., location.replace) and supports loop-protection keys."
+        },
+        {
+          "path": "frontend/src/hooks/useAppUpdateGuard.ts",
           "operation": "modify",
-          "description": "Wire the suppression hook (useSuppressMigrationBanner) into the top-level shell so it runs across all screens and navigation states, while leaving existing app loading/error components untouched."
+          "description": "Use the structured version-check result to: (1) log runningVersion/latestVersion when mismatch is detected, (2) show the existing AppUpdatingNotice overlay, (3) trigger a one-time per-session-per-running-version hard refresh via the shared hardRefresh helper, and (4) add extra loop protection (e.g., detect prior cache-bust param or session flag) to prevent repeated reloads."
+        },
+        {
+          "path": "frontend/src/App.tsx",
+          "operation": "modify",
+          "description": "Ensure the updating overlay is shown during the mismatch-triggered refresh flow (continue using AppUpdatingNotice) and that any new guard state returned by useAppUpdateGuard is properly respected in the app controller."
+        }
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "summary": "On invalid-assignment upload backend errors, show a clear recovery message and provide an in-app hard refresh action.",
+      "acceptanceCriteria": [
+        "If the backend returns an error containing \"Invalid assignment\", the UI displays an English message instructing the user to refresh and try again.",
+        "The UI provides a button/link that triggers a cache-busted reload (similar to the update guard reload).",
+        "After using the in-app hard refresh action, a user on the latest deploy can upload using canonical assignment IDs without seeing the invalid-assignment error caused by stale frontend assets."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/utils/sanitizeErrorMessage.ts",
+          "operation": "modify",
+          "description": "Adjust invalid-assignment user-facing copy to be explicitly recovery-oriented in English (stale app/assets) while keeping it sanitized and non-sensitive."
+        },
+        {
+          "path": "frontend/src/screens/Screen6InChallenge.tsx",
+          "operation": "modify",
+          "description": "When an upload error is an invalid-assignment case, render an explicit recovery UI next to the error (English message + a \"Hard refresh\" action) that calls the shared hardRefresh helper to perform a cache-busted reload."
+        },
+        {
+          "path": "frontend/src/utils/hardRefresh.ts",
+          "operation": "modify",
+          "description": "Expose a simple API for in-app hard refresh actions (reused by update guard and upload error recovery) ensuring consistent cache-busting and loop protection."
+        }
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "summary": "Add production-safe diagnostics for stale-asset scenarios (version mismatch and invalid-assignment upload errors).",
+      "acceptanceCriteria": [
+        "On version mismatch detection, console logs include runningVersion and latestVersion.",
+        "On invalid-assignment upload errors, console logs include the running app version (if available) and the assignment value being attempted.",
+        "Logs do not include principals, tokens, invite codes, or raw recording blobs."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/utils/versionCheck.ts",
+          "operation": "modify",
+          "description": "Ensure mismatch diagnostics (runningVersion/latestVersion) are available to callers so they can be logged exactly when a mismatch is detected."
+        },
+        {
+          "path": "frontend/src/hooks/useAppUpdateGuard.ts",
+          "operation": "modify",
+          "description": "Add lightweight console logging when a mismatch is detected that prints runningVersion and latestVersion only (no sensitive data)."
+        },
+        {
+          "path": "frontend/src/utils/recordingDiagnostics.ts",
+          "operation": "modify",
+          "description": "When logging upload failures for invalid-assignment scenarios, also log the running app version (if available) alongside the assignment string already being logged; ensure no principals/tokens/invite codes/blob data are logged."
+        },
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "On saveRecording failure, detect invalid-assignment errors and invoke the recording diagnostics logger in a way that includes the attempted assignment value and running app version (if available), without adding any sensitive data."
         }
       ]
     }

@@ -1,53 +1,88 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-05T03:19:00.315Z",
+  "generatedAt": "2026-02-05T15:01:21.663Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 2,
-    "implemented": 2,
+    "total": 4,
+    "implemented": 3,
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Fix the audio upload failures that show backend errors like \"Invalid assignment\" for the 5 daily assignments by ensuring assignment identifiers are consistently canonicalized across all recording operations (save, get, list/team fetch, delete) and cannot diverge between frontend and backend.",
-        "status": "implemented",
+        "summary": "Ensure every production build deploys a unique, non-placeholder app version identifier and that the running app can reliably read it at runtime (used for update detection and cache-busting).",
+        "status": "missing",
         "plannedFiles": [
-          "frontend/src/utils/recordingIds.ts",
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/screens/Screen6InChallenge.tsx"
+          "frontend/index.html",
+          "frontend/src/utils/appVersion.ts"
         ],
-        "matchedFiles": [
-          "frontend/src/utils/recordingIds.ts"
-        ]
+        "matchedFiles": []
       },
       {
         "id": "REQ-2",
-        "summary": "Remove/stop the erroneous recurring UI status banner/message \"Migrating your project to the new structure. Hold tight — this is a one-time operation.\" so it does not appear during normal app usage when no migration is actually occurring.",
+        "summary": "Harden the app’s forced-refresh mechanism so that when a version mismatch is detected, the app performs a one-time hard refresh that bypasses caches as aggressively as possible and avoids refresh loops.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/hooks/useSuppressMigrationBanner.ts",
-          "frontend/src/components/AppShell.tsx"
+          "frontend/src/utils/versionCheck.ts",
+          "frontend/src/utils/hardRefresh.ts",
+          "frontend/src/hooks/useAppUpdateGuard.ts",
+          "frontend/src/App.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/hooks/useSuppressMigrationBanner.ts",
-          "frontend/src/components/AppShell.tsx"
+          "frontend/src/utils/versionCheck.ts",
+          "frontend/src/utils/hardRefresh.ts",
+          "frontend/src/hooks/useAppUpdateGuard.ts"
+        ]
+      },
+      {
+        "id": "REQ-3",
+        "summary": "When a recording upload fails with a backend error indicating an invalid assignment (e.g., \"Invalid assignment: \\\"awareness\\\"\"), show a clear English user-facing recovery message and provide an in-app action to perform a hard refresh (cache-busted reload).",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/utils/sanitizeErrorMessage.ts",
+          "frontend/src/screens/Screen6InChallenge.tsx",
+          "frontend/src/utils/hardRefresh.ts"
+        ],
+        "matchedFiles": [
+          "frontend/src/utils/sanitizeErrorMessage.ts",
+          "frontend/src/screens/Screen6InChallenge.tsx",
+          "frontend/src/utils/hardRefresh.ts"
+        ]
+      },
+      {
+        "id": "REQ-4",
+        "summary": "Add lightweight diagnostics to help confirm stale-asset situations in production by logging the running app version and the latest fetched app version when a mismatch is detected, and logging the running app version when an invalid-assignment upload error occurs (no sensitive data).",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/utils/versionCheck.ts",
+          "frontend/src/hooks/useAppUpdateGuard.ts",
+          "frontend/src/utils/recordingDiagnostics.ts",
+          "frontend/src/hooks/useQueries.ts"
+        ],
+        "matchedFiles": [
+          "frontend/src/utils/versionCheck.ts",
+          "frontend/src/hooks/useAppUpdateGuard.ts",
+          "frontend/src/utils/recordingDiagnostics.ts",
+          "frontend/src/hooks/useQueries.ts"
         ]
       }
     ]
   },
   "changedFiles": [
-    "backend/main.mo",
-    "backend/migration.mo",
     "build-request.json",
+    "caffeine.lock.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/components/AppShell.tsx",
-    "frontend/src/hooks/useSuppressMigrationBanner.ts",
-    "frontend/src/utils/recordingIds.ts",
+    "frontend/src/hooks/useAppUpdateGuard.ts",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/screens/Screen6InChallenge.tsx",
+    "frontend/src/utils/hardRefresh.ts",
+    "frontend/src/utils/recordingDiagnostics.ts",
+    "frontend/src/utils/sanitizeErrorMessage.ts",
+    "frontend/src/utils/versionCheck.ts",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

@@ -3,7 +3,11 @@ import { useActor } from './useActor';
 import type { UserProfile, UserChallengeStatus, ChatMessage } from '../backend';
 import { Principal } from '@dfinity/principal';
 import type { ExternalBlob } from '../backend';
-import { normalizeRecordingDay, normalizeAssignmentId } from '../utils/recordingIds';
+import { normalizeRecordingDay, assertCanonicalAssignmentId } from '../utils/recordingIds';
+import type { CanonicalAssignmentId } from '../utils/recordingIds';
+import { logUploadAttempt, logUploadFailure, logUploadSuccess } from '../utils/recordingDiagnostics';
+import { sanitizeErrorMessage, isInvalidAssignmentError } from '../utils/sanitizeErrorMessage';
+import { getRunningAppVersion } from '../utils/appVersion';
 
 // ============================================================================
 // React Query Key Constants (exported for consistent invalidation)
@@ -344,53 +348,97 @@ export function useSaveRecording() {
     }: {
       challengeId: bigint;
       day: number;
-      assignment: string;
+      assignment: CanonicalAssignmentId;
       recording: ExternalBlob;
     }) => {
       if (!actor) throw new Error('Actor not available');
       
+      // Development-time assertion: ensure assignment is canonical
+      assertCanonicalAssignmentId(assignment, 'useSaveRecording');
+      
       // Normalize UI day (1-7) to backend day (0-6)
-      const backendDay = BigInt(normalizeRecordingDay(day));
+      const backendDay = normalizeRecordingDay(day);
       
-      // Normalize assignment ID to canonical form
-      const canonicalAssignment = normalizeAssignmentId(assignment);
+      // Log upload attempt with full context
+      logUploadAttempt({
+        challengeId: challengeId.toString(),
+        uiDay: day,
+        backendDay,
+        assignment,
+      });
       
-      return actor.saveRecording(challengeId, backendDay, canonicalAssignment, recording);
+      try {
+        // Assignment is already canonical - pass directly without normalization
+        const result = await actor.saveRecording(challengeId, BigInt(backendDay), assignment, recording);
+        
+        // Log success
+        logUploadSuccess({
+          challengeId: challengeId.toString(),
+          uiDay: day,
+          backendDay,
+          assignment,
+        });
+        
+        return result;
+      } catch (error) {
+        // Get app version for invalid assignment errors
+        const appVersion = getRunningAppVersion();
+        
+        // Log failure with sanitized error and app version for invalid assignment cases
+        const sanitizedError = sanitizeErrorMessage(error);
+        logUploadFailure({
+          challengeId: challengeId.toString(),
+          uiDay: day,
+          backendDay,
+          assignment,
+          error: sanitizedError,
+        });
+        
+        // Additional logging for invalid assignment errors
+        if (isInvalidAssignmentError(error)) {
+          console.error('[Recording Upload] Invalid assignment error detected:', {
+            assignment,
+            appVersion: appVersion || 'unknown',
+            hint: 'This usually indicates stale frontend assets. User should refresh.',
+          });
+        }
+        
+        throw error;
+      }
     },
     onSuccess: (_, variables) => {
       const backendDay = normalizeRecordingDay(variables.day);
-      const canonicalAssignment = normalizeAssignmentId(variables.assignment);
       
       // Remove the cached recording query data immediately
       queryClient.removeQueries({
-        queryKey: QUERY_KEYS.recording(variables.challengeId.toString(), backendDay.toString(), canonicalAssignment),
+        queryKey: QUERY_KEYS.recording(variables.challengeId.toString(), backendDay.toString(), variables.assignment),
       });
       
       // Then invalidate to trigger refetch
       queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.recording(variables.challengeId.toString(), backendDay.toString(), canonicalAssignment),
+        queryKey: QUERY_KEYS.recording(variables.challengeId.toString(), backendDay.toString(), variables.assignment),
       });
       queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.assignmentRecordings(variables.challengeId.toString(), backendDay.toString(), canonicalAssignment),
+        queryKey: QUERY_KEYS.assignmentRecordings(variables.challengeId.toString(), backendDay.toString(), variables.assignment),
       });
     },
   });
 }
 
-export function useGetRecording(challengeId: bigint | null, day: number, assignment: string) {
+export function useGetRecording(challengeId: bigint | null, day: number, assignment: CanonicalAssignmentId) {
   const { actor, isFetching: actorFetching } = useActor();
+
+  // Development-time assertion: ensure assignment is canonical
+  assertCanonicalAssignmentId(assignment, 'useGetRecording');
 
   // Normalize UI day (1-7) to backend day (0-6)
   const backendDay = normalizeRecordingDay(day);
-  
-  // Normalize assignment ID to canonical form
-  const canonicalAssignment = normalizeAssignmentId(assignment);
 
   return useQuery<ExternalBlob>({
-    queryKey: QUERY_KEYS.recording(challengeId?.toString() || '', backendDay.toString(), canonicalAssignment),
+    queryKey: QUERY_KEYS.recording(challengeId?.toString() || '', backendDay.toString(), assignment),
     queryFn: async () => {
       if (!actor || challengeId === null) throw new Error('Actor or challenge ID not available');
-      return actor.getRecording(challengeId, BigInt(backendDay), canonicalAssignment);
+      return actor.getRecording(challengeId, BigInt(backendDay), assignment);
     },
     enabled: !!actor && !actorFetching && challengeId !== null,
     retry: false,
@@ -402,51 +450,51 @@ export function useDeleteRecording() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ challengeId, day, assignment }: { challengeId: bigint; day: number; assignment: string }) => {
+    mutationFn: async ({ challengeId, day, assignment }: { challengeId: bigint; day: number; assignment: CanonicalAssignmentId }) => {
       if (!actor) throw new Error('Actor not available');
+      
+      // Development-time assertion: ensure assignment is canonical
+      assertCanonicalAssignmentId(assignment, 'useDeleteRecording');
       
       // Normalize UI day (1-7) to backend day (0-6)
       const backendDay = BigInt(normalizeRecordingDay(day));
       
-      // Normalize assignment ID to canonical form
-      const canonicalAssignment = normalizeAssignmentId(assignment);
-      
-      return actor.deleteRecording(challengeId, backendDay, canonicalAssignment);
+      // Assignment is already canonical - pass directly without normalization
+      return actor.deleteRecording(challengeId, backendDay, assignment);
     },
     onSuccess: (_, variables) => {
       const backendDay = normalizeRecordingDay(variables.day);
-      const canonicalAssignment = normalizeAssignmentId(variables.assignment);
       
       // Remove the cached recording query data immediately
       queryClient.removeQueries({
-        queryKey: QUERY_KEYS.recording(variables.challengeId.toString(), backendDay.toString(), canonicalAssignment),
+        queryKey: QUERY_KEYS.recording(variables.challengeId.toString(), backendDay.toString(), variables.assignment),
       });
       
       // Then invalidate to trigger refetch
       queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.recording(variables.challengeId.toString(), backendDay.toString(), canonicalAssignment),
+        queryKey: QUERY_KEYS.recording(variables.challengeId.toString(), backendDay.toString(), variables.assignment),
       });
       queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.assignmentRecordings(variables.challengeId.toString(), backendDay.toString(), canonicalAssignment),
+        queryKey: QUERY_KEYS.assignmentRecordings(variables.challengeId.toString(), backendDay.toString(), variables.assignment),
       });
     },
   });
 }
 
-export function useGetAssignmentRecordings(challengeId: bigint | null, day: number, assignment: string) {
+export function useGetAssignmentRecordings(challengeId: bigint | null, day: number, assignment: CanonicalAssignmentId) {
   const { actor, isFetching: actorFetching } = useActor();
+
+  // Development-time assertion: ensure assignment is canonical
+  assertCanonicalAssignmentId(assignment, 'useGetAssignmentRecordings');
 
   // Normalize UI day (1-7) to backend day (0-6)
   const backendDay = normalizeRecordingDay(day);
-  
-  // Normalize assignment ID to canonical form
-  const canonicalAssignment = normalizeAssignmentId(assignment);
 
   return useQuery<Array<[Principal, ExternalBlob | null]>>({
-    queryKey: QUERY_KEYS.assignmentRecordings(challengeId?.toString() || '', backendDay.toString(), canonicalAssignment),
+    queryKey: QUERY_KEYS.assignmentRecordings(challengeId?.toString() || '', backendDay.toString(), assignment),
     queryFn: async () => {
       if (!actor || challengeId === null) throw new Error('Actor or challenge ID not available');
-      return actor.getAssignmentRecordings(challengeId, BigInt(backendDay), canonicalAssignment);
+      return actor.getAssignmentRecordings(challengeId, BigInt(backendDay), assignment);
     },
     enabled: !!actor && !actorFetching && challengeId !== null,
     retry: false,
@@ -457,22 +505,22 @@ export function useGetParticipantRecording(
   challengeId: bigint | null,
   participant: Principal | null,
   day: number,
-  assignment: string
+  assignment: CanonicalAssignmentId
 ) {
   const { actor, isFetching: actorFetching } = useActor();
 
+  // Development-time assertion: ensure assignment is canonical
+  assertCanonicalAssignmentId(assignment, 'useGetParticipantRecording');
+
   // Normalize UI day (1-7) to backend day (0-6)
   const backendDay = normalizeRecordingDay(day);
-  
-  // Normalize assignment ID to canonical form
-  const canonicalAssignment = normalizeAssignmentId(assignment);
 
   return useQuery<ExternalBlob>({
-    queryKey: QUERY_KEYS.participantRecording(challengeId?.toString() || '', participant?.toString() || '', backendDay.toString(), canonicalAssignment),
+    queryKey: QUERY_KEYS.participantRecording(challengeId?.toString() || '', participant?.toString() || '', backendDay.toString(), assignment),
     queryFn: async () => {
       if (!actor || challengeId === null || participant === null)
         throw new Error('Actor, challenge ID, or participant not available');
-      return actor.getParticipantRecording(challengeId, participant, BigInt(backendDay), canonicalAssignment);
+      return actor.getParticipantRecording(challengeId, participant, BigInt(backendDay), assignment);
     },
     enabled: !!actor && !actorFetching && challengeId !== null && participant !== null,
     retry: false,
