@@ -1,10 +1,15 @@
 /**
  * Fixed assignment definitions for the 7-day Social Contemplation challenge.
  * Each day has exactly 5 assignments with the same titles and content.
+ * 
+ * CRITICAL: Assignment IDs must exactly match backend's validAssignments array
+ * and the CANONICAL_ASSIGNMENT_IDS in recordingIds.ts.
  */
 
+import { CANONICAL_ASSIGNMENT_IDS, type CanonicalAssignmentId } from './recordingIds';
+
 export interface Assignment {
-  id: string;
+  id: CanonicalAssignmentId;
   title: string;
   content: string;
 }
@@ -12,6 +17,8 @@ export interface Assignment {
 /**
  * The 5 fixed assignments that appear every day.
  * Content updated with new copy provided by the user.
+ * 
+ * IDs are typed as CanonicalAssignmentId to ensure compile-time safety.
  */
 export const FIXED_ASSIGNMENTS: Assignment[] = [
   {
@@ -79,6 +86,9 @@ Step 3: Anchor Your Reflections
 Listen back to your recording during your contemplation ritual. Let this exercise function as a gentle overflow space — where what is still unfolding can exist without needing to be structured or resolved.`,
   },
 ];
+
+// Compile-time check: ensure FIXED_ASSIGNMENTS uses all canonical IDs
+const _assignmentIdCheck: readonly CanonicalAssignmentId[] = FIXED_ASSIGNMENTS.map(a => a.id);
 
 /**
  * Get all assignments for a given day (1-7).

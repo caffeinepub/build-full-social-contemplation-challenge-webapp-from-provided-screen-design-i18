@@ -1,14 +1,22 @@
-import { type ReactNode } from 'react';
+import { useSuppressMigrationBanner } from '../hooks/useSuppressMigrationBanner';
 
 interface AppShellProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
+/**
+ * Layout wrapper component with centered phone-like container,
+ * mobile-first responsive padding and scrollable content area.
+ * Wires the migration banner suppression hook.
+ */
 export function AppShell({ children }: AppShellProps) {
+  // Suppress erroneous migration banner
+  useSuppressMigrationBanner();
+  
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-2 sm:p-4">
-      <div className="w-full max-w-md bg-card border border-border rounded-2xl shadow-lg overflow-hidden flex flex-col">
-        <div className="overflow-y-auto max-h-[calc(100vh-1rem)] sm:max-h-[calc(100vh-2rem)]">
+    <div className="min-h-screen bg-background">
+      <div className="mx-auto max-w-md min-h-screen flex flex-col">
+        <div className="flex-1 overflow-y-auto">
           {children}
         </div>
       </div>

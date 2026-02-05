@@ -2,11 +2,9 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-update-frontend-recording-operations-upload-get-delete-team-playback-to-use-the-same-canonical-day-assignment-identifiers-across-all-calls-and-ensure-react-query-cache-invalidation-refetch-reflects-the-corrected-mapping-so-the-ui-immediately-updates-after-upload-delete",
-      "featureTitle": "Update frontend recording operations (upload/get/delete/team playback) to use the same canonical day/assignment identifiers across all calls, and ensure React Query cache invalidation/refetch reflects the corrected mapping so the UI immediately updates after upload/delete.",
+      "featureId": "feature-fix-the-audio-upload-failures-that-show-backend-errors-like-invalid-assignment-for-the-5-daily-assignments-by-ensuring-assignment-identifiers-are-consistently-canonicalized-across-all-recording-operations-save-get-list-team-fetch-delete-and-cannot-diverge-between-frontend-and-backend",
+      "featureTitle": "Fix the audio upload failures that show backend errors like \"Invalid assignment\" for the 5 daily assignments by ensuring assignment identifiers are consistently canonicalized across all recording operations (save, get, list/team fetch, delete) and cannot diverge between frontend and backend.",
       "files": [
-        "frontend/src/hooks/useQueries.ts",
-        "frontend/src/screens/Screen6InChallenge.tsx",
         "frontend/src/utils/recordingIds.ts"
       ],
       "components": [
@@ -20,7 +18,29 @@
         "invite-links@3.0.0"
       ],
       "testIds": [
-        "REQ-4"
+        "REQ-1"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-remove-stop-the-erroneous-recurring-ui-status-banner-message-migrating-your-project-to-the-new-structure-hold-tight-this-is-a-one-time-operation-so-it-does-not-appear-during-normal-app-usage-when-no-migration-is-actually-occurring",
+      "featureTitle": "Remove/stop the erroneous recurring UI status banner/message \"Migrating your project to the new structure. Hold tight — this is a one-time operation.\" so it does not appear during normal app usage when no migration is actually occurring.",
+      "files": [
+        "frontend/src/components/AppShell.tsx",
+        "frontend/src/hooks/useSuppressMigrationBanner.ts"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0",
+        "invite-links@3.0.0"
+      ],
+      "testIds": [
+        "REQ-2"
       ],
       "confidence": "high"
     }

@@ -1,5 +1,6 @@
 import MixinStorage "blob-storage/Mixin";
 import Storage "blob-storage/Storage";
+
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
 import InviteLinksModule "invite-links/invite-links-module";
@@ -397,10 +398,10 @@ actor {
 
   public shared ({ caller }) func saveRecording(challengeId : Nat, day : Nat, assignment : Text, recording : Storage.ExternalBlob) : async () {
     validateUserRole(caller);
-    let normalizedDay = normalizeDay(day);
-    let normalizedAssignment = normalizeAssignment(assignment);
-    checkDay(normalizedDay);
-    checkAssignment(normalizedAssignment);
+    checkDay(day);
+
+    let canonicalAssignment = canonicalizeAssignment(assignment);
+    checkAssignment(canonicalAssignment);
 
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
@@ -414,20 +415,20 @@ actor {
           case (null) { Map.empty<Nat, Map.Map<Text, Storage.ExternalBlob>>() };
         };
 
-        let existingDayRecordings = switch (existingUserRecordings.get(normalizedDay)) {
+        let existingDayRecordings = switch (existingUserRecordings.get(day)) {
           case (?dayRecordings) { dayRecordings };
           case (null) { Map.empty<Text, Storage.ExternalBlob>() };
         };
 
-        if (existingDayRecordings.containsKey(normalizedAssignment)) {
+        if (existingDayRecordings.containsKey(canonicalAssignment)) {
           Runtime.trap("Recording already exists for this assignment. Delete the existing recording before uploading a new one. Users cannot overwrite an existing recording.");
         };
 
         let updatedDayRecordings = existingDayRecordings.clone();
-        updatedDayRecordings.add(normalizedAssignment, recording);
+        updatedDayRecordings.add(canonicalAssignment, recording);
 
         let updatedUserRecordings = existingUserRecordings.clone();
-        updatedUserRecordings.add(normalizedDay, updatedDayRecordings);
+        updatedUserRecordings.add(day, updatedDayRecordings);
 
         let newRecordings = challenge.recordings.clone();
         newRecordings.add(caller, updatedUserRecordings);
@@ -441,11 +442,11 @@ actor {
     };
   };
 
-  public query ({ caller }) func getRecording(challengeId : Nat, day : Nat, assignment : Text) : async Storage.ExternalBlob {
-    let normalizedDay = normalizeDay(day);
-    let normalizedAssignment = normalizeAssignment(assignment);
-    checkDay(normalizedDay);
-    checkAssignment(normalizedAssignment);
+  public shared query ({ caller }) func getRecording(challengeId : Nat, day : Nat, assignment : Text) : async Storage.ExternalBlob {
+    checkDay(day);
+
+    let canonicalAssignment = canonicalizeAssignment(assignment);
+    checkAssignment(canonicalAssignment);
 
     validateUserRole(caller);
 
@@ -459,10 +460,10 @@ actor {
         switch (challenge.recordings.get(caller)) {
           case (null) { Runtime.trap("No recordings found for user") };
           case (?userRecordings) {
-            switch (userRecordings.get(normalizedDay)) {
+            switch (userRecordings.get(day)) {
               case (null) { Runtime.trap("No recordings found for day") };
               case (?dayRecordings) {
-                switch (dayRecordings.get(normalizedAssignment)) {
+                switch (dayRecordings.get(canonicalAssignment)) {
                   case (null) { Runtime.trap("Recording not found for assignment") };
                   case (?recording) { recording };
                 };
@@ -475,10 +476,10 @@ actor {
   };
 
   public shared ({ caller }) func deleteRecording(challengeId : Nat, day : Nat, assignment : Text) : async () {
-    let normalizedDay = normalizeDay(day);
-    let normalizedAssignment = normalizeAssignment(assignment);
-    checkDay(normalizedDay);
-    checkAssignment(normalizedAssignment);
+    checkDay(day);
+
+    let canonicalAssignment = canonicalizeAssignment(assignment);
+    checkAssignment(canonicalAssignment);
 
     validateUserRole(caller);
 
@@ -494,20 +495,20 @@ actor {
           case (null) { Runtime.trap("No recordings found for user") };
         };
 
-        let existingDayRecordings = switch (existingUserRecordings.get(normalizedDay)) {
+        let existingDayRecordings = switch (existingUserRecordings.get(day)) {
           case (?dayRecordings) { dayRecordings };
           case (null) { Runtime.trap("No recordings found for day") };
         };
 
-        if (not existingDayRecordings.containsKey(normalizedAssignment)) {
+        if (not existingDayRecordings.containsKey(canonicalAssignment)) {
           Runtime.trap("Recording not found for assignment");
         };
 
         let updatedDayRecordings = existingDayRecordings.clone();
-        updatedDayRecordings.remove(normalizedAssignment);
+        updatedDayRecordings.remove(canonicalAssignment);
 
         let newUserRecordings = existingUserRecordings.clone();
-        newUserRecordings.add(normalizedDay, updatedDayRecordings);
+        newUserRecordings.add(day, updatedDayRecordings);
 
         let newRecordings = challenge.recordings.clone();
         newRecordings.add(caller, newUserRecordings);
@@ -518,11 +519,11 @@ actor {
     };
   };
 
-  public query ({ caller }) func getAssignmentRecordings(challengeId : Nat, day : Nat, assignment : Text) : async [(Principal, ?Storage.ExternalBlob)] {
-    let normalizedDay = normalizeDay(day);
-    let normalizedAssignment = normalizeAssignment(assignment);
-    checkDay(normalizedDay);
-    checkAssignment(normalizedAssignment);
+  public shared query ({ caller }) func getAssignmentRecordings(challengeId : Nat, day : Nat, assignment : Text) : async [(Principal, ?Storage.ExternalBlob)] {
+    checkDay(day);
+
+    let canonicalAssignment = canonicalizeAssignment(assignment);
+    checkAssignment(canonicalAssignment);
 
     validateUserRole(caller);
 
@@ -538,10 +539,10 @@ actor {
             switch (challenge.recordings.get(participant)) {
               case (null) { (participant, null : ?Storage.ExternalBlob) };
               case (?userRecordings) {
-                switch (userRecordings.get(normalizedDay)) {
+                switch (userRecordings.get(day)) {
                   case (null) { (participant, null : ?Storage.ExternalBlob) };
                   case (?dayRecordings) {
-                    switch (dayRecordings.get(normalizedAssignment)) {
+                    switch (dayRecordings.get(canonicalAssignment)) {
                       case (null) { (participant, null : ?Storage.ExternalBlob) };
                       case (?recording) { (participant, ?recording) };
                     };
@@ -555,11 +556,11 @@ actor {
     };
   };
 
-  public query ({ caller }) func getParticipantRecording(challengeId : Nat, participant : Principal, day : Nat, assignment : Text) : async Storage.ExternalBlob {
-    let normalizedDay = normalizeDay(day);
-    let normalizedAssignment = normalizeAssignment(assignment);
-    checkDay(normalizedDay);
-    checkAssignment(normalizedAssignment);
+  public shared query ({ caller }) func getParticipantRecording(challengeId : Nat, participant : Principal, day : Nat, assignment : Text) : async Storage.ExternalBlob {
+    checkDay(day);
+
+    let canonicalAssignment = canonicalizeAssignment(assignment);
+    checkAssignment(canonicalAssignment);
 
     validateUserRole(caller);
 
@@ -573,10 +574,10 @@ actor {
         switch (challenge.recordings.get(participant)) {
           case (null) { Runtime.trap("No recordings found for participant") };
           case (?userRecordings) {
-            switch (userRecordings.get(normalizedDay)) {
+            switch (userRecordings.get(day)) {
               case (null) { Runtime.trap("No recordings found for day") };
               case (?dayRecordings) {
-                switch (dayRecordings.get(normalizedAssignment)) {
+                switch (dayRecordings.get(canonicalAssignment)) {
                   case (null) { Runtime.trap("Recording not found for assignment") };
                   case (?recording) { recording };
                 };
@@ -602,7 +603,7 @@ actor {
     };
   };
 
-  public query ({ caller }) func getMessage(challengeId : Nat, messageId : Nat) : async ChatMessage {
+  public shared query ({ caller }) func getMessage(challengeId : Nat, messageId : Nat) : async ChatMessage {
     validateUserRole(caller);
 
     switch (challenges.get(challengeId)) {
@@ -714,7 +715,7 @@ actor {
     );
   };
 
-  public query ({ caller }) func getMessages(challengeId : Nat) : async [ChatMessage] {
+  public shared query ({ caller }) func getMessages(challengeId : Nat) : async [ChatMessage] {
     validateUserRole(caller);
 
     switch (challenges.get(challengeId)) {
@@ -796,6 +797,10 @@ actor {
     };
   };
 
+  func canonicalizeAssignment(assignment : Text) : Text {
+    assignment.toLower();
+  };
+
   func removeParticipantsFromChallenge(challengeId : Nat, challenge : Challenge) {
     for (participant in challenge.participants.values()) {
       if (participant == challenge.creator) {
@@ -807,37 +812,6 @@ actor {
       if (participantToChallengeId.get(participant) == ?challengeId) {
         participantToChallengeId.remove(participant);
       };
-    };
-  };
-
-  let legacyDay0Mapping : [(Nat, [Nat])] = [(0, [0, 1, 2])];
-  let legacyDay1Mapping : [(Nat, [Nat])] = [(1, [3])];
-
-  func normalizeDay(originalDay : Nat) : Nat {
-    let findDay = func(pair : (Nat, [Nat])) : Bool {
-      let (normalizedDay, validDays) = pair;
-      validDays.find(func(validDay) { validDay == originalDay }) != null;
-    };
-
-    switch (legacyDay0Mapping.find(findDay)) {
-      case (?pair) { pair.0 };
-      case (null) {
-        switch (legacyDay1Mapping.find(findDay)) {
-          case (?pair) { pair.0 };
-          case (null) { originalDay };
-        };
-      };
-    };
-  };
-
-  func normalizeAssignment(assignment : Text) : Text {
-    switch (assignment) {
-      case ("assignment1") { "awareness" };
-      case ("assignment2") { "utopia" };
-      case ("assignment3") { "small-steps" };
-      case ("assignment4") { "support-strategies" };
-      case ("assignment5") { "other-contemplations" };
-      case (_) { assignment };
     };
   };
 };

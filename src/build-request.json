@@ -1,102 +1,57 @@
 {
   "kind": "build_request",
-  "title": "Fix recording upload/delete by aligning assignment IDs and day index mapping",
-  "priority": "normal",
+  "title": "Fix audio upload 'Invalid assignment' errors and remove erroneous migration banner",
+  "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Fix backend day-index normalization for recordings so that all recording operations (save/get/delete/getAssignmentRecordings/getParticipantRecording) use a single consistent day key scheme (backend canonical day range 0–6) and do not produce collisions or off-by-one errors.",
-      "target": "backend",
+      "text": "Fix the audio upload failures that show backend errors like \"Invalid assignment\" for the 5 daily assignments by ensuring assignment identifiers are consistently canonicalized across all recording operations (save, get, list/team fetch, delete) and cannot diverge between frontend and backend.",
+      "target": "both",
       "source": {
         "messageIds": [
-          "msg-3",
-          "msg-5",
-          "msg-7"
+          "msg-6",
+          "msg-8"
         ],
         "quotes": [
-          "Als ik iets heb geüpload,  kan ik hem daarna niet deleten.",
-          "De eerste 2 uploads lukken maar kan ik niet deleten, de volgende 2 uploads lukken niet (zie printscreen",
-          "Awareness assignment kan ik wel uploaden maar niet deleten. Utopia kan ik wel uploaden maar niet deleten. De rest kan ik niet uploaden."
+          "Ik heb net alle bij  5 de assignments een audio fragment geprobeerd te uploaden, maar het is niet gelukt",
+          "fix maar"
         ]
       },
       "acceptanceCriteria": [
-        "For UI Day 1–7, the backend stores and looks up recordings under canonical day keys 0–6 (Day 1 => 0, Day 7 => 6).",
-        "Saving a recording for any day/assignment does not collide with a different UI day due to normalization.",
-        "Deleting a recording for any day/assignment removes the same recording that was previously saved and retrieved for that slot.",
-        "Backend error messages for invalid day values remain clear (English) and reflect the canonical day range expectations."
+        "Uploading an audio file succeeds for each of the 5 assignments (awareness, utopia, small-steps, support-strategies, other-contemplations) on any valid day (1–7 in UI).",
+        "After a successful upload, the recording is immediately visible in the \"My\" tab for that assignment/day and playable.",
+        "The same uploaded recordings are visible and playable in the \"Team\" tab for other participants when selected.",
+        "Deleting a recording succeeds for each of the 5 assignments and removes it from both \"My\" and \"Team\" views after refresh/refetch.",
+        "No backend error containing \"Invalid assignment\" occurs for the canonical assignment IDs used by the UI."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Add backward-compatible handling for existing recordings that may have been stored under legacy day keys due to previous normalization behavior, so users can still retrieve and delete previously uploaded recordings without manual intervention.",
-      "target": "backend",
-      "source": {
-        "messageIds": [
-          "msg-3",
-          "msg-5",
-          "msg-7"
-        ],
-        "quotes": [
-          "Als ik iets heb geüpload,  kan ik hem daarna niet deleten.",
-          "De eerste 2 uploads lukken maar kan ik niet deleten, de volgende 2 uploads lukken niet (zie printscreen"
-        ]
-      },
-      "acceptanceCriteria": [
-        "If a recording exists under a legacy day key for the requested slot, get/delete operations still succeed for the user’s selected UI day.",
-        "If a recording exists under either canonical or legacy day keys for the requested slot, save operations correctly detect it and continue to enforce the no-overwrite rule (users must delete before uploading a new one).",
-        "After a successful delete of a legacy-stored recording, subsequent fetches for that slot return no recording."
-      ]
-    },
-    {
-      "id": "REQ-3",
-      "text": "Fix backend assignment identifier normalization/validation so uploads work for all five assignments and deletes work for uploaded recordings, including compatibility with any legacy assignment identifiers used by older frontend versions.",
-      "target": "backend",
-      "source": {
-        "messageIds": [
-          "msg-5",
-          "msg-7"
-        ],
-        "quotes": [
-          "Awareness assignment kan ik wel uploaden maar niet deleten. Utopia kan ik wel uploaden maar niet deleten. De rest kan ik niet uploaden."
-        ]
-      },
-      "acceptanceCriteria": [
-        "Backend accepts and correctly normalizes the canonical assignment IDs used by the frontend: awareness, utopia, small-steps, support-strategies, other-contemplations.",
-        "Backend also normalizes any legacy assignment IDs previously used (e.g., assignment1/assignment2/assignment3/assignment4/assignment5) to the canonical IDs so existing data remains accessible.",
-        "Uploading for Small Steps, Support Strategies, and Other Contemplations succeeds (no 'Invalid assignment' trap) when called with the canonical assignment IDs.",
-        "Deleting for Awareness and Utopia succeeds for recordings that were uploaded previously."
-      ]
-    },
-    {
-      "id": "REQ-4",
-      "text": "Update frontend recording operations (upload/get/delete/team playback) to use the same canonical day/assignment identifiers across all calls, and ensure React Query cache invalidation/refetch reflects the corrected mapping so the UI immediately updates after upload/delete.",
+      "text": "Remove/stop the erroneous recurring UI status banner/message \"Migrating your project to the new structure. Hold tight — this is a one-time operation.\" so it does not appear during normal app usage when no migration is actually occurring.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-3",
-          "msg-5",
-          "msg-7"
+          "msg-6"
         ],
         "quotes": [
-          "Als ik iets heb geüpload,  kan ik hem daarna niet deleten.",
-          "De rest kan ik niet uploaden."
+          "Remove/stop the erroneous recurring UI status banner/message: “Migrating your project to the new structure. Hold tight — this is a one-time operation.”"
         ]
       },
       "acceptanceCriteria": [
-        "For the same selected UI day and assignment, the UI uses consistent parameters across save/get/delete calls (no mismatched day index or assignment id between operations).",
-        "After upload succeeds, the assignment card shows the recorded state and disables upload until delete.",
-        "After delete succeeds, the recorded state clears and upload is re-enabled for that slot without a manual refresh.",
-        "User-facing error messages shown in the UI for recording operations remain in English."
+        "The message \"Migrating your project to the new structure. Hold tight — this is a one-time operation.\" is not shown anywhere in the UI during normal navigation and use (including audio upload flows).",
+        "No other loading/error UI is removed or degraded; genuine loading states still display appropriate messages (e.g., \"Loading...\")."
       ]
     }
   ],
   "constraints": [
-    "Backend must remain a single-actor Motoko canister (all logic in backend/main.mo).",
-    "Do not edit files under frontend/immutablePaths; compose existing UI components instead of modifying their sources."
+    "Backend must remain a single-actor Motoko canister; keep all logic in backend/main.mo.",
+    "Do not edit files under frontend/src/components/ui (compose them instead).",
+    "Do not edit immutable paths: frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, frontend/src/components/ui."
   ],
   "nonGoals": [
-    "Do not add new challenge/assignment features beyond fixing mapping and recording CRUD behavior.",
-    "Do not introduce external databases or non-Motoko backend services."
+    "Do not add new authentication providers beyond Internet Identity.",
+    "Do not introduce external databases or off-chain storage systems.",
+    "Do not redesign unrelated screens or change challenge/chat behavior beyond what is required to fix assignment identifier consistency and remove the erroneous migration banner."
   ],
   "imageRequirements": {
     "required": [],

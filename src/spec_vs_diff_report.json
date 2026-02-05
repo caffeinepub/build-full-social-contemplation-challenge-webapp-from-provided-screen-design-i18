@@ -1,59 +1,35 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-05T01:48:45.709Z",
-  "summary": "Diff adds frontend-side identifier normalizers (day + assignment) and introduces a backend migration module wired into backend/main.mo, but the diff summary does not show the required backend fixes for consistent canonical day-key handling across all recording CRUD/query functions, nor backend assignment ID normalization/legacy compatibility. Frontend hook/key changes are visible, but the diff is truncated so full REQ-4 acceptance criteria cannot be confirmed from the provided evidence.",
+  "generatedAt": "2026-02-05T03:19:00.291Z",
+  "summary": "REQ-2 appears to be addressed by adding a frontend hook that hides the specific migration banner text and wiring it into AppShell. REQ-1 is only partially evidenced: canonical assignment normalization is added on the frontend and there is a backend migration module that lowercases existing recording keys, but the diff summary does not show backend recording save/get/list/delete paths being updated to consistently canonicalize/validate assignment identifiers across all operations as required. The diff also introduces a new backend file/module despite constraints stating logic should remain in backend/main.mo and the backend must remain a single-actor canister with all logic in backend/main.mo.",
   "missing_requirements": [
     {
       "id": "REQ-1",
-      "requirement": "Fix backend day-index normalization for recordings so all recording operations use a single consistent canonical day key scheme (0–6) without collisions/off-by-one errors, with clear English errors for invalid days.",
-      "reason": "The provided backend/main.mo snippet only shows type/constant definitions and does not show any implementation of day normalization in save/get/delete/getAssignmentRecordings/getParticipantRecording. The added backend/migration.mo also does not show canonical 0–6 normalization being enforced for recording operations.",
+      "requirement": "Ensure assignment identifiers are consistently canonicalized across all recording operations (save, get, list/team fetch, delete) and cannot diverge between frontend and backend so audio uploads do not fail with \"Invalid assignment\" for the 5 daily assignments.",
+      "reason": "The diff shows a new frontend normalizer (trim+lowercase) and a backend migration that lowercases existing stored keys, but it does not show changes to the backend recording APIs (save/get/list/team/delete) to canonicalize incoming assignment IDs and use canonical IDs for lookups/validation. backend/main.mo is truncated and contains no visible recording-operation changes in the provided excerpt.",
       "evidence": [
-        "backend/main.mo",
-        "backend/migration.mo"
-      ]
-    },
-    {
-      "id": "REQ-2",
-      "requirement": "Add backward-compatible handling for legacy day keys so existing recordings can still be retrieved/deleted, and save detects existing recordings under either canonical or legacy keys (no-overwrite rule).",
-      "reason": "No evidence in the truncated backend/main.mo of fallback lookup/delete across legacy day keys, and the added backend/migration.mo does not demonstrate migrating or dual-reading legacy keys for recording CRUD operations.",
-      "evidence": [
-        "backend/main.mo",
-        "backend/migration.mo"
-      ]
-    },
-    {
-      "id": "REQ-3",
-      "requirement": "Fix backend assignment identifier normalization/validation to accept canonical assignment IDs and normalize legacy assignment1..5 identifiers for compatibility.",
-      "reason": "backend/main.mo shows a validAssignments list of canonical IDs, but the diff summary does not show any backend logic that maps/normalizes legacy assignment IDs to canonical ones for uploads/deletes/queries.",
-      "evidence": [
+        "frontend/src/utils/recordingIds.ts",
+        "backend/migration.mo",
         "backend/main.mo"
-      ]
-    },
-    {
-      "id": "REQ-4",
-      "requirement": "Update frontend recording operations (upload/get/delete/team playback) to use canonical day/assignment identifiers consistently across all calls, and ensure React Query invalidation/refetch so UI updates immediately after upload/delete (English error messages).",
-      "reason": "Although useQueries.ts now imports normalizeRecordingDay/normalizeAssignmentId and QUERY_KEYS are present, the diff is truncated and does not show the actual recording mutation/query call sites being updated to consistently apply these normalizers, nor the specific post-upload/delete invalidation/refetch behavior tied to the corrected mapping (including team playback paths).",
-      "evidence": [
-        "frontend/src/hooks/useQueries.ts",
-        "frontend/src/screens/Screen6InChallenge.tsx"
       ]
     }
   ],
   "hallucinated_features": [
     {
-      "description": "Introduced a backend migration module (backend/migration.mo) and wired it into the actor with “(with migration = Migration.run)”.",
-      "reason": "BuildRequest constraints specify backend must remain a single-actor Motoko canister with all logic in backend/main.mo; adding a separate migration module is additional structure not requested by the requirements (which focus on recording day/assignment mapping and CRUD behavior).",
+      "description": "Added a backend migration module (backend/migration.mo) and wired it into backend/main.mo via `(with migration = Migration.run)` to mutate/transform stored challenge recordings data by lowercasing assignment keys.",
+      "reason": "The BuildRequest asks to fix assignment identifier consistency to prevent \"Invalid assignment\" errors, but does not request adding a separate migration module/file. This also appears to conflict with stated constraints to keep all backend logic in backend/main.mo and remain a single-actor Motoko canister without splitting logic into additional backend files.",
       "evidence": [
         "backend/migration.mo",
         "backend/main.mo"
       ]
     },
     {
-      "description": "Project scope/state text indicates major unrelated product changes (e.g., multi-language/i18n removed, invitation links behavior, chat features, UI layout changes).",
-      "reason": "These changes are outside the stated non-goals (no new features beyond fixing mapping/recording CRUD behavior). The diff summary includes this as part of project_state.json content.",
+      "description": "Implemented migration-banner removal by scanning and mutating the DOM (querySelectorAll('*') + MutationObserver) to hide any element containing the banner text.",
+      "reason": "REQ-2 requires stopping the erroneous banner from appearing, but does not specify DOM-level suppression; this is an extra implementation approach that could hide unrelated UI containing the same text and is not explicitly requested.",
       "evidence": [
-        "project_state.json"
+        "frontend/src/hooks/useSuppressMigrationBanner.ts",
+        "frontend/src/components/AppShell.tsx"
       ]
     }
   ],
@@ -62,8 +38,8 @@
     "backend/main.mo",
     "backend/migration.mo",
     "frontend-file-summaries.txt",
-    "frontend/src/hooks/useQueries.ts",
-    "frontend/src/screens/Screen6InChallenge.tsx",
+    "frontend/src/components/AppShell.tsx",
+    "frontend/src/hooks/useSuppressMigrationBanner.ts",
     "frontend/src/utils/recordingIds.ts",
     "project_state.json"
   ]

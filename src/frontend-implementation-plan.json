@@ -1,32 +1,53 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Align frontend recording day/assignment identifiers and ensure immediate UI updates after upload/delete",
+  "title": "Fix recording assignment ID canonicalization and suppress erroneous migration banner",
   "requirements": [
     {
-      "id": "REQ-4",
-      "summary": "Use a single canonical day (UI 1–7 => backend 0–6) and canonical assignment identifiers across all recording operations, with React Query cache updates so upload/delete state updates immediately.",
+      "id": "REQ-1",
+      "summary": "Ensure assignment identifiers are consistently canonicalized across all recording operations to prevent upload/playback/list/delete mismatches that trigger backend “Invalid assignment” errors.",
       "acceptanceCriteria": [
-        "For the same selected UI day and assignment, the UI uses consistent parameters across save/get/delete calls (no mismatched day index or assignment id between operations).",
-        "After upload succeeds, the assignment card shows the recorded state and disables upload until delete.",
-        "After delete succeeds, the recorded state clears and upload is re-enabled for that slot without a manual refresh.",
-        "User-facing error messages shown in the UI for recording operations remain in English."
+        "Uploading an audio file succeeds for each of the 5 assignments (awareness, utopia, small-steps, support-strategies, other-contemplations) on any valid day (1–7 in UI).",
+        "After a successful upload, the recording is immediately visible in the \"My\" tab for that assignment/day and playable.",
+        "The same uploaded recordings are visible and playable in the \"Team\" tab for other participants when selected.",
+        "Deleting a recording succeeds for each of the 5 assignments and removes it from both \"My\" and \"Team\" views after refresh/refetch.",
+        "No backend error containing \"Invalid assignment\" occurs for the canonical assignment IDs used by the UI."
       ],
       "file_operations": [
         {
           "path": "frontend/src/utils/recordingIds.ts",
-          "operation": "create",
-          "description": "Add shared frontend-only normalizers for recording identifiers: (1) normalize UI day values to the backend canonical range 0–6 using the existing day conversion utility, and (2) normalize/validate assignment identifiers to the canonical IDs used by the app (awareness, utopia, small-steps, support-strategies, other-contemplations). This ensures every recording call path uses the same canonical identifiers."
+          "operation": "modify",
+          "description": "Harden assignment ID normalization so all recording operations use a single canonical form: trim, lowercase, and normalize common unicode dash variants and legacy separators (e.g., underscores/spaces) into the canonical IDs used by the UI. Add a safe normalization helper (e.g., tryNormalizeAssignmentId) to avoid runtime crashes and to make it impossible for non-canonical strings to reach recording calls."
         },
         {
           "path": "frontend/src/hooks/useQueries.ts",
           "operation": "modify",
-          "description": "Update all recording-related React Query hooks (save/get/delete/getAssignmentRecordings/getParticipantRecording) to apply the shared canonical identifier normalization (day and assignment) before calling backend capabilities and before building query keys. Also, on successful delete, proactively clear/remove the cached recording query data (not just invalidate) so the UI does not keep showing stale 'Recorded' state if a refetch returns a not-found error."
+          "description": "Ensure save/get/list(team fetch)/delete recording query hooks consistently derive the assignment argument and query keys from the same canonicalization utility (from recordingIds.ts). Where assignment normalization could fail, prevent the query/mutation from calling the backend and surface a controlled, user-safe error instead of throwing during render."
         },
         {
           "path": "frontend/src/screens/Screen6InChallenge.tsx",
           "operation": "modify",
-          "description": "Ensure the in-challenge UI passes canonical assignment IDs consistently to upload/get/delete/team playback flows (using the shared normalizer where appropriate) and surfaces delete failures to the user using existing English error sanitization. After a successful delete, ensure any per-assignment UI error state is cleared so upload is immediately re-enabled and the recorded badge/state disappears without a manual refresh."
+          "description": "Plumb canonical assignment IDs through all recording-related UI actions (upload, play, delete, team playback) by typing assignment IDs to the canonical union type and normalizing any external inputs before invoking recording hooks. Ensure internal state keys (uploadStates, playingAssignment identifiers) cannot diverge from the canonical ID representation."
+        }
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "summary": "Remove/suppress the erroneous recurring migration status banner so it never appears during normal app usage while preserving genuine loading UI.",
+      "acceptanceCriteria": [
+        "The message \"Migrating your project to the new structure. Hold tight — this is a one-time operation.\" is not shown anywhere in the UI during normal navigation and use (including audio upload flows).",
+        "No other loading/error UI is removed or degraded; genuine loading states still display appropriate messages (e.g., \"Loading...\")."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/hooks/useSuppressMigrationBanner.ts",
+          "operation": "create",
+          "description": "Create a small client-side suppression hook that, on mount, scans the DOM for elements containing the exact migration banner text and removes/hides them, and also installs a MutationObserver to catch and suppress re-insertions without impacting other UI."
+        },
+        {
+          "path": "frontend/src/components/AppShell.tsx",
+          "operation": "modify",
+          "description": "Wire the suppression hook (useSuppressMigrationBanner) into the top-level shell so it runs across all screens and navigation states, while leaving existing app loading/error components untouched."
         }
       ]
     }
