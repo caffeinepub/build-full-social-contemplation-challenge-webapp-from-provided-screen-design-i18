@@ -1,12 +1,11 @@
 # Specification
 
 ## Summary
-**Goal:** Fix the production “Invalid assignment” recording errors by adding a frontend-only assignment ID compatibility fallback (hyphenated ↔ underscore), while keeping existing UI assignment labels unchanged.
+**Goal:** Fix the audio recording Save → “Share with team?” → Yes flow so recordings reliably upload/save and share with the team (including from Caffeine draft domains), and users get clear error feedback when something fails.
 
 **Planned changes:**
-- Add a frontend compatibility layer for all recording-related API calls to retry once with the alternate assignment ID format when the backend returns an error containing `Invalid assignment:`.
-- Keep one canonical assignment ID set inside the frontend for rendering/state, and normalize assignment IDs used in React Query cache keys to avoid duplicate cache entries across ID variants.
-- Add lightweight frontend diagnostic console logging when the invalid-assignment retry path triggers (original ID, fallback ID, sanitized error, and whether retry succeeded), without logging sensitive user data.
-- Ensure any user-facing error is shown once in English only if both the original attempt and fallback retry fail.
+- Backend: Update recording upload/storage origin allowlisting to explicitly permit the frontend origins used by Caffeine deployments (including `https://*.caffeine.xyz`) while keeping origin validation enabled.
+- Frontend: Ensure the Save → share-confirmation → Yes path properly completes the upload/save and then marks the recording as shared.
+- Frontend: Add user-facing English error handling for save/share failures (including a specific message for “disallowed origin”) and reset UI state so the dialog closes and users can retry without refresh.
 
-**User-visible outcome:** In production, saving/sharing/fetching/deleting recordings works even when the backend expects legacy assignment IDs, and users no longer get stuck on “Invalid assignment” for these operations while seeing the same assignment titles/labels as before.
+**User-visible outcome:** After recording audio in the “My” tab, users can click Save and confirm sharing; the recording is saved and playable for the day, and if “Yes” is chosen it becomes visible/playable for other participants in the Team tab—even when the app is opened on a Caffeine draft domain. If something goes wrong, users see a clear English error message and can try again.

@@ -1,76 +1,73 @@
 {
   "kind": "build_request",
-  "title": "Fix production 'Invalid assignment' by adding legacy assignment ID fallback and robust client-side mapping",
-  "priority": "high",
+  "title": "Fix audio recording Save → Share with team flow failing with “disallowed origin” in draft",
+  "priority": "normal",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Add a frontend compatibility layer that transparently maps assignment IDs between hyphenated and underscore variants when calling backend recording APIs, so production canisters that still validate legacy IDs do not reject requests.",
-      "target": "frontend",
+      "text": "Fix the audio recording upload + share flow so that clicking “Save” then confirming “Share with team? → Yes” successfully (1) uploads/saves the recording and (2) sets it as shared, making it visible on the Team tab for other participants, including when the app is opened from a Caffeine draft domain.",
+      "target": "both",
       "source": {
         "messageIds": [
-          "msg-1"
+          "recent-messages"
         ],
         "quotes": [
-          "In de draft mode werkt hij perfect, maar in de live app werkt hij niet goed.",
-          "Invalid assignment: \"daily-check-in\"",
-          "ik heb een schermafbeelding toegevoegd waar je de labels kan lezen, deze wil ik behouden."
+          "als ik nu op save druk, en dan op share with group, yes, dan slaat hij niet op en dan deelt hij ook niet met de groep.",
+          "ik zou op save drukken, dan komt pop up menu met de info van share with group en dan yes, en dan wordt de opname opgeslagene en gedeeld."
         ]
       },
       "acceptanceCriteria": [
-        "When the backend returns an error containing \"Invalid assignment:\" for any recording operation (save, share, get, delete, getAssignmentRecordings, getParticipantRecording), the frontend retries the same request once using the alternate ID format (daily-check-in <-> daily_check_in, morning-reflection <-> morning_reflection, evening-reflection <-> evening_reflection, mindfulness-practice <-> mindfulness_practice, gratitude-journal <-> gratitude_journal).",
-        "If the retry succeeds, the UI proceeds as normal (no persistent error shown).",
-        "If both attempts fail, the UI shows a single user-facing error message in English (no duplicate toasts/errors).",
-        "Assignment labels/titles displayed in the UI remain unchanged from the current screenshots (e.g., the visible assignment cards still show the same labels the user provided)."
+        "From the in-challenge “My” tab, after recording audio, clicking “Save” opens the share confirmation dialog and clicking “Yes” completes without silently failing.",
+        "After confirmation, the recording exists for the current assignment/day (My tab shows the saved/recorded state and playback works).",
+        "After confirmation with “Yes”, the recording is visible to other participants via the Team tab (i.e., other participants can see a shared badge/indicator and can play it).",
+        "The behavior works in the draft environment where the user currently sees “error disallowed origin” in the browser console."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Ensure the frontend always uses a single internal canonical assignment ID set for rendering and state (keep current IDs used in frontend), while persisting/reading recordings in React Query using a key strategy that prevents duplicate cache entries across the two backend ID variants.",
-      "target": "frontend",
+      "text": "Update backend storage/upload origin validation (the cause of “error disallowed origin”) to allow the frontend origins used by Caffeine deployments so recording uploads are accepted from both draft and live app domains.",
+      "target": "backend",
       "source": {
         "messageIds": [
-          "msg-1"
+          "recent-messages"
         ],
         "quotes": [
-          "de assignmentnamen zijn een aantal keer veranderd.",
-          "In de draft mode werkt hij perfect, maar in de live app werkt hij niet goed."
+          "(screenshots show 'error disallowed origin')"
         ]
       },
       "acceptanceCriteria": [
-        "UI components continue to reference one canonical assignment ID per assignment (no UI duplication caused by variant IDs).",
-        "React Query cache keys for recording queries normalize assignment IDs so that a recording fetched via underscore variant is stored/read under the same cache entry as the hyphenated variant.",
-        "Manual refresh and navigation between days/tabs does not re-trigger the invalid-assignment error once a successful retry has occurred."
+        "Recording uploads initiated from a Caffeine draft domain (e.g., https://*.caffeine.xyz) no longer fail due to origin checks.",
+        "Recording uploads initiated from the live domain also continue to work.",
+        "Origin-allowlisting remains explicit (do not disable origin validation globally)."
       ]
     },
     {
       "id": "REQ-3",
-      "text": "Add lightweight diagnostic logging (frontend-only) that captures the assignment ID used, the fallback attempt, and the sanitized backend error message whenever an invalid-assignment retry path is triggered, to make future production debugging easier.",
+      "text": "Improve client-side error handling for recording save/share so users always get a clear English error message when an upload/share fails (including disallowed-origin failures), and the UI state resets appropriately (no stuck “Saving…” state).",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-1"
+          "recent-messages"
         ],
         "quotes": [
-          "In de live app krijg je een \"Invalid assignment: daily‑check‑in\" fout"
+          "er gebeurt helemaal niets."
         ]
       },
       "acceptanceCriteria": [
-        "When an invalid-assignment error occurs, the console logs clearly indicate (a) the original assignment ID, (b) the fallback ID used for retry, and (c) whether the retry succeeded.",
-        "Logs do not include sensitive user data (no principals, no recording blob details)."
+        "If saving or sharing fails, the UI shows a user-facing English error message (not only a console error).",
+        "If the failure reason contains “disallowed origin”, the displayed message explicitly indicates the app is running on an unauthorized domain/origin and that the user should use the official link or the deployment must be reconfigured.",
+        "After a failure, the share dialog closes and the user can retry saving without refreshing the page."
       ]
     }
   ],
   "constraints": [
-    "Do not edit files under frontend/src/components/ui (read-only).",
-    "Do not edit files listed as immutable in SYSTEM_CONTEXT (e.g., frontend/src/hooks/useInternetIdentity.ts(x), frontend/src/hooks/useActor.ts, frontend/src/main.tsx).",
-    "Backend must remain a single Motoko actor in backend/main.mo; only add backend/migration.mo if state changes require it (not expected for this fix).",
-    "Use English for any user-facing text changes."
+    "Backend must remain a single Motoko actor in backend/main.mo; add backend/migration.mo only if state schema changes are required.",
+    "Do not edit any files under frontend/src/components/ui or other immutable paths listed in SYSTEM_CONTEXT."
   ],
   "nonGoals": [
-    "Renaming or changing the visible assignment labels/titles shown in the UI.",
-    "Introducing a new backend database or external service to store assignment metadata.",
-    "Adding real-time features or WebSocket-based synchronization."
+    "Adding new authentication providers beyond Internet Identity.",
+    "Adding new recording features (e.g., editing, trimming, waveform rendering) beyond fixing save/share reliability and error messaging.",
+    "Changing the challenge/assignment model unrelated to recording upload/sharing."
   ],
   "imageRequirements": {
     "required": [],

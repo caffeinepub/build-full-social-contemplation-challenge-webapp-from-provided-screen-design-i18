@@ -47,6 +47,17 @@ export function isInvalidAssignmentError(error: unknown): boolean {
 }
 
 /**
+ * Check if an error indicates a disallowed origin (draft domain or CORS issue).
+ */
+export function isDisallowedOriginError(error: unknown): boolean {
+  const message = extractErrorMessage(error).toLowerCase();
+  return message.includes('disallowed origin') || 
+         message.includes('origin not allowed') ||
+         message.includes('cors') ||
+         message.includes('cross-origin');
+}
+
+/**
  * Check if an error indicates a stale build or interface mismatch.
  * Includes invalid assignment errors and common call/decoding failures.
  */
@@ -87,6 +98,14 @@ export function isRecordingParameterError(error: unknown): boolean {
 export function sanitizeErrorMessage(error: unknown): string {
   const rawMessage = extractErrorMessage(error);
   const lowerMessage = rawMessage.toLowerCase();
+  
+  // Disallowed origin errors (draft domains, CORS issues)
+  if (lowerMessage.includes('disallowed origin') || 
+      lowerMessage.includes('origin not allowed') ||
+      lowerMessage.includes('cors') ||
+      lowerMessage.includes('cross-origin')) {
+    return 'This app is running on an unauthorized domain. Please use the official link or contact support if this issue persists.';
+  }
   
   // Access control / permission errors (including CORS-like errors from failed bootstrap)
   if (lowerMessage.includes('access control checks') || 

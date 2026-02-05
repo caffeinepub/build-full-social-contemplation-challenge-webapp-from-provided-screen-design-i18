@@ -2,11 +2,10 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-add-a-frontend-compatibility-layer-that-transparently-maps-assignment-ids-between-hyphenated-and-underscore-variants-when-calling-backend-recording-apis-so-production-canisters-that-still-validate-legacy-ids-do-not-reject-requests",
-      "featureTitle": "Add a frontend compatibility layer that transparently maps assignment IDs between hyphenated and underscore variants when calling backend recording APIs, so production canisters that still validate legacy IDs do not reject requests.",
+      "featureId": "feature-fix-the-audio-recording-upload-share-flow-so-that-clicking-save-then-confirming-share-with-team-yes-successfully-1-uploads-saves-the-recording-and-2-sets-it-as-shared-making-it-visible-on-the-team-tab-for-other-participants-including-when-the-app-is-opened-from-a-caffeine-draft-domain",
+      "featureTitle": "Fix the audio recording upload + share flow so that clicking “Save” then confirming “Share with team? → Yes” successfully (1) uploads/saves the recording and (2) sets it as shared, making it visible on the Team tab for other participants, including when the app is opened from a Caffeine draft domain.",
       "files": [
-        "frontend/src/hooks/useQueries.ts",
-        "frontend/src/utils/assignmentIdCompat.ts"
+        "frontend/src/screens/Screen6InChallenge.tsx"
       ],
       "components": [
         "authorization@4.0.0",
@@ -24,32 +23,12 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-ensure-the-frontend-always-uses-a-single-internal-canonical-assignment-id-set-for-rendering-and-state-keep-current-ids-used-in-frontend-while-persisting-reading-recordings-in-react-query-using-a-key-strategy-that-prevents-duplicate-cache-entries-across-the-two-backend-id-variants",
-      "featureTitle": "Ensure the frontend always uses a single internal canonical assignment ID set for rendering and state (keep current IDs used in frontend), while persisting/reading recordings in React Query using a key strategy that prevents duplicate cache entries across the two backend ID variants.",
+      "featureId": "feature-improve-client-side-error-handling-for-recording-save-share-so-users-always-get-a-clear-english-error-message-when-an-upload-share-fails-including-disallowed-origin-failures-and-the-ui-state-resets-appropriately-no-stuck-saving-state",
+      "featureTitle": "Improve client-side error handling for recording save/share so users always get a clear English error message when an upload/share fails (including disallowed-origin failures), and the UI state resets appropriately (no stuck “Saving…” state).",
       "files": [
-        "frontend/src/hooks/useQueries.ts",
-        "frontend/src/utils/recordingIds.ts"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0",
-        "blob-storage@4.0.0",
-        "invite-links@3.0.0"
-      ],
-      "testIds": [
-        "REQ-2"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-add-lightweight-diagnostic-logging-frontend-only-that-captures-the-assignment-id-used-the-fallback-attempt-and-the-sanitized-backend-error-message-whenever-an-invalid-assignment-retry-path-is-triggered-to-make-future-production-debugging-easier",
-      "featureTitle": "Add lightweight diagnostic logging (frontend-only) that captures the assignment ID used, the fallback attempt, and the sanitized backend error message whenever an invalid-assignment retry path is triggered, to make future production debugging easier.",
-      "files": [
-        "frontend/src/hooks/useQueries.ts"
+        "frontend/src/components/AudioRecorder.tsx",
+        "frontend/src/screens/Screen6InChallenge.tsx",
+        "frontend/src/utils/sanitizeErrorMessage.ts"
       ],
       "components": [
         "authorization@4.0.0",

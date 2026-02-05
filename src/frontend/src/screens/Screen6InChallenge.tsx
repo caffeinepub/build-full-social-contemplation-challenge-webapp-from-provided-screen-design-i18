@@ -254,7 +254,7 @@ export function Screen6InChallenge({ onNavigateToManage, onNavigateBack }: Scree
         return newState;
       });
     } catch (error) {
-      console.error('Failed to upload recording:', error);
+      console.error('Failed to save/share recording:', error);
       
       // Check if challenge was deleted
       if (isChallengeNotFoundError(error)) {
@@ -266,6 +266,7 @@ export function Screen6InChallenge({ onNavigateToManage, onNavigateBack }: Scree
         return;
       }
       
+      // Always reset upload state on error so user can retry
       setUploadStates(prev => ({
         ...prev,
         [assignmentId]: {

@@ -1,34 +1,50 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-05T23:03:22.839Z",
-  "summary": "Diff adds an assignment ID compatibility utility, normalizes React Query cache keys by assignment ID, and introduces a retry helper with console diagnostics. However, the diff excerpt is truncated before showing that all required recording operations are wrapped to perform the one-time retry on \"Invalid assignment:\" errors, and it does not clearly show the single user-facing error behavior when both attempts fail.",
+  "generatedAt": "2026-02-05T23:26:59.796Z",
+  "summary": "Frontend changes add/adjust error sanitization (including explicit disallowed-origin messaging) and tweak AudioRecorder dialog behavior around upload failures, but no backend changes are shown. The backend origin allowlist fix (core cause) appears missing, and end-to-end save+share visibility for other participants cannot be confirmed from the truncated diffs.",
   "missing_requirements": [
     {
-      "id": "REQ-1",
-      "requirement": "When the backend returns an error containing \"Invalid assignment:\" for any recording operation (save, share, get, delete, getAssignmentRecordings, getParticipantRecording), the frontend retries the same request once using the alternate ID format, proceeds normally if retry succeeds, and shows a single English user-facing error if both attempts fail (no duplicate toasts/errors).",
-      "reason": "While a retry helper is introduced, the diff is truncated before showing the actual execution wrapper and its use across all listed recording operations, and no concrete UI error/toast de-duplication behavior is visible in the provided changes.",
+      "id": "REQ-2",
+      "requirement": "Update backend storage/upload origin validation to explicitly allow the frontend origins used by Caffeine deployments (including draft domains like https://*.caffeine.xyz) while keeping allowlisting explicit.",
+      "reason": "The diff shows only frontend file modifications; there are no changes to backend/main.mo (or any backend files) implementing origin allowlisting updates, so uploads from draft origins would still fail if backend validation remains unchanged.",
       "evidence": [
-        "frontend/src/hooks/useQueries.ts (truncated; shows retry helper but not the full integration across operations)",
-        "frontend/src/utils/assignmentIdCompat.ts"
+        "File diff summary: Added 0 backend files; Modified files are all under frontend/ (no backend/main.mo shown)"
       ]
     },
     {
-      "id": "REQ-3",
-      "requirement": "When an invalid-assignment error occurs, console logs indicate the original assignment ID, the fallback ID used for retry, and whether the retry succeeded, including a sanitized backend error message, without sensitive user data.",
-      "reason": "The shown logs include original/alternate IDs and success/failure, and sanitizeErrorMessage is logged on retry failure, but the excerpt does not show logging of the sanitized *original* backend error message at the moment the retry path is triggered (could be in truncated portion).",
+      "id": "REQ-1",
+      "requirement": "Fix the audio recording upload + share flow so Save → Share with team? → Yes successfully uploads/saves and sets shared so it appears on Team tab for other participants, including in draft domain.",
+      "reason": "While the frontend dialog and error-handling code is adjusted, the diff does not provide evidence that the underlying save+share operation now succeeds in draft domains (likely requiring REQ-2), nor does it show definitive changes ensuring the shared state is persisted and reflected on the Team tab for other participants.",
       "evidence": [
-        "frontend/src/hooks/useQueries.ts (truncated; logging shown for retry attempt/success and retry failure with sanitizeErrorMessage, but original error logging not shown)"
+        "frontend/src/components/AudioRecorder.tsx (truncated)",
+        "frontend/src/screens/Screen6InChallenge.tsx (truncated)",
+        "No backend changes shown in diff summary (likely needed for draft-origin success)"
       ]
     }
   ],
-  "hallucinated_features": [],
-  "confidence": 0.56,
+  "hallucinated_features": [
+    {
+      "description": "Added broader frontend error classification and messaging unrelated to recording save/share (e.g., stale build/interface mismatch detection and invalid assignment heuristics).",
+      "reason": "REQ-3 only asks for clearer error messaging and UI reset for recording save/share failures (especially disallowed-origin). The diff introduces additional generalized error-detection helpers that go beyond the stated scope.",
+      "evidence": [
+        "frontend/src/utils/sanitizeErrorMessage.ts (truncated): adds isStaleBuildError, isInvalidAssignmentError, isRecordingParameterError"
+      ]
+    },
+    {
+      "description": "Challenge recovery/reset behaviors triggered by 'challenge not found' errors in Screen6.",
+      "reason": "The BuildRequest is specifically about fixing recording Save→Share reliability and origin validation; adding challenge recovery logic is not requested and may be unrelated.",
+      "evidence": [
+        "frontend/src/screens/Screen6InChallenge.tsx (truncated): 'Detect \"Challenge not found\" errors and trigger recovery' and references to resetChallengeState/setChallengeDeletedNotice"
+      ]
+    }
+  ],
+  "confidence": 0.64,
   "changed_files": [
     "frontend-file-summaries.txt",
-    "frontend/src/hooks/useQueries.ts",
-    "frontend/src/utils/assignmentIdCompat.ts",
-    "frontend/src/utils/recordingIds.ts",
+    "frontend/src/components/AudioRecorder.tsx",
+    "frontend/src/screens/Screen6InChallenge.tsx",
+    "frontend/src/utils/sanitizeErrorMessage.ts",
     "project_state.json"
   ]
 }

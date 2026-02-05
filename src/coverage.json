@@ -1,52 +1,46 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-05T23:03:22.841Z",
+  "generatedAt": "2026-02-05T23:26:59.800Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
     "total": 3,
-    "implemented": 3,
+    "implemented": 2,
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Add a frontend compatibility layer that transparently maps assignment IDs between hyphenated and underscore variants when calling backend recording APIs, so production canisters that still validate legacy IDs do not reject requests.",
+        "summary": "Fix the audio recording upload + share flow so that clicking “Save” then confirming “Share with team? → Yes” successfully (1) uploads/saves the recording and (2) sets it as shared, making it visible on the Team tab for other participants, including when the app is opened from a Caffeine draft domain.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/utils/assignmentIdCompat.ts",
-          "frontend/src/hooks/useQueries.ts",
           "frontend/src/screens/Screen6InChallenge.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/utils/assignmentIdCompat.ts",
-          "frontend/src/hooks/useQueries.ts"
+          "frontend/src/screens/Screen6InChallenge.tsx"
         ]
       },
       {
         "id": "REQ-2",
-        "summary": "Ensure the frontend always uses a single internal canonical assignment ID set for rendering and state (keep current IDs used in frontend), while persisting/reading recordings in React Query using a key strategy that prevents duplicate cache entries across the two backend ID variants.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/utils/recordingIds.ts"
-        ],
-        "matchedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/utils/recordingIds.ts"
-        ]
+        "summary": "Update backend storage/upload origin validation (the cause of “error disallowed origin”) to allow the frontend origins used by Caffeine deployments so recording uploads are accepted from both draft and live app domains.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
       },
       {
         "id": "REQ-3",
-        "summary": "Add lightweight diagnostic logging (frontend-only) that captures the assignment ID used, the fallback attempt, and the sanitized backend error message whenever an invalid-assignment retry path is triggered, to make future production debugging easier.",
+        "summary": "Improve client-side error handling for recording save/share so users always get a clear English error message when an upload/share fails (including disallowed-origin failures), and the UI state resets appropriately (no stuck “Saving…” state).",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/utils/recordingDiagnostics.ts",
-          "frontend/src/hooks/useQueries.ts"
+          "frontend/src/utils/sanitizeErrorMessage.ts",
+          "frontend/src/screens/Screen6InChallenge.tsx",
+          "frontend/src/components/AudioRecorder.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/hooks/useQueries.ts"
+          "frontend/src/utils/sanitizeErrorMessage.ts",
+          "frontend/src/screens/Screen6InChallenge.tsx",
+          "frontend/src/components/AudioRecorder.tsx"
         ]
       }
     ]
@@ -56,9 +50,9 @@
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/hooks/useQueries.ts",
-    "frontend/src/utils/assignmentIdCompat.ts",
-    "frontend/src/utils/recordingIds.ts",
+    "frontend/src/components/AudioRecorder.tsx",
+    "frontend/src/screens/Screen6InChallenge.tsx",
+    "frontend/src/utils/sanitizeErrorMessage.ts",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

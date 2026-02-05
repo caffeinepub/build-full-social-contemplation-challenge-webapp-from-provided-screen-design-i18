@@ -1,73 +1,48 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Frontend fallback for legacy assignment ID variants + normalized React Query caching",
+  "title": "Repair recording Save→Share flow reliability and user-facing error handling (draft domains)",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Retry recording API calls once with legacy (hyphen/underscore) assignment ID variant when backend rejects the provided assignment ID.",
+      "summary": "Ensure Save→Share(Yes) reliably saves the audio and marks it shared so it appears for others in Team tab, including in draft domains.",
       "acceptanceCriteria": [
-        "When the backend returns an error containing \"Invalid assignment:\" for any recording operation (save, share, get, delete, getAssignmentRecordings, getParticipantRecording), the frontend retries the same request once using the alternate ID format (daily-check-in <-> daily_check_in, morning-reflection <-> morning_reflection, evening-reflection <-> evening_reflection, mindfulness-practice <-> mindfulness_practice, gratitude-journal <-> gratitude_journal).",
-        "If the retry succeeds, the UI proceeds as normal (no persistent error shown).",
-        "If both attempts fail, the UI shows a single user-facing error message in English (no duplicate toasts/errors).",
-        "Assignment labels/titles displayed in the UI remain unchanged from the current screenshots (e.g., the visible assignment cards still show the same labels the user provided)."
+        "From the in-challenge “My” tab, after recording audio, clicking “Save” opens the share confirmation dialog and clicking “Yes” completes without silently failing.",
+        "After confirmation, the recording exists for the current assignment/day (My tab shows the saved/recorded state and playback works).",
+        "After confirmation with “Yes”, the recording is visible to other participants via the Team tab (i.e., other participants can see a shared badge/indicator and can play it).",
+        "The behavior works in the draft environment where the user currently sees “error disallowed origin” in the browser console."
       ],
       "file_operations": [
-        {
-          "path": "frontend/src/utils/assignmentIdCompat.ts",
-          "operation": "create",
-          "description": "Add a small compatibility utility that (1) maps between canonical hyphenated IDs and legacy underscore variants for the known assignments, (2) returns an alternate ID for retry, and (3) exposes helpers to detect an \"Invalid assignment:\" backend error and to normalize any variant to the canonical ID. Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/hooks/useQueries.ts",
-          "operation": "modify",
-          "description": "Wrap all recording-related backend calls (saveRecording, shareRecording, getRecording, deleteRecording, getAssignmentRecordings, getParticipantRecording) with a one-time retry on \"Invalid assignment:\" using the alternate ID from the compatibility utility, ensuring only one user-facing error is produced when both attempts fail. Verify the component's usage instructions before implementing."
-        },
         {
           "path": "frontend/src/screens/Screen6InChallenge.tsx",
           "operation": "modify",
-          "description": "Ensure upload/delete UI error handling continues to display a single English error message sourced from the final failure only (no duplicate error state updates), and that assignment titles/labels remain unchanged. Verify the component's usage instructions before implementing."
-        }
-      ]
-    },
-    {
-      "id": "REQ-2",
-      "summary": "Keep canonical assignment IDs in UI/state while normalizing React Query cache keys so both backend ID variants share the same cache entry.",
-      "acceptanceCriteria": [
-        "UI components continue to reference one canonical assignment ID per assignment (no UI duplication caused by variant IDs).",
-        "React Query cache keys for recording queries normalize assignment IDs so that a recording fetched via underscore variant is stored/read under the same cache entry as the hyphenated variant.",
-        "Manual refresh and navigation between days/tabs does not re-trigger the invalid-assignment error once a successful retry has occurred."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/hooks/useQueries.ts",
-          "operation": "modify",
-          "description": "Normalize assignment IDs used inside React Query keys for recording queries/mutations (recording, assignmentRecordings, participantRecording) by converting any variant to the canonical ID before key construction; ensure invalidation/removal uses the same normalized key strategy to prevent duplicate cache entries and to avoid re-triggering invalid-assignment after a successful fallback. Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/utils/recordingIds.ts",
-          "operation": "modify",
-          "description": "Add/adjust a minimal helper (or re-export from the compatibility utility) to support consistent canonicalization of assignment IDs for cache-key construction without changing the canonical IDs used by UI rendering. Verify the component's usage instructions before implementing."
+          "description": "Harden the Save→Share sequence: treat save and share as separate steps with distinct failure handling (e.g., if save succeeds but share fails, keep the saved recording visible, invalidate relevant queries, and surface an actionable error prompting the user to retry sharing). Ensure React Query invalidations cover both My-tab recording state and Team-tab shared indicators, and ensure upload state always exits the “Saving…” state on any failure. Verify the component's usage instructions before implementing (blob-storage ExternalBlob upload/progress behaviors)."
         }
       ]
     },
     {
       "id": "REQ-3",
-      "summary": "Add frontend-only diagnostic logs for invalid-assignment fallback attempts without exposing sensitive data.",
+      "summary": "Add clear English client-side error messages for save/share failures (including disallowed-origin) and reset UI state so users can retry without refresh.",
       "acceptanceCriteria": [
-        "When an invalid-assignment error occurs, the console logs clearly indicate (a) the original assignment ID, (b) the fallback ID used for retry, and (c) whether the retry succeeded.",
-        "Logs do not include sensitive user data (no principals, no recording blob details)."
+        "If saving or sharing fails, the UI shows a user-facing English error message (not only a console error).",
+        "If the failure reason contains “disallowed origin”, the displayed message explicitly indicates the app is running on an unauthorized domain/origin and that the user should use the official link or the deployment must be reconfigured.",
+        "After a failure, the share dialog closes and the user can retry saving without refreshing the page."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/utils/recordingDiagnostics.ts",
+          "path": "frontend/src/utils/sanitizeErrorMessage.ts",
           "operation": "modify",
-          "description": "Add a lightweight logging helper dedicated to invalid-assignment fallback retries that logs only: operation name, original assignment ID, fallback assignment ID, sanitized backend error message (if present), and retry result (success/failure); explicitly avoid logging principals or blob details. Verify the component's usage instructions before implementing."
+          "description": "Add explicit sanitization/mapping for upload/share failures that include “disallowed origin” (and common variants), returning a clear English message explaining the app is running on an unauthorized origin/domain and that the user should use the official link or the deployment must be reconfigured. Keep other mappings intact and avoid exposing raw backend/storage error text."
         },
         {
-          "path": "frontend/src/hooks/useQueries.ts",
+          "path": "frontend/src/screens/Screen6InChallenge.tsx",
           "operation": "modify",
-          "description": "When the invalid-assignment retry path is triggered for any recording operation, call the new diagnostic logger with original/fallback IDs, operation name, sanitized error message, and retry outcome; ensure logs are emitted only on this path. Verify the component's usage instructions before implementing."
+          "description": "Ensure UI state resets correctly on failures: always set per-assignment upload state to non-uploading, preserve the recorded blob so Save can be retried, and show the sanitized user-facing error text (including the disallowed-origin mapping). Ensure errors from either save or share are surfaced consistently."
+        },
+        {
+          "path": "frontend/src/components/AudioRecorder.tsx",
+          "operation": "modify",
+          "description": "Guarantee the share confirmation dialog closes on any user decision and never leaves the UI in a stuck state; ensure error display prioritizes sanitized upload/share errors and that the user can immediately retry Save without refreshing. Verify the component's usage instructions before implementing (shadcn-ui Dialog behavior in this wrapper usage)."
         }
       ]
     }

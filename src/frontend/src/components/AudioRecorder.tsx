@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Mic, Square, Save, Trash2, Loader2 } from 'lucide-react';
 import { useAudioRecording } from '../hooks/useAudioRecording';
@@ -55,6 +55,17 @@ export function AudioRecorder({
 
   const [localError, setLocalError] = useState<string | null>(null);
   const [showShareDialog, setShowShareDialog] = useState(false);
+
+  // Close share dialog when upload completes or fails
+  useEffect(() => {
+    if (showShareDialog && !isUploading) {
+      // If there's an upload error, close the dialog so user can see the error
+      if (uploadError) {
+        setShowShareDialog(false);
+      }
+      // If upload succeeded (no error and not uploading), dialog was already closed by handleShareDecision
+    }
+  }, [isUploading, uploadError, showShareDialog]);
 
   const handleStartRecording = async () => {
     setLocalError(null);
@@ -248,6 +259,7 @@ export function AudioRecorder({
               variant="outline"
               onClick={() => handleShareDecision(false)}
               className="w-full sm:w-auto"
+              disabled={isUploading}
             >
               No
             </Button>
@@ -255,6 +267,7 @@ export function AudioRecorder({
               variant="default"
               onClick={() => handleShareDecision(true)}
               className="w-full sm:w-auto"
+              disabled={isUploading}
             >
               Yes
             </Button>
