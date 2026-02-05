@@ -13,21 +13,21 @@ import { uiDayToBackendDay } from './recordingDayIndex';
  * These MUST match the validAssignments array in backend/main.mo exactly.
  * 
  * Backend validAssignments (canonical IDs only):
- * ["awareness", "utopia", "small-steps", "support-strategies", "other-contemplations"]
+ * ["daily-check-in", "morning-reflection", "evening-reflection", "mindfulness-practice", "gratitude-journal"]
  * 
  * Backend canonicalizes all assignments with .trim().toLower()
  * 
  * IMPORTANT: Only these hyphenated IDs should be used in the frontend.
- * Legacy underscore variants (small_steps, support_strategies, other_contemplations)
+ * Legacy underscore variants (daily_check_in, morning_reflection, etc.)
  * are accepted by the backend for backward compatibility but should NOT be used
  * in new code.
  */
 export const CANONICAL_ASSIGNMENT_IDS = [
-  'awareness',
-  'utopia',
-  'small-steps',
-  'support-strategies',
-  'other-contemplations',
+  'daily-check-in',
+  'morning-reflection',
+  'evening-reflection',
+  'mindfulness-practice',
+  'gratitude-journal',
 ] as const;
 
 export type CanonicalAssignmentId = typeof CANONICAL_ASSIGNMENT_IDS[number];

@@ -16,6 +16,9 @@ import Principal "mo:core/Principal";
 import Array "mo:core/Array";
 import Debug "mo:core/Debug";
 
+
+
+
 actor {
   public type BuildInfo = {
     version : Text;
@@ -77,17 +80,48 @@ actor {
 
   let userProfiles = Map.empty<Principal, UserProfile>();
 
-  // Set of valid assignments (including legacy variants from first deployment)
+  // Mapping from variant canonicalAssignment to human-readable title
+  let assignmentTitles = Map.fromIter(
+    [
+      // Official canonical titles as first entry for each assignment
+      ("daily-check-in", "Daily Check-in"),
+      ("daily_check_in", "Daily Check-in"),
+      ("morning-reflection", "Morning Reflection"),
+      ("morning_reflection", "Morning Reflection"),
+      ("evening-reflection", "Evening Reflection"),
+      ("evening_reflection", "Evening Reflection"),
+      ("mindfulness-practice", "Mindfulness Practice"),
+      ("mindfulness_practice", "Mindfulness Practice"),
+      ("gratitude-journal", "Gratitude Journal"),
+      ("gratitude_journal", "Gratitude Journal"),
+    ].values()
+  );
+
+  // Mapping from legacy assignment names to new canonical assignment names
+  let assignmentMap = Map.fromIter(
+    [
+      // New assignments - self-mapping
+      ("daily-check-in", "daily-check-in"),
+      ("daily_check_in", "daily-check-in"),
+      ("morning-reflection", "morning-reflection"),
+      ("morning_reflection", "morning-reflection"),
+      ("evening-reflection", "evening-reflection"),
+      ("evening_reflection", "evening-reflection"),
+      ("mindfulness-practice", "mindfulness-practice"),
+      ("mindfulness_practice", "mindfulness-practice"),
+      ("gratitude-journal", "gratitude-journal"),
+      ("gratitude_journal", "gratitude-journal"),
+    ].values()
+  );
+
+  // Set of allowed assignment names including legacy names for safe rollout
   let validAssignments = Set.fromIter(
     [
-      "awareness",
-      "utopia",
-      "small-steps",
-      "small_steps",
-      "support-strategies",
-      "support_strategies",
-      "other-contemplations",
-      "other_contemplations",
+      "daily-check-in", "daily_check_in",
+      "morning-reflection", "morning_reflection",
+      "evening-reflection", "evening_reflection",
+      "mindfulness-practice", "mindfulness_practice",
+      "gratitude-journal", "gratitude_journal",
     ].values()
   );
 
@@ -421,14 +455,23 @@ actor {
     };
   };
 
-  public shared ({ caller }) func saveRecording(challengeId : Nat, day : Nat, assignment : Text, recording : Storage.ExternalBlob) : async () {
+  public shared ({ caller }) func saveRecording(
+    challengeId : Nat,
+    day : Nat,
+    assignment : Text,
+    recording : Storage.ExternalBlob,
+  ) : async () {
     validateAuthenticatedUser(caller);
     checkDay(day);
 
     let canonicalAssignment = canonicalizeAssignment(assignment);
-    validateAssignment(canonicalAssignment);
+    let mappedAssignment = switch (assignmentMap.get(canonicalAssignment)) {
+      case (null) { canonicalAssignment };
+      case (?mapped) { mapped };
+    };
 
-    Debug.print("MC: saveRecording day=" # day.toText() # " assignment=" # assignment # " canonicalAssignment=" # canonicalAssignment);
+    validateAssignment(mappedAssignment);
+    Debug.print("MC: saveRecording day=" # day.toText() # " assignment=" # assignment # " mappedAssignment=" # mappedAssignment);
 
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
@@ -447,12 +490,12 @@ actor {
           case (null) { Map.empty<Text, Storage.ExternalBlob>() };
         };
 
-        if (existingDayRecordings.containsKey(canonicalAssignment)) {
+        if (existingDayRecordings.containsKey(mappedAssignment)) {
           Runtime.trap("Recording already exists for this assignment. Delete the existing recording before uploading a new one. Users cannot overwrite an existing recording.");
         };
 
         let updatedDayRecordings = existingDayRecordings.clone();
-        updatedDayRecordings.add(canonicalAssignment, recording);
+        updatedDayRecordings.add(mappedAssignment, recording);
 
         let updatedUserRecordings = existingUserRecordings.clone();
         updatedUserRecordings.add(day, updatedDayRecordings);
@@ -473,9 +516,13 @@ actor {
     checkDay(day);
 
     let canonicalAssignment = canonicalizeAssignment(assignment);
-    validateAssignment(canonicalAssignment);
+    let mappedAssignment = switch (assignmentMap.get(canonicalAssignment)) {
+      case (null) { canonicalAssignment };
+      case (?mapped) { mapped };
+    };
 
-    Debug.print("MC: getRecording day=" # day.toText() # " assignment=" # assignment # " canonicalAssignment=" # canonicalAssignment);
+    validateAssignment(mappedAssignment);
+    Debug.print("MC: getRecording day=" # day.toText() # " assignment=" # assignment # " mappedAssignment=" # mappedAssignment);
 
     validateAuthenticatedUser(caller);
 
@@ -492,7 +539,7 @@ actor {
             switch (userRecordings.get(day)) {
               case (null) { Runtime.trap("No recordings found for day") };
               case (?dayRecordings) {
-                switch (dayRecordings.get(canonicalAssignment)) {
+                switch (dayRecordings.get(mappedAssignment)) {
                   case (null) { Runtime.trap("Recording not found for assignment") };
                   case (?recording) { recording };
                 };
@@ -508,9 +555,13 @@ actor {
     checkDay(day);
 
     let canonicalAssignment = canonicalizeAssignment(assignment);
-    validateAssignment(canonicalAssignment);
+    let mappedAssignment = switch (assignmentMap.get(canonicalAssignment)) {
+      case (null) { canonicalAssignment };
+      case (?mapped) { mapped };
+    };
 
-    Debug.print("MC: deleteRecording day=" # day.toText() # " assignment=" # assignment # " canonicalAssignment=" # canonicalAssignment);
+    validateAssignment(mappedAssignment);
+    Debug.print("MC: deleteRecording day=" # day.toText() # " assignment=" # assignment # " mappedAssignment=" # mappedAssignment);
 
     validateAuthenticatedUser(caller);
 
@@ -531,12 +582,12 @@ actor {
           case (null) { Runtime.trap("No recordings found for day") };
         };
 
-        if (not existingDayRecordings.containsKey(canonicalAssignment)) {
+        if (not existingDayRecordings.containsKey(mappedAssignment)) {
           Runtime.trap("Recording not found for assignment");
         };
 
         let updatedDayRecordings = existingDayRecordings.clone();
-        updatedDayRecordings.remove(canonicalAssignment);
+        updatedDayRecordings.remove(mappedAssignment);
 
         let newUserRecordings = existingUserRecordings.clone();
         newUserRecordings.add(day, updatedDayRecordings);
@@ -554,9 +605,13 @@ actor {
     checkDay(day);
 
     let canonicalAssignment = canonicalizeAssignment(assignment);
-    validateAssignment(canonicalAssignment);
+    let mappedAssignment = switch (assignmentMap.get(canonicalAssignment)) {
+      case (null) { canonicalAssignment };
+      case (?mapped) { mapped };
+    };
 
-    Debug.print("MC: getAssignmentRecordings day=" # day.toText() # " assignment=" # assignment # " canonicalAssignment=" # canonicalAssignment);
+    validateAssignment(mappedAssignment);
+    Debug.print("MC: getAssignmentRecordings day=" # day.toText() # " assignment=" # assignment # " mappedAssignment=" # mappedAssignment);
 
     validateAuthenticatedUser(caller);
 
@@ -575,7 +630,7 @@ actor {
                 switch (userRecordings.get(day)) {
                   case (null) { (participant, null : ?Storage.ExternalBlob) };
                   case (?dayRecordings) {
-                    switch (dayRecordings.get(canonicalAssignment)) {
+                    switch (dayRecordings.get(mappedAssignment)) {
                       case (null) { (participant, null : ?Storage.ExternalBlob) };
                       case (?recording) { (participant, ?recording) };
                     };
@@ -593,9 +648,13 @@ actor {
     checkDay(day);
 
     let canonicalAssignment = canonicalizeAssignment(assignment);
-    validateAssignment(canonicalAssignment);
+    let mappedAssignment = switch (assignmentMap.get(canonicalAssignment)) {
+      case (null) { canonicalAssignment };
+      case (?mapped) { mapped };
+    };
 
-    Debug.print("MC: getParticipantRecording day=" # day.toText() # " assignment=" # assignment # " canonicalAssignment=" # canonicalAssignment);
+    validateAssignment(mappedAssignment);
+    Debug.print("MC: getParticipantRecording day=" # day.toText() # " assignment=" # assignment # " mappedAssignment=" # mappedAssignment);
 
     validateAuthenticatedUser(caller);
 
@@ -612,7 +671,7 @@ actor {
             switch (userRecordings.get(day)) {
               case (null) { Runtime.trap("No recordings found for day") };
               case (?dayRecordings) {
-                switch (dayRecordings.get(canonicalAssignment)) {
+                switch (dayRecordings.get(mappedAssignment)) {
                   case (null) { Runtime.trap("Recording not found for assignment") };
                   case (?recording) { recording };
                 };

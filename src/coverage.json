@@ -1,21 +1,22 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-05T20:10:27.187Z",
+  "generatedAt": "2026-02-05T22:02:03.431Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 3,
-    "implemented": 3,
+    "total": 2,
+    "implemented": 2,
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Remove the waveform visualization from the recording UI so users no longer see an empty/black waveform area while recording.",
+        "summary": "Remove (hide/disable) all UI elements that allow users to upload an existing audio file (e.g., file picker, \"Upload\" button meant for selecting a local file) anywhere in the app.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/components/AudioRecorder.tsx"
+          "frontend/src/components/AudioRecorder.tsx",
+          "frontend/src/screens/Screen6InChallenge.tsx"
         ],
         "matchedFiles": [
           "frontend/src/components/AudioRecorder.tsx"
@@ -23,25 +24,13 @@
       },
       {
         "id": "REQ-2",
-        "summary": "Ensure a clearly visible, real-time input level (VU meter) is shown during recording and reliably updates in response to incoming microphone audio.",
+        "summary": "Ensure the in-app audio recorder flow is active and usable: users can start recording, stop recording, review the recorded audio, and proceed with the existing save/share action without exposing a user-facing control labeled \"Upload\".",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/hooks/useAudioRecording.ts"
+          "frontend/src/components/AudioRecorder.tsx",
+          "frontend/src/screens/Screen6InChallenge.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/hooks/useAudioRecording.ts"
-        ]
-      },
-      {
-        "id": "REQ-3",
-        "summary": "Remove waveform-related state/logic from the audio recording hook and component interfaces so the app no longer computes or stores waveform samples.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/hooks/useAudioRecording.ts",
-          "frontend/src/components/AudioRecorder.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/hooks/useAudioRecording.ts",
           "frontend/src/components/AudioRecorder.tsx"
         ]
       }
@@ -53,8 +42,6 @@
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
     "frontend/src/components/AudioRecorder.tsx",
-    "frontend/src/components/RecordingWaveform.tsx",
-    "frontend/src/hooks/useAudioRecording.ts",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

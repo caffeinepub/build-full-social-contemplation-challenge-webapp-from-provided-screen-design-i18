@@ -1,11 +1,11 @@
 # Specification
 
 ## Summary
-**Goal:** Provide reliable live input level (VU meter) feedback during recording and remove the waveform visualization so users don’t see an empty/black waveform area.
+**Goal:** Remove all audio file upload UI and ensure the in-app microphone recorder flow is the only active, usable way to provide audio.
 
 **Planned changes:**
-- Remove the waveform UI from the recording and post-record review states so no waveform canvas/placeholder is shown.
-- Ensure a clearly visible real-time recording level meter is displayed during recording and updates multiple times per second based on microphone input, including on iOS/Safari (resume/start audio analysis from the “Start Recording” user gesture when required).
-- Simplify the recording hook/component interfaces by removing waveform-related state and logic so waveform samples are no longer computed or stored, while keeping recorded audio playback and upload behavior unchanged.
+- Hide/disable/remove any file-input based audio upload controls across the app (e.g., file picker, “Upload” button intended for selecting a local file).
+- Ensure the in-challenge recorder flow supports start recording, stop recording, playback review, and proceeding with the existing send/save/share action.
+- Update user-facing UI text so no control in the recorder flow is labeled “Upload” (use English UI text).
 
-**User-visible outcome:** While recording, users see a responsive live level meter that confirms audio is coming in, and they no longer see a black/empty waveform area; recording, review, and upload continue to work as before.
+**User-visible outcome:** Users can record audio in-app with the microphone, review the recording, and proceed with the existing action to send it—without any visible option to upload a local audio file and without any “Upload” button label in the recorder UI.

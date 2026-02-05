@@ -80,6 +80,9 @@ export function isRecordingParameterError(error: unknown): boolean {
 /**
  * Sanitize error messages for display to users.
  * Maps backend errors to user-friendly messages.
+ * 
+ * IMPORTANT: Only show the "invalid assignment" refresh prompt when the backend
+ * explicitly rejects an assignment ID. Do not show it for other errors.
  */
 export function sanitizeErrorMessage(error: unknown): string {
   const rawMessage = extractErrorMessage(error);
@@ -106,9 +109,11 @@ export function sanitizeErrorMessage(error: unknown): string {
   }
   
   // Recording-related errors - invalid assignment (stale frontend)
-  if (lowerMessage.includes('invalid assignment')) {
+  // Only show refresh prompt if the backend explicitly rejected the assignment
+  if (lowerMessage.includes('invalid assignment') && 
+      (rawMessage.includes('Please refresh') || rawMessage.includes('refresh the page'))) {
     // Extract the invalid assignment name if present
-    const match = rawMessage.match(/invalid assignment[:\s]+([a-z_-]+)/i);
+    const match = rawMessage.match(/invalid assignment[:\s]+["']?([a-z_-]+)["']?/i);
     if (match) {
       return `Invalid assignment: "${match[1]}". Your app may be out of date. Please refresh.`;
     }

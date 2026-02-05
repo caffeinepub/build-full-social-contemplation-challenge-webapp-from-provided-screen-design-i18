@@ -1,72 +1,51 @@
 {
   "kind": "build_request",
-  "title": "Add reliable live VU meter feedback during recording and remove waveform visualization",
+  "title": "Step 1: Remove audio file upload UI and ensure the in-app audio recorder is active",
   "priority": "normal",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Remove the waveform visualization from the recording UI so users no longer see an empty/black waveform area while recording.",
+      "text": "Remove (hide/disable) all UI elements that allow users to upload an existing audio file (e.g., file picker, \"Upload\" button meant for selecting a local file) anywhere in the app.",
       "target": "frontend",
       "source": {
         "messageIds": [
           "msg-1"
         ],
         "quotes": [
-          "Input level vi meter is genoeg \nWaveform hoeft niet zichtbaar\nJa (de waveform kan dus weg)"
+          "Voer stap 1 uit"
         ]
       },
       "acceptanceCriteria": [
-        "When `isRecording` is true, the UI does not render `RecordingWaveform` (no canvas/placeholder waveform area is visible).",
-        "No waveform is shown during recording or in the review state after recording.",
-        "The rest of the record → stop → review → upload flow remains unchanged."
+        "There is no file-input based audio upload control visible anywhere in the UI.",
+        "Users cannot select a local audio file for upload via the UI."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Ensure a clearly visible, real-time input level (VU meter) is shown during recording and reliably updates in response to incoming microphone audio.",
+      "text": "Ensure the in-app audio recorder flow is active and usable: users can start recording, stop recording, review the recorded audio, and proceed with the existing save/share action without exposing a user-facing control labeled \"Upload\".",
       "target": "frontend",
       "source": {
         "messageIds": [
           "msg-1"
         ],
         "quotes": [
-          "Dus dat je niet ziet dat er daadwerkelijk geluid binnenkomt als je opneemt.",
-          "Of in ieder geval wil ik dat je een input level ziet, zodat je het gevoel hebt dat je dat eigenlijk opneemt."
+          "Voer stap 1 uit"
         ]
       },
       "acceptanceCriteria": [
-        "While recording, the `RecordingLevelMeter` is visible and updates multiple times per second as audio is detected (level changes are observable when speaking/clapping).",
-        "On iOS/Safari and desktop browsers, the audio analysis starts successfully after the user taps “Start Recording” (e.g., AudioContext is resumed from a user gesture if needed).",
-        "If microphone permission is denied or no microphone exists, an English error message is shown (existing error behavior preserved)."
-      ]
-    },
-    {
-      "id": "REQ-3",
-      "text": "Remove waveform-related state/logic from the audio recording hook and component interfaces so the app no longer computes or stores waveform samples.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-1"
-        ],
-        "quotes": [
-          "Waveform hoeft niet zichtbaar\nJa (de waveform kan dus weg)"
-        ]
-      },
-      "acceptanceCriteria": [
-        "`useAudioRecording` no longer exposes `waveformSamples` and does not update waveform sample arrays during `updateAudioLevel`.",
-        "Any waveform-only components/props are removed from the active render path of the app (no unused waveform data is required by `AudioRecorder`).",
-        "Recording still produces a playable `recordedBlob`/`recordedUrl`, and upload continues to work as before."
+        "On the in-challenge screen, users can start and stop a microphone recording successfully.",
+        "After stopping, users can review playback of the recorded audio and then proceed with the action that sends it to the backend, but the control is not labeled \"Upload\" (use English UI text).",
+        "No user-facing button labeled \"Upload\" is shown in the recorder UI."
       ]
     }
   ],
   "constraints": [
-    "Do not edit any files under `frontend/src/components/ui` or other paths listed in `frontend.immutablePaths`.",
-    "Keep all existing recording, review, upload, and delete behaviors unchanged aside from removing the waveform visualization and improving the live level feedback."
+    "Do not edit files under frontend/src/components/ui (shadcn components are read-only).",
+    "Do not edit frontend immutable hook files (frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx)."
   ],
   "nonGoals": [
-    "Adding waveform visualization back (static or scrolling).",
-    "Changing backend APIs, recording storage, or metadata formats.",
-    "Introducing new recording features (pause, noise gate controls, device selection, etc.)."
+    "Do not implement the confirmation-before-sharing behavior in this step (that is a later step).",
+    "Do not change backend Motoko logic or schemas for this step."
   ],
   "imageRequirements": {
     "required": [],

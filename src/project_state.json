@@ -1,34 +1,28 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "Add a live audio input-level (VU meter) indicator to the recording UI and remove the waveform visualization, providing real-time feedback that audio is being captured while keeping the rest of the recording functionality unchanged.",
-  "architectural_notes": [],
-  "known_issues": [
-    "During recording, the waveform display appears black/empty so users cannot see that audio input is being received."
+  "summary": "Update the assignment and audio recording flow: remove the upload button, support recording/delete in the audio recorder with confirmed sharing to team members, and restore/standardize assignment titles across UI including pop-up menus.",
+  "architectural_notes": [
+    "Sharing recorded audio with team members requires an explicit user confirmation step before becoming visible."
   ],
-  "isFixRequest": true,
+  "known_issues": [
+    "Build engine may fail on large/combined prompts; changes may need to be submitted as smaller sequential steps."
+  ],
+  "isFixRequest": false,
   "existing_features": [
     {
-      "id": "feature-remove-the-waveform-visualization-from-the-recording-ui-so-users-no-longer-see-an-empty-black-waveform-area-while-recording",
-      "title": "Remove the waveform visualization from the recording UI so users no longer see an empty/black waveform area while recording.",
+      "id": "feature-remove-hide-disable-all-ui-elements-that-allow-users-to-upload-an-existing-audio-file-e-g-file-picker-upload-button-meant-for-selecting-a-local-file-anywhere-in-the-app",
+      "title": "Remove (hide/disable) all UI elements that allow users to upload an existing audio file (e.g., file picker, \"Upload\" button meant for selecting a local file) anywhere in the app.",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
     },
     {
-      "id": "feature-ensure-a-clearly-visible-real-time-input-level-vu-meter-is-shown-during-recording-and-reliably-updates-in-response-to-incoming-microphone-audio",
-      "title": "Ensure a clearly visible, real-time input level (VU meter) is shown during recording and reliably updates in response to incoming microphone audio.",
+      "id": "feature-ensure-the-in-app-audio-recorder-flow-is-active-and-usable-users-can-start-recording-stop-recording-review-the-recorded-audio-and-proceed-with-the-existing-save-share-action-without-exposing-a-user-facing-control-labeled-upload",
+      "title": "Ensure the in-app audio recorder flow is active and usable: users can start recording, stop recording, review the recorded audio, and proceed with the existing save/share action without exposing a user-facing control labeled \"Upload\".",
       "reqIds": [
         "REQ-2"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-remove-waveform-related-state-logic-from-the-audio-recording-hook-and-component-interfaces-so-the-app-no-longer-computes-or-stores-waveform-samples",
-      "title": "Remove waveform-related state/logic from the audio recording hook and component interfaces so the app no longer computes or stores waveform samples.",
-      "reqIds": [
-        "REQ-3"
       ],
       "version": 1
     }
@@ -36,12 +30,30 @@
   "new_feature_requests": [
     {
       "id": "AR-1",
-      "summary": "Add a real-time audio input level (VU meter) to the recording interface and remove/disable the waveform visualization entirely.",
+      "summary": "Remove the upload button everywhere (disable uploading existing audio files) and re-enable the audio recorder flow.",
+      "reqIds": [],
+      "status": "in_progress"
+    },
+    {
+      "id": "AR-2",
+      "summary": "Add confirmation step before sharing a recorded audio to team members; after confirmation the recording becomes visible to the team.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-3",
+      "summary": "Ensure recordings can be recorded and deleted within the audio recorder.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-4",
+      "summary": "Rename all assignments to: Awareness, Utopia, Small steps, Support strategie, Other contemplations, and ensure these names are used correctly in all pop-up menus.",
       "reqIds": [],
       "status": "pending"
     }
   ],
-  "projectName": "Add reliable live VU meter feedback during recording and remove waveform visualization",
+  "projectName": "Step 1: Remove audio file upload UI and ensure the in-app audio recorder is active",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

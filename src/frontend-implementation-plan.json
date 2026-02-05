@@ -1,58 +1,46 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Live VU meter during recording and remove waveform visualization",
+  "title": "Step 1: Remove audio file upload UI and keep in-app recorder active",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Remove waveform visualization from the recording and review UI so no empty waveform area is shown.",
+      "summary": "Remove/hide any UI that allows selecting an existing local audio file for upload anywhere in the app.",
       "acceptanceCriteria": [
-        "When `isRecording` is true, the UI does not render `RecordingWaveform` (no canvas/placeholder waveform area is visible).",
-        "No waveform is shown during recording or in the review state after recording.",
-        "The rest of the record → stop → review → upload flow remains unchanged."
+        "There is no file-input based audio upload control visible anywhere in the UI.",
+        "Users cannot select a local audio file for upload via the UI."
       ],
       "file_operations": [
         {
           "path": "frontend/src/components/AudioRecorder.tsx",
           "operation": "modify",
-          "description": "Remove the `RecordingWaveform` import and JSX from the recording state (and ensure it is not rendered in review either). Keep existing record/stop/review/upload/delete behaviors unchanged."
+          "description": "Audit and remove any file-picker style audio upload controls (e.g., input type=\"file\", browse/select-file flows) if present; ensure this component only supports in-app microphone recording + review."
+        },
+        {
+          "path": "frontend/src/screens/Screen6InChallenge.tsx",
+          "operation": "modify",
+          "description": "Audit the in-challenge screen to ensure it does not render (or conditionally render) any audio file upload UI (e.g., file picker / select-local-file controls), and that it only exposes the recorder-based flow for creating recordings."
         }
       ]
     },
     {
       "id": "REQ-2",
-      "summary": "Make the live input level (VU meter) reliably start and update in real time across iOS/Safari and desktop after the user starts recording.",
+      "summary": "Ensure the in-app audio recorder flow remains usable (start/stop/review/save-share) without any user-facing control labeled \"Upload\".",
       "acceptanceCriteria": [
-        "While recording, the `RecordingLevelMeter` is visible and updates multiple times per second as audio is detected (level changes are observable when speaking/clapping).",
-        "On iOS/Safari and desktop browsers, the audio analysis starts successfully after the user taps “Start Recording” (e.g., AudioContext is resumed from a user gesture if needed).",
-        "If microphone permission is denied or no microphone exists, an English error message is shown (existing error behavior preserved)."
+        "On the in-challenge screen, users can start and stop a microphone recording successfully.",
+        "After stopping, users can review playback of the recorded audio and then proceed with the action that sends it to the backend, but the control is not labeled \"Upload\" (use English UI text).",
+        "No user-facing button labeled \"Upload\" is shown in the recorder UI."
       ],
       "file_operations": [
-        {
-          "path": "frontend/src/hooks/useAudioRecording.ts",
-          "operation": "modify",
-          "description": "Ensure the Web Audio analysis chain reliably runs after the user gesture by resuming the `AudioContext` when needed before starting the level-monitoring loop; keep existing permission-denied and no-microphone error messages/behavior intact. Ensure the `level` state continues to update multiple times per second during recording."
-        }
-      ]
-    },
-    {
-      "id": "REQ-3",
-      "summary": "Remove waveform-related state and interfaces so waveform samples are no longer computed or stored while recording.",
-      "acceptanceCriteria": [
-        "`useAudioRecording` no longer exposes `waveformSamples` and does not update waveform sample arrays during `updateAudioLevel`.",
-        "Any waveform-only components/props are removed from the active render path of the app (no unused waveform data is required by `AudioRecorder`).",
-        "Recording still produces a playable `recordedBlob`/`recordedUrl`, and upload continues to work as before."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/hooks/useAudioRecording.ts",
-          "operation": "modify",
-          "description": "Remove `waveformSamples` from the `AudioRecordingState` interface, React state, cleanup/reset logic, return value, and from the `updateAudioLevel` loop so no waveform sample arrays are computed/stored. Keep recorded blob/url creation and cleanup behavior unchanged."
-        },
         {
           "path": "frontend/src/components/AudioRecorder.tsx",
           "operation": "modify",
-          "description": "Update `useAudioRecording()` destructuring and component usage to remove `waveformSamples` from the interface and eliminate any waveform-only props/usage so `AudioRecorder` depends only on level meter + recording/review/upload controls."
+          "description": "Update recorder review/actions UI to remove/replace the \"Upload\" button label and related wording (e.g., change to \"Save\" / \"Send\" / \"Share\" and adjust loading text accordingly); keep start/stop, playback review, and trigger to send the recorded audio via the existing onUpload callback."
+        },
+        {
+          "path": "frontend/src/screens/Screen6InChallenge.tsx",
+          "operation": "modify",
+          "description": "Ensure the in-challenge screen wiring continues to provide a complete recorder flow (start, stop, review, then send-to-backend action) while not exposing any user-facing control labeled \"Upload\"; if needed, pass a non-\"Upload\" label down to AudioRecorder via props."
         }
       ]
     }

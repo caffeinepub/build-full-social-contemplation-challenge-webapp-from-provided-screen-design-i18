@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from './ui/button';
-import { Mic, Square, Upload, Trash2, Loader2 } from 'lucide-react';
+import { Mic, Square, Save, Trash2, Loader2 } from 'lucide-react';
 import { useAudioRecording } from '../hooks/useAudioRecording';
 import { RecordingLevelMeter } from './RecordingLevelMeter';
 import { RecordingPlayer } from './RecordingPlayer';
@@ -55,7 +55,7 @@ export function AudioRecorder({
     stopRecording();
   };
 
-  const handleUpload = () => {
+  const handleSave = () => {
     if (!recordedBlob) return;
     setLocalError(null);
     onUpload(recordedBlob);
@@ -74,7 +74,7 @@ export function AudioRecorder({
 
   const displayError = recordingError || uploadError || localError;
   const canRecord = !hasExistingRecording && !isRecording && !recordedBlob && !isUploading;
-  const canUpload = recordedBlob && !isUploading && !hasExistingRecording;
+  const canSave = recordedBlob && !isUploading && !hasExistingRecording;
 
   return (
     <div className={`space-y-4 ${className}`}>
@@ -119,21 +119,21 @@ export function AudioRecorder({
           
           <div className="flex items-center gap-2">
             <Button
-              onClick={handleUpload}
+              onClick={handleSave}
               size="default"
               variant="default"
               className="flex-1"
-              disabled={!canUpload || isUploading}
+              disabled={!canSave || isUploading}
             >
               {isUploading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Uploading...
+                  Saving...
                 </>
               ) : (
                 <>
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload
+                  <Save className="w-4 h-4 mr-2" />
+                  Save
                 </>
               )}
             </Button>
@@ -153,7 +153,7 @@ export function AudioRecorder({
       {isUploading && (
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Uploading...</span>
+            <span>Saving...</span>
             <span>{Math.round(uploadProgress)}%</span>
           </div>
           <Progress value={uploadProgress} className="h-2" />
