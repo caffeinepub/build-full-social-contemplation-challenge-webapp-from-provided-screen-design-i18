@@ -5,6 +5,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../components/ui/alert-dialog';
+import { ScrollArea } from '../components/ui/scroll-area';
 import { ArrowLeft, Calendar, Plus, Check, Loader2, Users, RefreshCw, X, Link as LinkIcon, Trash2, UserX } from 'lucide-react';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { AuthIconButton } from '../components/AuthIconButton';
@@ -511,15 +512,18 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
                                   <UserX className="w-4 h-4" />
                                 </Button>
                               </AlertDialogTrigger>
-                              <AlertDialogContent>
+                              <AlertDialogContent className="max-w-[90vw] w-full sm:max-w-2xl max-h-[85vh] flex flex-col">
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>{t('screen4.leave.title')}</AlertDialogTitle>
                                   <AlertDialogDescription asChild>
-                                    <div>
-                                      <PopupBodySections sections={t<Section[]>('screen4.leave.sections')} />
-                                    </div>
+                                    <div className="sr-only">Leave challenge confirmation</div>
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
+                                <ScrollArea className="flex-1 pr-4">
+                                  <div className="space-y-4">
+                                    <PopupBodySections sections={t<Section[]>('screen4.leave.sections')} />
+                                  </div>
+                                </ScrollArea>
                                 <AlertDialogFooter>
                                   <AlertDialogCancel>{t('screen4.leave.cancel')}</AlertDialogCancel>
                                   <AlertDialogAction
@@ -542,15 +546,18 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
                                   <UserX className="w-4 h-4" />
                                 </Button>
                               </AlertDialogTrigger>
-                              <AlertDialogContent>
+                              <AlertDialogContent className="max-w-[90vw] w-full sm:max-w-2xl max-h-[85vh] flex flex-col">
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>{t('screen4.remove.title')}</AlertDialogTitle>
                                   <AlertDialogDescription asChild>
-                                    <div>
-                                      <PopupBodySections sections={t<Section[]>('screen4.remove.sections')} />
-                                    </div>
+                                    <div className="sr-only">Remove participant confirmation</div>
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
+                                <ScrollArea className="flex-1 pr-4">
+                                  <div className="space-y-4">
+                                    <PopupBodySections sections={t<Section[]>('screen4.remove.sections')} />
+                                  </div>
+                                </ScrollArea>
                                 <AlertDialogFooter>
                                   <AlertDialogCancel>{t('screen4.remove.cancel')}</AlertDialogCancel>
                                   <AlertDialogAction
@@ -609,15 +616,18 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
                       )}
                     </Button>
                   </AlertDialogTrigger>
-                  <AlertDialogContent>
+                  <AlertDialogContent className="max-w-[90vw] w-full sm:max-w-2xl max-h-[85vh] flex flex-col">
                     <AlertDialogHeader>
                       <AlertDialogTitle>{t('screen4.delete.confirmTitle')}</AlertDialogTitle>
                       <AlertDialogDescription asChild>
-                        <div>
-                          <PopupBodySections sections={t<Section[]>('screen4.delete.sections')} />
-                        </div>
+                        <div className="sr-only">Delete challenge confirmation</div>
                       </AlertDialogDescription>
                     </AlertDialogHeader>
+                    <ScrollArea className="flex-1 pr-4">
+                      <div className="space-y-4">
+                        <PopupBodySections sections={t<Section[]>('screen4.delete.sections')} />
+                      </div>
+                    </ScrollArea>
                     <AlertDialogFooter>
                       <AlertDialogCancel>{t('screen4.delete.cancel')}</AlertDialogCancel>
                       <AlertDialogAction

@@ -1,76 +1,40 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "Implement challenge-scoped team audio sharing: recorded audio is only shared with team members after a Yes/No confirmation prompt, and shared recordings are displayed in the team view grouped per user, per day, per exercise.",
-  "architectural_notes": [
-    "Team membership is defined solely by being in the same challenge; information is only shared within a challenge.",
-    "Recorded audio should not be shared automatically; require explicit user confirmation (Yes/No) prior to sharing."
+  "summary": "New project",
+  "architectural_notes": [],
+  "known_issues": [
+    "Live app (production) throws \"Invalid assignment: daily-check-in\" while draft mode works; likely mismatch between assignment internal names in live canister and app code/labels after renames (cache clear doesn't help)."
   ],
-  "known_issues": [],
-  "isFixRequest": false,
+  "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-add-a-yes-no-confirmation-prompt-in-the-recording-save-flow-when-the-user-attempts-to-save-a-newly-recorded-audio-show-a-modal-dialog-that-asks-whether-to-share-the-recording-with-the-team-if-the-user-selects-no-the-recording-is-saved-privately-and-not-shared-if-the-user-selects-yes-the-recording-is-saved-and-then-shared-to-the-team-within-the-same-challenge-the-prompt-must-be-confirmation-only-no-extra-fields",
-      "title": "Add a Yes/No confirmation prompt in the recording save flow: when the user attempts to save a newly recorded audio, show a modal dialog that asks whether to share the recording with the team. If the user selects \"No\", the recording is saved privately and not shared. If the user selects \"Yes\", the recording is saved and then shared to the team within the same challenge. The prompt must be confirmation-only (no extra fields).",
+      "id": "feature-add-a-frontend-compatibility-layer-that-transparently-maps-assignment-ids-between-hyphenated-and-underscore-variants-when-calling-backend-recording-apis-so-production-canisters-that-still-validate-legacy-ids-do-not-reject-requests",
+      "title": "Add a frontend compatibility layer that transparently maps assignment IDs between hyphenated and underscore variants when calling backend recording APIs, so production canisters that still validate legacy IDs do not reject requests.",
+      "reqIds": [
+        "REQ-1"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-the-frontend-always-uses-a-single-internal-canonical-assignment-id-set-for-rendering-and-state-keep-current-ids-used-in-frontend-while-persisting-reading-recordings-in-react-query-using-a-key-strategy-that-prevents-duplicate-cache-entries-across-the-two-backend-id-variants",
+      "title": "Ensure the frontend always uses a single internal canonical assignment ID set for rendering and state (keep current IDs used in frontend), while persisting/reading recordings in React Query using a key strategy that prevents duplicate cache entries across the two backend ID variants.",
+      "reqIds": [
+        "REQ-2"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-lightweight-diagnostic-logging-frontend-only-that-captures-the-assignment-id-used-the-fallback-attempt-and-the-sanitized-backend-error-message-whenever-an-invalid-assignment-retry-path-is-triggered-to-make-future-production-debugging-easier",
+      "title": "Add lightweight diagnostic logging (frontend-only) that captures the assignment ID used, the fallback attempt, and the sanitized backend error message whenever an invalid-assignment retry path is triggered, to make future production debugging easier.",
       "reqIds": [
         "REQ-3"
       ],
       "version": 1
-    },
-    {
-      "id": "feature-update-the-team-tab-to-display-only-shared-recordings-not-private-recordings-the-team-view-must-allow-browsing-by-participant-then-by-day-then-by-exercise-assignment-and-must-play-audio-only-when-that-participant-has-shared-a-recording-for-that-specific-day-exercise",
-      "title": "Update the Team tab to display only shared recordings (not private recordings). The team view must allow browsing by participant, then by day, then by exercise/assignment, and must play audio only when that participant has shared a recording for that specific day+exercise.",
-      "reqIds": [
-        "REQ-4"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-ensure-deletion-behavior-prevents-unintended-sharing-when-a-user-deletes-a-recording-from-the-my-tab-any-shared-version-of-that-same-challengeid-day-assignment-recording-must-no-longer-be-accessible-by-other-participants-in-the-team-tab",
-      "title": "Ensure deletion behavior prevents unintended sharing: when a user deletes a recording from the 'My' tab, any shared version of that same (challengeId, day, assignment) recording must no longer be accessible by other participants in the Team tab.",
-      "reqIds": [
-        "REQ-5"
-      ],
-      "version": 1
     }
   ],
-  "new_feature_requests": [
-    {
-      "id": "AR-1",
-      "summary": "Add confirmation prompt (Yes/No) before sharing recorded audio to team members",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-2",
-      "summary": "Build challenge-scoped team sharing: users in the same challenge can see shared audio; data is not shared outside the challenge",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-3",
-      "summary": "Display shared recordings in Team view grouped per user, per day, per exercise",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-4",
-      "summary": "Add challenge-scoped recording sharing so that a newly recorded audio is not visible to other challenge participants unless the recording owner explicitly confirms sharing (Yes/No). Team membership must be defined exclusively as: users who are participants of the same challenge; recordings must never be accessible outside that challenge.",
-      "reqIds": [
-        "REQ-1"
-      ],
-      "status": "pending"
-    },
-    {
-      "id": "AR-5",
-      "summary": "Implement backend APIs to support team view rendering of shared recordings grouped by participant, day, and exercise (assignment). The APIs must allow the frontend to: (1) mark a caller’s saved recording as shared for a specific (challengeId, day, assignment), and (2) fetch a specific participant’s shared recording for a specific (challengeId, day, assignment).",
-      "reqIds": [
-        "REQ-2"
-      ],
-      "status": "pending"
-    }
-  ],
-  "projectName": "Add challenge-scoped confirmation prompt before sharing audio recordings to the team",
+  "new_feature_requests": [],
+  "projectName": "Fix production 'Invalid assignment' by adding legacy assignment ID fallback and robust client-side mapping",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

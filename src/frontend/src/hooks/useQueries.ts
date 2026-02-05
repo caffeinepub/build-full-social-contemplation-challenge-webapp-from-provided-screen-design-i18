@@ -3,11 +3,16 @@ import { useActor } from './useActor';
 import type { UserProfile, UserChallengeStatus, ChatMessage, Recording } from '../backend';
 import { Principal } from '@dfinity/principal';
 import type { ExternalBlob } from '../backend';
-import { normalizeRecordingDay, assertCanonicalAssignmentId } from '../utils/recordingIds';
+import { normalizeRecordingDay, assertCanonicalAssignmentId, normalizeToCanonical } from '../utils/recordingIds';
 import type { CanonicalAssignmentId } from '../utils/recordingIds';
 import { logUploadAttempt, logUploadFailure, logUploadSuccess } from '../utils/recordingDiagnostics';
 import { sanitizeErrorMessage, isInvalidAssignmentError } from '../utils/sanitizeErrorMessage';
 import { getRunningAppVersion } from '../utils/appVersion';
+import { 
+  getAlternateAssignmentId, 
+  isInvalidAssignmentError as isInvalidAssignmentCompat,
+  normalizeToCanonical as normalizeAssignmentId,
+} from '../utils/assignmentIdCompat';
 
 // ============================================================================
 // React Query Key Constants (exported for consistent invalidation)
@@ -23,12 +28,75 @@ export const QUERY_KEYS = {
   challengeParticipants: (challengeId: string) => ['challengeParticipants', challengeId],
   participantProfiles: (challengeId: string) => ['participantProfiles', challengeId],
   challengeStartTime: (challengeId: string) => ['challengeStartTime', challengeId],
-  recording: (challengeId: string, day: string, assignment: string) => ['recording', challengeId, day, assignment],
-  assignmentRecordings: (challengeId: string, day: string, assignment: string) => ['assignmentRecordings', challengeId, day, assignment],
-  participantRecording: (challengeId: string, participant: string, day: string, assignment: string) => ['participantRecording', challengeId, participant, day, assignment],
+  // Normalize assignment IDs in cache keys to prevent duplicate entries
+  recording: (challengeId: string, day: string, assignment: string) => 
+    ['recording', challengeId, day, normalizeAssignmentId(assignment)],
+  assignmentRecordings: (challengeId: string, day: string, assignment: string) => 
+    ['assignmentRecordings', challengeId, day, normalizeAssignmentId(assignment)],
+  participantRecording: (challengeId: string, participant: string, day: string, assignment: string) => 
+    ['participantRecording', challengeId, participant, day, normalizeAssignmentId(assignment)],
   chatMessages: (challengeId: string) => ['chatMessages', challengeId],
   chatMessage: (challengeId: string, messageId: string) => ['chatMessage', challengeId, messageId],
 } as const;
+
+// ============================================================================
+// Helper: Retry with alternate assignment ID
+// ============================================================================
+
+/**
+ * Retry a backend operation with the alternate assignment ID format.
+ * Logs the retry attempt and result for diagnostics.
+ */
+async function retryWithAlternateAssignment<T>(
+  operation: string,
+  originalAssignment: string,
+  backendCall: (assignment: string) => Promise<T>
+): Promise<T> {
+  const alternateId = getAlternateAssignmentId(originalAssignment);
+  
+  if (!alternateId) {
+    throw new Error(`No alternate assignment ID available for: ${originalAssignment}`);
+  }
+  
+  console.log(`[${operation}] Retrying with alternate assignment ID:`, {
+    original: originalAssignment,
+    alternate: alternateId,
+  });
+  
+  try {
+    const result = await backendCall(alternateId);
+    console.log(`[${operation}] Retry succeeded with alternate ID:`, {
+      original: originalAssignment,
+      alternate: alternateId,
+    });
+    return result;
+  } catch (retryError) {
+    console.error(`[${operation}] Retry failed with alternate ID:`, {
+      original: originalAssignment,
+      alternate: alternateId,
+      error: sanitizeErrorMessage(retryError),
+    });
+    throw retryError;
+  }
+}
+
+/**
+ * Execute a backend call with automatic retry on invalid assignment error.
+ */
+async function executeWithAssignmentRetry<T>(
+  operation: string,
+  assignment: string,
+  backendCall: (assignment: string) => Promise<T>
+): Promise<T> {
+  try {
+    return await backendCall(assignment);
+  } catch (error) {
+    if (isInvalidAssignmentCompat(error)) {
+      return await retryWithAlternateAssignment(operation, assignment, backendCall);
+    }
+    throw error;
+  }
+}
 
 // ============================================================================
 // User Profile Queries
@@ -368,8 +436,12 @@ export function useSaveRecording() {
       });
       
       try {
-        // Assignment is already canonical - pass directly without normalization
-        const result = await actor.saveRecording(challengeId, BigInt(backendDay), assignment, recording);
+        // Execute with automatic retry on invalid assignment error
+        const result = await executeWithAssignmentRetry(
+          'Recording Upload',
+          assignment,
+          (assignmentId) => actor.saveRecording(challengeId, BigInt(backendDay), assignmentId, recording)
+        );
         
         // Log success
         logUploadSuccess({
@@ -452,8 +524,12 @@ export function useShareRecording() {
       // Normalize UI day (1-7) to backend day (0-6)
       const backendDay = normalizeRecordingDay(day);
       
-      // Call backend shareRecording method
-      return actor.shareRecording(challengeId, BigInt(backendDay), assignment, isShared);
+      // Execute with automatic retry on invalid assignment error
+      return executeWithAssignmentRetry(
+        'Share Recording',
+        assignment,
+        (assignmentId) => actor.shareRecording(challengeId, BigInt(backendDay), assignmentId, isShared)
+      );
     },
     onSuccess: (_, variables) => {
       const backendDay = normalizeRecordingDay(variables.day);
@@ -485,7 +561,13 @@ export function useGetRecording(challengeId: bigint | null, day: number, assignm
     queryKey: QUERY_KEYS.recording(challengeId?.toString() || '', backendDay.toString(), assignment),
     queryFn: async () => {
       if (!actor || challengeId === null) throw new Error('Actor or challenge ID not available');
-      return actor.getRecording(challengeId, BigInt(backendDay), assignment);
+      
+      // Execute with automatic retry on invalid assignment error
+      return executeWithAssignmentRetry(
+        'Get Recording',
+        assignment,
+        (assignmentId) => actor.getRecording(challengeId, BigInt(backendDay), assignmentId)
+      );
     },
     enabled: !!actor && !actorFetching && challengeId !== null,
     retry: false,
@@ -506,8 +588,12 @@ export function useDeleteRecording() {
       // Normalize UI day (1-7) to backend day (0-6)
       const backendDay = BigInt(normalizeRecordingDay(day));
       
-      // Assignment is already canonical - pass directly without normalization
-      return actor.deleteRecording(challengeId, backendDay, assignment);
+      // Execute with automatic retry on invalid assignment error
+      return executeWithAssignmentRetry(
+        'Delete Recording',
+        assignment,
+        (assignmentId) => actor.deleteRecording(challengeId, backendDay, assignmentId)
+      );
     },
     onSuccess: (_, variables) => {
       const backendDay = normalizeRecordingDay(variables.day);
@@ -544,7 +630,13 @@ export function useGetAssignmentRecordings(challengeId: bigint | null, day: numb
     queryKey: QUERY_KEYS.assignmentRecordings(challengeId?.toString() || '', backendDay.toString(), assignment),
     queryFn: async () => {
       if (!actor || challengeId === null) throw new Error('Actor or challenge ID not available');
-      return actor.getAssignmentRecordings(challengeId, BigInt(backendDay), assignment);
+      
+      // Execute with automatic retry on invalid assignment error
+      return executeWithAssignmentRetry(
+        'Get Assignment Recordings',
+        assignment,
+        (assignmentId) => actor.getAssignmentRecordings(challengeId, BigInt(backendDay), assignmentId)
+      );
     },
     enabled: !!actor && !actorFetching && challengeId !== null,
     retry: false,
@@ -570,7 +662,13 @@ export function useGetParticipantRecording(
     queryFn: async () => {
       if (!actor || challengeId === null || participant === null)
         throw new Error('Actor, challenge ID, or participant not available');
-      return actor.getParticipantRecording(challengeId, participant, BigInt(backendDay), assignment);
+      
+      // Execute with automatic retry on invalid assignment error
+      return executeWithAssignmentRetry(
+        'Get Participant Recording',
+        assignment,
+        (assignmentId) => actor.getParticipantRecording(challengeId, participant, BigInt(backendDay), assignmentId)
+      );
     },
     enabled: !!actor && !actorFetching && challengeId !== null && participant !== null,
     retry: false,

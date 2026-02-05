@@ -15,10 +15,7 @@ import Iter "mo:core/Iter";
 import Principal "mo:core/Principal";
 import Array "mo:core/Array";
 import Debug "mo:core/Debug";
-import Migration "migration";
 
-// Enable data migration functionality
-(with migration = Migration.run)
 actor {
   public type BuildInfo = {
     version : Text;
@@ -152,15 +149,24 @@ actor {
   public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
     validateAuthenticatedUser(caller);
 
-    if (caller == user or AccessControl.isAdmin(accessControlState, caller)) {
+    if (caller == user) {
       return userProfiles.get(user);
     };
 
-    let callerIsCreatorOfUserChallenge = challenges.values().any(
-      func(challenge) { challenge.creator == caller and challenge.participants.contains(user) }
+    if (AccessControl.isAdmin(accessControlState, caller)) {
+      return userProfiles.get(user);
+    };
+
+    // Check if caller is creator of an active challenge that includes the user
+    let callerIsCreatorOfUserActiveChallenge = challenges.values().any(
+      func(challenge) {
+        challenge.isActive and
+        challenge.creator == caller and
+        challenge.participants.contains(user)
+      }
     );
 
-    if (callerIsCreatorOfUserChallenge) {
+    if (callerIsCreatorOfUserActiveChallenge) {
       userProfiles.get(user);
     } else {
       Runtime.trap("Unauthorized: Can only view your own profile");

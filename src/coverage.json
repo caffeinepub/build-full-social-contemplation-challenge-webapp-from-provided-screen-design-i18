@@ -1,86 +1,64 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-05T22:23:06.187Z",
+  "generatedAt": "2026-02-05T23:03:22.841Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 5,
+    "total": 3,
     "implemented": 3,
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Add challenge-scoped recording sharing so that a newly recorded audio is not visible to other challenge participants unless the recording owner explicitly confirms sharing (Yes/No). Team membership must be defined exclusively as: users who are participants of the same challenge; recordings must never be accessible outside that challenge.",
-        "status": "unknown",
-        "plannedFiles": [],
-        "matchedFiles": []
+        "summary": "Add a frontend compatibility layer that transparently maps assignment IDs between hyphenated and underscore variants when calling backend recording APIs, so production canisters that still validate legacy IDs do not reject requests.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/utils/assignmentIdCompat.ts",
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/screens/Screen6InChallenge.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/utils/assignmentIdCompat.ts",
+          "frontend/src/hooks/useQueries.ts"
+        ]
       },
       {
         "id": "REQ-2",
-        "summary": "Implement backend APIs to support team view rendering of shared recordings grouped by participant, day, and exercise (assignment). The APIs must allow the frontend to: (1) mark a caller’s saved recording as shared for a specific (challengeId, day, assignment), and (2) fetch a specific participant’s shared recording for a specific (challengeId, day, assignment).",
-        "status": "unknown",
-        "plannedFiles": [],
-        "matchedFiles": []
+        "summary": "Ensure the frontend always uses a single internal canonical assignment ID set for rendering and state (keep current IDs used in frontend), while persisting/reading recordings in React Query using a key strategy that prevents duplicate cache entries across the two backend ID variants.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/utils/recordingIds.ts"
+        ],
+        "matchedFiles": [
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/utils/recordingIds.ts"
+        ]
       },
       {
         "id": "REQ-3",
-        "summary": "Add a Yes/No confirmation prompt in the recording save flow: when the user attempts to save a newly recorded audio, show a modal dialog that asks whether to share the recording with the team. If the user selects \"No\", the recording is saved privately and not shared. If the user selects \"Yes\", the recording is saved and then shared to the team within the same challenge. The prompt must be confirmation-only (no extra fields).",
+        "summary": "Add lightweight diagnostic logging (frontend-only) that captures the assignment ID used, the fallback attempt, and the sanitized backend error message whenever an invalid-assignment retry path is triggered, to make future production debugging easier.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/components/AudioRecorder.tsx",
-          "frontend/src/screens/Screen6InChallenge.tsx",
+          "frontend/src/utils/recordingDiagnostics.ts",
           "frontend/src/hooks/useQueries.ts"
         ],
         "matchedFiles": [
-          "frontend/src/components/AudioRecorder.tsx",
-          "frontend/src/screens/Screen6InChallenge.tsx",
           "frontend/src/hooks/useQueries.ts"
-        ]
-      },
-      {
-        "id": "REQ-4",
-        "summary": "Update the Team tab to display only shared recordings (not private recordings). The team view must allow browsing by participant, then by day, then by exercise/assignment, and must play audio only when that participant has shared a recording for that specific day+exercise.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/screens/Screen6InChallenge.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/screens/Screen6InChallenge.tsx"
-        ]
-      },
-      {
-        "id": "REQ-5",
-        "summary": "Ensure deletion behavior prevents unintended sharing: when a user deletes a recording from the 'My' tab, any shared version of that same (challengeId, day, assignment) recording must no longer be accessible by other participants in the Team tab.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/screens/Screen6InChallenge.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/screens/Screen6InChallenge.tsx"
         ]
       }
     ]
   },
   "changedFiles": [
-    "backend/main.mo",
-    "backend/migration.mo",
     "build-request.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/backend.d.ts",
-    "frontend/src/backend.ts",
-    "frontend/src/components/AudioRecorder.tsx",
-    "frontend/src/declarations/backend.did.d.ts",
-    "frontend/src/declarations/backend.did.js",
     "frontend/src/hooks/useQueries.ts",
-    "frontend/src/screens/Screen6InChallenge.tsx",
+    "frontend/src/utils/assignmentIdCompat.ts",
+    "frontend/src/utils/recordingIds.ts",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

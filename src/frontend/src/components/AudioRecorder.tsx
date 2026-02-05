@@ -13,6 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from './ui/dialog';
+import { ScrollArea } from './ui/scroll-area';
 import type { CanonicalAssignmentId } from '../utils/recordingIds';
 
 interface AudioRecorderProps {
@@ -225,15 +226,23 @@ export function AudioRecorder({
         )}
       </div>
 
-      {/* Share Confirmation Dialog */}
+      {/* Share Confirmation Dialog - Now with ScrollArea */}
       <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
-        <DialogContent>
+        <DialogContent className="max-w-[90vw] w-full sm:max-w-md max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Share with team?</DialogTitle>
             <DialogDescription>
               Would you like to share this recording with your challenge team?
             </DialogDescription>
           </DialogHeader>
+          <ScrollArea className="flex-1 pr-4">
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Shared recordings will be visible to all participants in your challenge. 
+                You can change this setting later if needed.
+              </p>
+            </div>
+          </ScrollArea>
           <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button
               variant="outline"

@@ -2,12 +2,54 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-add-a-yes-no-confirmation-prompt-in-the-recording-save-flow-when-the-user-attempts-to-save-a-newly-recorded-audio-show-a-modal-dialog-that-asks-whether-to-share-the-recording-with-the-team-if-the-user-selects-no-the-recording-is-saved-privately-and-not-shared-if-the-user-selects-yes-the-recording-is-saved-and-then-shared-to-the-team-within-the-same-challenge-the-prompt-must-be-confirmation-only-no-extra-fields",
-      "featureTitle": "Add a Yes/No confirmation prompt in the recording save flow: when the user attempts to save a newly recorded audio, show a modal dialog that asks whether to share the recording with the team. If the user selects \"No\", the recording is saved privately and not shared. If the user selects \"Yes\", the recording is saved and then shared to the team within the same challenge. The prompt must be confirmation-only (no extra fields).",
+      "featureId": "feature-add-a-frontend-compatibility-layer-that-transparently-maps-assignment-ids-between-hyphenated-and-underscore-variants-when-calling-backend-recording-apis-so-production-canisters-that-still-validate-legacy-ids-do-not-reject-requests",
+      "featureTitle": "Add a frontend compatibility layer that transparently maps assignment IDs between hyphenated and underscore variants when calling backend recording APIs, so production canisters that still validate legacy IDs do not reject requests.",
       "files": [
-        "frontend/src/components/AudioRecorder.tsx",
         "frontend/src/hooks/useQueries.ts",
-        "frontend/src/screens/Screen6InChallenge.tsx"
+        "frontend/src/utils/assignmentIdCompat.ts"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0",
+        "invite-links@3.0.0"
+      ],
+      "testIds": [
+        "REQ-1"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-ensure-the-frontend-always-uses-a-single-internal-canonical-assignment-id-set-for-rendering-and-state-keep-current-ids-used-in-frontend-while-persisting-reading-recordings-in-react-query-using-a-key-strategy-that-prevents-duplicate-cache-entries-across-the-two-backend-id-variants",
+      "featureTitle": "Ensure the frontend always uses a single internal canonical assignment ID set for rendering and state (keep current IDs used in frontend), while persisting/reading recordings in React Query using a key strategy that prevents duplicate cache entries across the two backend ID variants.",
+      "files": [
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/utils/recordingIds.ts"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0",
+        "invite-links@3.0.0"
+      ],
+      "testIds": [
+        "REQ-2"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-add-lightweight-diagnostic-logging-frontend-only-that-captures-the-assignment-id-used-the-fallback-attempt-and-the-sanitized-backend-error-message-whenever-an-invalid-assignment-retry-path-is-triggered-to-make-future-production-debugging-easier",
+      "featureTitle": "Add lightweight diagnostic logging (frontend-only) that captures the assignment ID used, the fallback attempt, and the sanitized backend error message whenever an invalid-assignment retry path is triggered, to make future production debugging easier.",
+      "files": [
+        "frontend/src/hooks/useQueries.ts"
       ],
       "components": [
         "authorization@4.0.0",
@@ -21,50 +63,6 @@
       ],
       "testIds": [
         "REQ-3"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-update-the-team-tab-to-display-only-shared-recordings-not-private-recordings-the-team-view-must-allow-browsing-by-participant-then-by-day-then-by-exercise-assignment-and-must-play-audio-only-when-that-participant-has-shared-a-recording-for-that-specific-day-exercise",
-      "featureTitle": "Update the Team tab to display only shared recordings (not private recordings). The team view must allow browsing by participant, then by day, then by exercise/assignment, and must play audio only when that participant has shared a recording for that specific day+exercise.",
-      "files": [
-        "frontend/src/hooks/useQueries.ts",
-        "frontend/src/screens/Screen6InChallenge.tsx"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0",
-        "blob-storage@4.0.0",
-        "invite-links@3.0.0"
-      ],
-      "testIds": [
-        "REQ-4"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-ensure-deletion-behavior-prevents-unintended-sharing-when-a-user-deletes-a-recording-from-the-my-tab-any-shared-version-of-that-same-challengeid-day-assignment-recording-must-no-longer-be-accessible-by-other-participants-in-the-team-tab",
-      "featureTitle": "Ensure deletion behavior prevents unintended sharing: when a user deletes a recording from the 'My' tab, any shared version of that same (challengeId, day, assignment) recording must no longer be accessible by other participants in the Team tab.",
-      "files": [
-        "frontend/src/hooks/useQueries.ts",
-        "frontend/src/screens/Screen6InChallenge.tsx"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0",
-        "blob-storage@4.0.0",
-        "invite-links@3.0.0"
-      ],
-      "testIds": [
-        "REQ-5"
       ],
       "confidence": "high"
     }

@@ -1,72 +1,73 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Challenge-scoped recording share confirmation + shared-only Team tab rendering",
+  "title": "Frontend fallback for legacy assignment ID variants + normalized React Query caching",
   "requirements": [
     {
+      "id": "REQ-1",
+      "summary": "Retry recording API calls once with legacy (hyphen/underscore) assignment ID variant when backend rejects the provided assignment ID.",
+      "acceptanceCriteria": [
+        "When the backend returns an error containing \"Invalid assignment:\" for any recording operation (save, share, get, delete, getAssignmentRecordings, getParticipantRecording), the frontend retries the same request once using the alternate ID format (daily-check-in <-> daily_check_in, morning-reflection <-> morning_reflection, evening-reflection <-> evening_reflection, mindfulness-practice <-> mindfulness_practice, gratitude-journal <-> gratitude_journal).",
+        "If the retry succeeds, the UI proceeds as normal (no persistent error shown).",
+        "If both attempts fail, the UI shows a single user-facing error message in English (no duplicate toasts/errors).",
+        "Assignment labels/titles displayed in the UI remain unchanged from the current screenshots (e.g., the visible assignment cards still show the same labels the user provided)."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/utils/assignmentIdCompat.ts",
+          "operation": "create",
+          "description": "Add a small compatibility utility that (1) maps between canonical hyphenated IDs and legacy underscore variants for the known assignments, (2) returns an alternate ID for retry, and (3) exposes helpers to detect an \"Invalid assignment:\" backend error and to normalize any variant to the canonical ID. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Wrap all recording-related backend calls (saveRecording, shareRecording, getRecording, deleteRecording, getAssignmentRecordings, getParticipantRecording) with a one-time retry on \"Invalid assignment:\" using the alternate ID from the compatibility utility, ensuring only one user-facing error is produced when both attempts fail. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/screens/Screen6InChallenge.tsx",
+          "operation": "modify",
+          "description": "Ensure upload/delete UI error handling continues to display a single English error message sourced from the final failure only (no duplicate error state updates), and that assignment titles/labels remain unchanged. Verify the component's usage instructions before implementing."
+        }
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "summary": "Keep canonical assignment IDs in UI/state while normalizing React Query cache keys so both backend ID variants share the same cache entry.",
+      "acceptanceCriteria": [
+        "UI components continue to reference one canonical assignment ID per assignment (no UI duplication caused by variant IDs).",
+        "React Query cache keys for recording queries normalize assignment IDs so that a recording fetched via underscore variant is stored/read under the same cache entry as the hyphenated variant.",
+        "Manual refresh and navigation between days/tabs does not re-trigger the invalid-assignment error once a successful retry has occurred."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Normalize assignment IDs used inside React Query keys for recording queries/mutations (recording, assignmentRecordings, participantRecording) by converting any variant to the canonical ID before key construction; ensure invalidation/removal uses the same normalized key strategy to prevent duplicate cache entries and to avoid re-triggering invalid-assignment after a successful fallback. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/utils/recordingIds.ts",
+          "operation": "modify",
+          "description": "Add/adjust a minimal helper (or re-export from the compatibility utility) to support consistent canonicalization of assignment IDs for cache-key construction without changing the canonical IDs used by UI rendering. Verify the component's usage instructions before implementing."
+        }
+      ]
+    },
+    {
       "id": "REQ-3",
-      "summary": "Add a Yes/No confirmation modal to the recorder Save action to decide whether to share the new recording with the challenge team.",
+      "summary": "Add frontend-only diagnostic logs for invalid-assignment fallback attempts without exposing sensitive data.",
       "acceptanceCriteria": [
-        "Clicking Save in the recorder shows a modal with exactly two choices (Yes / No) and no additional required inputs.",
-        "Choosing \"No\" results in the recording being available in the 'My' tab but not playable/visible in the 'Team' tab for other participants.",
-        "Choosing \"Yes\" results in the recording being playable/visible in the 'Team' tab for other participants in the same challenge."
+        "When an invalid-assignment error occurs, the console logs clearly indicate (a) the original assignment ID, (b) the fallback ID used for retry, and (c) whether the retry succeeded.",
+        "Logs do not include sensitive user data (no principals, no recording blob details)."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/AudioRecorder.tsx",
+          "path": "frontend/src/utils/recordingDiagnostics.ts",
           "operation": "modify",
-          "description": "Change the Save flow to open a confirmation-only modal with exactly two actions (Yes / No) in English; on selection, call the provided save callback with the recorded blob plus the user’s share choice. Compose the modal using existing shadcn Dialog primitives (do not modify anything under frontend/src/components/ui). Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/screens/Screen6InChallenge.tsx",
-          "operation": "modify",
-          "description": "Update the recording save handler to accept a share decision from AudioRecorder; after saving, call the backend sharing capability (shareRecording) with isShared=true for \"Yes\" and isShared=false for \"No\"; ensure React Query invalidations refresh both My and Team data for that (challengeId, day, assignment)."
+          "description": "Add a lightweight logging helper dedicated to invalid-assignment fallback retries that logs only: operation name, original assignment ID, fallback assignment ID, sanitized backend error message (if present), and retry result (success/failure); explicitly avoid logging principals or blob details. Verify the component's usage instructions before implementing."
         },
         {
           "path": "frontend/src/hooks/useQueries.ts",
           "operation": "modify",
-          "description": "Add a React Query mutation hook for the backend sharing capability (shareRecording) and wire it into existing recording cache invalidations so Team views reflect newly-shared recordings immediately."
-        }
-      ]
-    },
-    {
-      "id": "REQ-4",
-      "summary": "Update the Team tab to show and play only recordings that have been explicitly shared, browsable by participant, day, then assignment.",
-      "acceptanceCriteria": [
-        "In the Team tab, selecting a participant and day shows a list of exercises/assignments where only shared recordings are indicated as available.",
-        "If a recording exists privately but was not shared, the Team tab must behave as if no recording exists for that slot.",
-        "The Team tab does not attempt to call any backend method that returns private recordings for other participants."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/hooks/useQueries.ts",
-          "operation": "modify",
-          "description": "Align the Team-facing query hook(s) to the backend interface for shared recording discovery: update the getAssignmentRecordings hook return typing to use Recording { value, isShared } (not ExternalBlob), and ensure query logic supports detecting availability without fetching private recordings."
-        },
-        {
-          "path": "frontend/src/screens/Screen6InChallenge.tsx",
-          "operation": "modify",
-          "description": "Refactor the Team tab assignment list to determine availability using the assignment-level recordings query (grouped data), then only attempt audio playback when the selected participant has a Recording with isShared=true for the selected day+assignment. Remove/avoid per-assignment calls that directly fetch another participant’s recording when none is shared."
-        }
-      ]
-    },
-    {
-      "id": "REQ-5",
-      "summary": "Ensure My-tab deletion updates UI state and triggers Team-tab refresh so deleted recordings are no longer shown/played as shared.",
-      "acceptanceCriteria": [
-        "After deleting a recording, other participants can no longer fetch/play it in the Team tab (it is no longer shared/available).",
-        "The recording is also removed from the owner’s 'My' tab state after deletion."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/hooks/useQueries.ts",
-          "operation": "modify",
-          "description": "Ensure the deleteRecording mutation invalidates/removes all relevant cached queries for both My and Team views (including any assignment-level shared-recording discovery queries) so the UI no longer indicates availability after deletion."
-        },
-        {
-          "path": "frontend/src/screens/Screen6InChallenge.tsx",
-          "operation": "modify",
-          "description": "After successful deletion from the My tab, ensure local UI state and play state are reconciled (e.g., stop playback if the deleted slot was playing) and rely on updated query invalidations so Team availability updates promptly."
+          "description": "When the invalid-assignment retry path is triggered for any recording operation, call the new diagnostic logger with original/fallback IDs, operation name, sanitized error message, and retry outcome; ensure logs are emitted only on this path. Verify the component's usage instructions before implementing."
         }
       ]
     }

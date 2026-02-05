@@ -1,122 +1,79 @@
 {
   "kind": "build_request",
-  "title": "Add challenge-scoped confirmation prompt before sharing audio recordings to the team",
-  "priority": "normal",
+  "title": "Fix production 'Invalid assignment' by adding legacy assignment ID fallback and robust client-side mapping",
+  "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Add challenge-scoped recording sharing so that a newly recorded audio is not visible to other challenge participants unless the recording owner explicitly confirms sharing (Yes/No). Team membership must be defined exclusively as: users who are participants of the same challenge; recordings must never be accessible outside that challenge.",
-      "target": "backend",
+      "text": "Add a frontend compatibility layer that transparently maps assignment IDs between hyphenated and underscore variants when calling backend recording APIs, so production canisters that still validate legacy IDs do not reject requests.",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-6"
+          "msg-1"
         ],
         "quotes": [
-          "Zorg dat opgenomen audio pas wordt gedeeld met teamleden na een bevestigingsprompt.",
-          "je zit in een team als je in dezelfde challenge zit. Dat is alles. Informatie binnen een challenge wordt alleen onderling gedeeld.",
-          "alleen vraagt om te bevestigen yes/no"
+          "In de draft mode werkt hij perfect, maar in de live app werkt hij niet goed.",
+          "Invalid assignment: \"daily-check-in\"",
+          "ik heb een schermafbeelding toegevoegd waar je de labels kan lezen, deze wil ik behouden."
         ]
       },
       "acceptanceCriteria": [
-        "If user A saves a recording and answers \"No\" to sharing, user B (in the same challenge) cannot access that recording via any backend query/method.",
-        "If user A saves a recording and answers \"Yes\" to sharing, user B (in the same challenge) can access that recording via backend query/method(s).",
-        "A user who is not a participant in the challenge cannot access any shared recordings for that challenge (backend traps/denies)."
+        "When the backend returns an error containing \"Invalid assignment:\" for any recording operation (save, share, get, delete, getAssignmentRecordings, getParticipantRecording), the frontend retries the same request once using the alternate ID format (daily-check-in <-> daily_check_in, morning-reflection <-> morning_reflection, evening-reflection <-> evening_reflection, mindfulness-practice <-> mindfulness_practice, gratitude-journal <-> gratitude_journal).",
+        "If the retry succeeds, the UI proceeds as normal (no persistent error shown).",
+        "If both attempts fail, the UI shows a single user-facing error message in English (no duplicate toasts/errors).",
+        "Assignment labels/titles displayed in the UI remain unchanged from the current screenshots (e.g., the visible assignment cards still show the same labels the user provided)."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Implement backend APIs to support team view rendering of shared recordings grouped by participant, day, and exercise (assignment). The APIs must allow the frontend to: (1) mark a caller’s saved recording as shared for a specific (challengeId, day, assignment), and (2) fetch a specific participant’s shared recording for a specific (challengeId, day, assignment).",
-      "target": "backend",
+      "text": "Ensure the frontend always uses a single internal canonical assignment ID set for rendering and state (keep current IDs used in frontend), while persisting/reading recordings in React Query using a key strategy that prevents duplicate cache entries across the two backend ID variants.",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-6"
+          "msg-1"
         ],
         "quotes": [
-          "Ik wil dat je die bouwt, en dat ze worden weergegeven in teamview, per user per dag per oefening."
+          "de assignmentnamen zijn een aantal keer veranderd.",
+          "In de draft mode werkt hij perfect, maar in de live app werkt hij niet goed."
         ]
       },
       "acceptanceCriteria": [
-        "There is a backend method to share (or publish) a caller’s recording for (challengeId, day, assignment) that only works if the caller is a participant in that challenge and the caller has a saved recording for that slot.",
-        "There is a backend method to fetch a participant’s shared recording for (challengeId, participant, day, assignment) that only works for callers who are participants in the same challenge.",
-        "The backend distinguishes between 'saved privately' and 'shared to team' so that team fetches do not accidentally return unshared/private recordings."
+        "UI components continue to reference one canonical assignment ID per assignment (no UI duplication caused by variant IDs).",
+        "React Query cache keys for recording queries normalize assignment IDs so that a recording fetched via underscore variant is stored/read under the same cache entry as the hyphenated variant.",
+        "Manual refresh and navigation between days/tabs does not re-trigger the invalid-assignment error once a successful retry has occurred."
       ]
     },
     {
       "id": "REQ-3",
-      "text": "Add a Yes/No confirmation prompt in the recording save flow: when the user attempts to save a newly recorded audio, show a modal dialog that asks whether to share the recording with the team. If the user selects \"No\", the recording is saved privately and not shared. If the user selects \"Yes\", the recording is saved and then shared to the team within the same challenge. The prompt must be confirmation-only (no extra fields).",
+      "text": "Add lightweight diagnostic logging (frontend-only) that captures the assignment ID used, the fallback attempt, and the sanitized backend error message whenever an invalid-assignment retry path is triggered, to make future production debugging easier.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-6"
+          "msg-1"
         ],
         "quotes": [
-          "Zorg dat opgenomen audio pas wordt gedeeld met teamleden na een bevestigingsprompt.",
-          "alleen vraagt om te bevestigen yes/no"
+          "In de live app krijg je een \"Invalid assignment: daily‑check‑in\" fout"
         ]
       },
       "acceptanceCriteria": [
-        "Clicking Save in the recorder shows a modal with exactly two choices (Yes / No) and no additional required inputs.",
-        "Choosing \"No\" results in the recording being available in the 'My' tab but not playable/visible in the 'Team' tab for other participants.",
-        "Choosing \"Yes\" results in the recording being playable/visible in the 'Team' tab for other participants in the same challenge."
-      ]
-    },
-    {
-      "id": "REQ-4",
-      "text": "Update the Team tab to display only shared recordings (not private recordings). The team view must allow browsing by participant, then by day, then by exercise/assignment, and must play audio only when that participant has shared a recording for that specific day+exercise.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-6"
-        ],
-        "quotes": [
-          "weergegeven in teamview, per user per dag per oefening.",
-          "Informatie binnen een challenge wordt alleen onderling gedeeld."
-        ]
-      },
-      "acceptanceCriteria": [
-        "In the Team tab, selecting a participant and day shows a list of exercises/assignments where only shared recordings are indicated as available.",
-        "If a recording exists privately but was not shared, the Team tab must behave as if no recording exists for that slot.",
-        "The Team tab does not attempt to call any backend method that returns private recordings for other participants."
-      ]
-    },
-    {
-      "id": "REQ-5",
-      "text": "Ensure deletion behavior prevents unintended sharing: when a user deletes a recording from the 'My' tab, any shared version of that same (challengeId, day, assignment) recording must no longer be accessible by other participants in the Team tab.",
-      "target": "both",
-      "source": {
-        "messageIds": [
-          "msg-6"
-        ]
-      },
-      "acceptanceCriteria": [
-        "After deleting a recording, other participants can no longer fetch/play it in the Team tab (it is no longer shared/available).",
-        "The recording is also removed from the owner’s 'My' tab state after deletion."
+        "When an invalid-assignment error occurs, the console logs clearly indicate (a) the original assignment ID, (b) the fallback ID used for retry, and (c) whether the retry succeeded.",
+        "Logs do not include sensitive user data (no principals, no recording blob details)."
       ]
     }
   ],
   "constraints": [
-    "Use English for any user-facing UI text (e.g., the confirmation prompt buttons and message).",
-    "Backend must remain a single Motoko actor in backend/main.mo (no additional backend services).",
-    "Do not modify files under frontend/src/components/ui (compose existing shadcn components instead).",
-    "Do not modify frontend immutable paths listed in SYSTEM_CONTEXT."
+    "Do not edit files under frontend/src/components/ui (read-only).",
+    "Do not edit files listed as immutable in SYSTEM_CONTEXT (e.g., frontend/src/hooks/useInternetIdentity.ts(x), frontend/src/hooks/useActor.ts, frontend/src/main.tsx).",
+    "Backend must remain a single Motoko actor in backend/main.mo; only add backend/migration.mo if state changes require it (not expected for this fix).",
+    "Use English for any user-facing text changes."
   ],
   "nonGoals": [
-    "Do not implement third-party auth; only Internet Identity is allowed.",
-    "Do not add cross-challenge sharing or any global/team directory beyond 'same challenge participants'.",
-    "Do not add additional sharing settings beyond a simple Yes/No confirmation."
+    "Renaming or changing the visible assignment labels/titles shown in the UI.",
+    "Introducing a new backend database or external service to store assignment metadata.",
+    "Adding real-time features or WebSocket-based synchronization."
   ],
   "imageRequirements": {
     "required": [],
     "edits": []
-  },
-  "userProfileUpdate": {
-    "goalsToAdd": [],
-    "goalsToRemove": [],
-    "preferencesToAdd": [],
-    "preferencesToRemove": [],
-    "miscToAdd": [],
-    "miscToRemove": [],
-    "fieldsToSet": {},
-    "fieldsToDelete": []
   }
 }
