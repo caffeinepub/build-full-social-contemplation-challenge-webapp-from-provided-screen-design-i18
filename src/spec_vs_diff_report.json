@@ -1,52 +1,70 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-05T00:55:01.769Z",
-  "summary": "Diff adds an AssignmentDetailText component to bold “Step X:” labels and updates FIXED_ASSIGNMENTS copy for several assignments. However, evidence for updating the two info popups and for fully updating all 5 assignment texts (and wiring the bold rendering into the actual popup) is incomplete or missing in the provided diff summary.",
+  "generatedAt": "2026-02-05T01:48:45.709Z",
+  "summary": "Diff adds frontend-side identifier normalizers (day + assignment) and introduces a backend migration module wired into backend/main.mo, but the diff summary does not show the required backend fixes for consistent canonical day-key handling across all recording CRUD/query functions, nor backend assignment ID normalization/legacy compatibility. Frontend hook/key changes are visible, but the diff is truncated so full REQ-4 acceptance criteria cannot be confirmed from the provided evidence.",
   "missing_requirements": [
     {
       "id": "REQ-1",
-      "requirement": "Replace the instructional text for all 5 fixed daily assignments (Awareness, Utopia, Small Steps, Support Strategies, Other Contemplations) with the exact new English copy provided by the user.",
-      "reason": "The diff shows updated content for Awareness, Utopia, Small Steps, and Support Strategies, but the `other-contemplations` assignment content is truncated and not shown, so full replacement for all 5 assignments cannot be verified from the provided diff summary.",
+      "requirement": "Fix backend day-index normalization for recordings so all recording operations use a single consistent canonical day key scheme (0–6) without collisions/off-by-one errors, with clear English errors for invalid days.",
+      "reason": "The provided backend/main.mo snippet only shows type/constant definitions and does not show any implementation of day normalization in save/get/delete/getAssignmentRecordings/getParticipantRecording. The added backend/migration.mo also does not show canonical 0–6 normalization being enforced for recording operations.",
       "evidence": [
-        "frontend/src/utils/assignments.ts (truncated at `id: 'other-contemplations'`)"
+        "backend/main.mo",
+        "backend/migration.mo"
       ]
     },
     {
       "id": "REQ-2",
-      "requirement": "Update the assignment detail popup rendering so that within these assignment text blocks, the “Step 1:”, “Step 2:”, and “Step 3:” labels are rendered in bold while the step body remains normal weight.",
-      "reason": "A new component exists to render bold step labels, and Screen6 imports it, but the diff excerpt does not show it being used in the assignment detail popup rendering (i.e., replacement of the prior rendering in the popup body). Therefore, the required UI behavior in the actual popup cannot be confirmed from the provided summary.",
+      "requirement": "Add backward-compatible handling for legacy day keys so existing recordings can still be retrieved/deleted, and save detects existing recordings under either canonical or legacy keys (no-overwrite rule).",
+      "reason": "No evidence in the truncated backend/main.mo of fallback lookup/delete across legacy day keys, and the added backend/migration.mo does not demonstrate migrating or dual-reading legacy keys for recording CRUD operations.",
       "evidence": [
-        "frontend/src/components/AssignmentDetailText.tsx",
-        "frontend/src/screens/Screen6InChallenge.tsx (imports AssignmentDetailText; usage not shown due to truncation)"
+        "backend/main.mo",
+        "backend/migration.mo"
       ]
     },
     {
       "id": "REQ-3",
-      "requirement": "Replace the content of the two info popups (Social Contemplation and About the challenge) with the exact new English copy provided by the user, keeping the existing popup structure and bold section headings.",
-      "reason": "No diff evidence shows the Social Contemplation/About popups’ sectioned copy being replaced with the user-provided text. The modified `translations.ts` excerpt shown does not include the info popup content/sections, and `InfoPopups.tsx` is only mentioned in a separate file summary (not a diff).",
+      "requirement": "Fix backend assignment identifier normalization/validation to accept canonical assignment IDs and normalize legacy assignment1..5 identifiers for compatibility.",
+      "reason": "backend/main.mo shows a validAssignments list of canonical IDs, but the diff summary does not show any backend logic that maps/normalizes legacy assignment IDs to canonical ones for uploads/deletes/queries.",
       "evidence": [
-        "frontend/src/i18n/translations.ts (truncated; no info popup section copy shown)",
-        "frontend-file-summaries.txt (mentions InfoPopups.tsx but does not show changes)"
+        "backend/main.mo"
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "requirement": "Update frontend recording operations (upload/get/delete/team playback) to use canonical day/assignment identifiers consistently across all calls, and ensure React Query invalidation/refetch so UI updates immediately after upload/delete (English error messages).",
+      "reason": "Although useQueries.ts now imports normalizeRecordingDay/normalizeAssignmentId and QUERY_KEYS are present, the diff is truncated and does not show the actual recording mutation/query call sites being updated to consistently apply these normalizers, nor the specific post-upload/delete invalidation/refetch behavior tied to the corrected mapping (including team playback paths).",
+      "evidence": [
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/screens/Screen6InChallenge.tsx"
       ]
     }
   ],
   "hallucinated_features": [
     {
-      "description": "Unrequested changes/additions to general translation content and language-list commentary (including a “Plus: Dutch (nl) - requested addition” note and unrelated UI strings like a footer line).",
-      "reason": "The BuildRequest is narrowly scoped to updating assignment detail popup copy, bolding step labels within those blocks, and updating two specific info popups’ copy—explicitly stating no i18n expansion. The diff shows unrelated translation content/metadata changes in `translations.ts` beyond the specified popups/assignment blocks.",
+      "description": "Introduced a backend migration module (backend/migration.mo) and wired it into the actor with “(with migration = Migration.run)”.",
+      "reason": "BuildRequest constraints specify backend must remain a single-actor Motoko canister with all logic in backend/main.mo; adding a separate migration module is additional structure not requested by the requirements (which focus on recording day/assignment mapping and CRUD behavior).",
       "evidence": [
-        "frontend/src/i18n/translations.ts (commentary about top 10 languages + Dutch; unrelated strings such as footer text)"
+        "backend/migration.mo",
+        "backend/main.mo"
+      ]
+    },
+    {
+      "description": "Project scope/state text indicates major unrelated product changes (e.g., multi-language/i18n removed, invitation links behavior, chat features, UI layout changes).",
+      "reason": "These changes are outside the stated non-goals (no new features beyond fixing mapping/recording CRUD behavior). The diff summary includes this as part of project_state.json content.",
+      "evidence": [
+        "project_state.json"
       ]
     }
   ],
-  "confidence": 0.56,
+  "confidence": 0.62,
   "changed_files": [
+    "backend/main.mo",
+    "backend/migration.mo",
     "frontend-file-summaries.txt",
-    "frontend/src/components/AssignmentDetailText.tsx",
-    "frontend/src/i18n/translations.ts",
+    "frontend/src/hooks/useQueries.ts",
     "frontend/src/screens/Screen6InChallenge.tsx",
-    "frontend/src/utils/assignments.ts",
+    "frontend/src/utils/recordingIds.ts",
     "project_state.json"
   ]
 }

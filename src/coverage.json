@@ -1,61 +1,63 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-05T00:55:01.814Z",
+  "generatedAt": "2026-02-05T01:48:45.727Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 3,
-    "implemented": 3,
+    "total": 4,
+    "implemented": 1,
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Replace the instructional text for the 5 fixed daily assignments (Awareness, Utopia, Small Steps, Support Strategies, Other Contemplations) with the exact new English copy provided by the user, fully replacing the existing assignment copy used in the in-challenge assignment detail popups.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/utils/assignments.ts"
-        ],
-        "matchedFiles": [
-          "frontend/src/utils/assignments.ts"
-        ]
+        "summary": "Fix backend day-index normalization for recordings so that all recording operations (save/get/delete/getAssignmentRecordings/getParticipantRecording) use a single consistent day key scheme (backend canonical day range 0–6) and do not produce collisions or off-by-one errors.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
       },
       {
         "id": "REQ-2",
-        "summary": "Update the assignment detail popup rendering so that within these assignment text blocks, the subheadings are bold: specifically, each \"Step 1:\", \"Step 2:\", and \"Step 3:\" line label must be rendered in bold while the step body text remains normal weight.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/components/AssignmentDetailText.tsx",
-          "frontend/src/screens/Screen6InChallenge.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/components/AssignmentDetailText.tsx",
-          "frontend/src/screens/Screen6InChallenge.tsx"
-        ]
+        "summary": "Add backward-compatible handling for existing recordings that may have been stored under legacy day keys due to previous normalization behavior, so users can still retrieve and delete previously uploaded recordings without manual intervention.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
       },
       {
         "id": "REQ-3",
-        "summary": "Replace the content of the two info popups (Social Contemplation and About the challenge) with the exact new English copy provided by the user, fully replacing the existing popup copy, while keeping the existing popup structure (title/description + sectioned body).",
+        "summary": "Fix backend assignment identifier normalization/validation so uploads work for all five assignments and deletes work for uploaded recordings, including compatibility with any legacy assignment identifiers used by older frontend versions.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-4",
+        "summary": "Update frontend recording operations (upload/get/delete/team playback) to use the same canonical day/assignment identifiers across all calls, and ensure React Query cache invalidation/refetch reflects the corrected mapping so the UI immediately updates after upload/delete.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/i18n/translations.ts"
+          "frontend/src/utils/recordingIds.ts",
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/screens/Screen6InChallenge.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/i18n/translations.ts"
+          "frontend/src/utils/recordingIds.ts",
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/screens/Screen6InChallenge.tsx"
         ]
       }
     ]
   },
   "changedFiles": [
+    "backend/main.mo",
+    "backend/migration.mo",
     "build-request.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/components/AssignmentDetailText.tsx",
-    "frontend/src/i18n/translations.ts",
+    "frontend/src/hooks/useQueries.ts",
     "frontend/src/screens/Screen6InChallenge.tsx",
-    "frontend/src/utils/assignments.ts",
+    "frontend/src/utils/recordingIds.ts",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

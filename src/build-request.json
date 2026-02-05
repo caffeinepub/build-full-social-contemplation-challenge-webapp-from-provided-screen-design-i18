@@ -1,73 +1,102 @@
 {
   "kind": "build_request",
-  "title": "Replace assignment + info popup copy and bold headings within the new text blocks",
+  "title": "Fix recording upload/delete by aligning assignment IDs and day index mapping",
   "priority": "normal",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Replace the instructional text for the 5 fixed daily assignments (Awareness, Utopia, Small Steps, Support Strategies, Other Contemplations) with the exact new English copy provided by the user, fully replacing the existing assignment copy used in the in-challenge assignment detail popups.",
-      "target": "frontend",
+      "text": "Fix backend day-index normalization for recordings so that all recording operations (save/get/delete/getAssignmentRecordings/getParticipantRecording) use a single consistent day key scheme (backend canonical day range 0–6) and do not produce collisions or off-by-one errors.",
+      "target": "backend",
       "source": {
         "messageIds": [
-          "msg-1"
+          "msg-3",
+          "msg-5",
+          "msg-7"
         ],
         "quotes": [
-          "ze zijn volledig te vervangen.",
-          "Hier zijn alle teksten opnieuw. ... Daarom moeten de nieuwe teksten erin."
+          "Als ik iets heb geüpload,  kan ik hem daarna niet deleten.",
+          "De eerste 2 uploads lukken maar kan ik niet deleten, de volgende 2 uploads lukken niet (zie printscreen",
+          "Awareness assignment kan ik wel uploaden maar niet deleten. Utopia kan ik wel uploaden maar niet deleten. De rest kan ik niet uploaden."
         ]
       },
       "acceptanceCriteria": [
-        "Opening any assignment detail popup in the in-challenge screen shows the updated copy exactly matching the user-provided text for that assignment (including punctuation and the 1–3 minutes range).",
-        "The Small Steps Step 1 text reads: \"Think of your current screen habits. Give yourself a rating from 0 to 10 that reflects how satisfied you are with your current screen behavior.\" (not the previous \"drawing\" wording).",
-        "The Awareness Step 3 paragraph includes: \"Listen to your previous recordings and to those of others.\" (not \"and, if relevant, to those of others\")."
+        "For UI Day 1–7, the backend stores and looks up recordings under canonical day keys 0–6 (Day 1 => 0, Day 7 => 6).",
+        "Saving a recording for any day/assignment does not collide with a different UI day due to normalization.",
+        "Deleting a recording for any day/assignment removes the same recording that was previously saved and retrieved for that slot.",
+        "Backend error messages for invalid day values remain clear (English) and reflect the canonical day range expectations."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Update the assignment detail popup rendering so that within these assignment text blocks, the subheadings are bold: specifically, each \"Step 1:\", \"Step 2:\", and \"Step 3:\" line label must be rendered in bold while the step body text remains normal weight.",
-      "target": "frontend",
+      "text": "Add backward-compatible handling for existing recordings that may have been stored under legacy day keys due to previous normalization behavior, so users can still retrieve and delete previously uploaded recordings without manual intervention.",
+      "target": "backend",
       "source": {
         "messageIds": [
-          "msg-1"
+          "msg-3",
+          "msg-5",
+          "msg-7"
         ],
         "quotes": [
-          "Ik wil dat de titels van de teksten en de tussenkopjes bold zijn.",
-          "Alleen in de nieuwe tekstblokken."
+          "Als ik iets heb geüpload,  kan ik hem daarna niet deleten.",
+          "De eerste 2 uploads lukken maar kan ik niet deleten, de volgende 2 uploads lukken niet (zie printscreen"
         ]
       },
       "acceptanceCriteria": [
-        "In each assignment detail popup, the text \"Step 1: ...\", \"Step 2: ...\", and \"Step 3: ...\" headings are visually bold.",
-        "Only the new assignment detail text blocks are affected; no global typography change is introduced for other screens/components."
+        "If a recording exists under a legacy day key for the requested slot, get/delete operations still succeed for the user’s selected UI day.",
+        "If a recording exists under either canonical or legacy day keys for the requested slot, save operations correctly detect it and continue to enforce the no-overwrite rule (users must delete before uploading a new one).",
+        "After a successful delete of a legacy-stored recording, subsequent fetches for that slot return no recording."
       ]
     },
     {
       "id": "REQ-3",
-      "text": "Replace the content of the two info popups (Social Contemplation and About the challenge) with the exact new English copy provided by the user, fully replacing the existing popup copy, while keeping the existing popup structure (title/description + sectioned body).",
-      "target": "frontend",
+      "text": "Fix backend assignment identifier normalization/validation so uploads work for all five assignments and deletes work for uploaded recordings, including compatibility with any legacy assignment identifiers used by older frontend versions.",
+      "target": "backend",
       "source": {
         "messageIds": [
-          "msg-1"
+          "msg-5",
+          "msg-7"
         ],
         "quotes": [
-          "ze zijn volledig te vervangen.",
-          "Social Contemplation ... About the challenge ... (full text provided)"
+          "Awareness assignment kan ik wel uploaden maar niet deleten. Utopia kan ik wel uploaden maar niet deleten. De rest kan ik niet uploaden."
         ]
       },
       "acceptanceCriteria": [
-        "The Social Contemplation info popup includes the user-provided sections: \"What is social contemplation\", \"Solution-focused psychology\", and \"Making meaning together\", with their provided paragraphs.",
-        "The About the challenge info popup includes the user-provided intro line \"Contemplate for about 15 to 30 minutes a day and let others inspire you\" plus Step 1/2/3 and Privacy & Security content exactly as provided, including the final sentence: \"If you end your participation in the challenge, all your data will be deleted\".",
-        "Popup section headings in these info popups render bold (consistent with existing section heading styling)."
+        "Backend accepts and correctly normalizes the canonical assignment IDs used by the frontend: awareness, utopia, small-steps, support-strategies, other-contemplations.",
+        "Backend also normalizes any legacy assignment IDs previously used (e.g., assignment1/assignment2/assignment3/assignment4/assignment5) to the canonical IDs so existing data remains accessible.",
+        "Uploading for Small Steps, Support Strategies, and Other Contemplations succeeds (no 'Invalid assignment' trap) when called with the canonical assignment IDs.",
+        "Deleting for Awareness and Utopia succeeds for recordings that were uploaded previously."
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "text": "Update frontend recording operations (upload/get/delete/team playback) to use the same canonical day/assignment identifiers across all calls, and ensure React Query cache invalidation/refetch reflects the corrected mapping so the UI immediately updates after upload/delete.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-3",
+          "msg-5",
+          "msg-7"
+        ],
+        "quotes": [
+          "Als ik iets heb geüpload,  kan ik hem daarna niet deleten.",
+          "De rest kan ik niet uploaden."
+        ]
+      },
+      "acceptanceCriteria": [
+        "For the same selected UI day and assignment, the UI uses consistent parameters across save/get/delete calls (no mismatched day index or assignment id between operations).",
+        "After upload succeeds, the assignment card shows the recorded state and disables upload until delete.",
+        "After delete succeeds, the recorded state clears and upload is re-enabled for that slot without a manual refresh.",
+        "User-facing error messages shown in the UI for recording operations remain in English."
       ]
     }
   ],
   "constraints": [
-    "Do not edit files under the immutable frontend paths listed in SYSTEM_CONTEXT.frontend.immutablePaths.",
-    "Keep the change scoped to the new text blocks only; do not introduce app-wide heading/font-weight changes."
+    "Backend must remain a single-actor Motoko canister (all logic in backend/main.mo).",
+    "Do not edit files under frontend/immutablePaths; compose existing UI components instead of modifying their sources."
   ],
   "nonGoals": [
-    "No backend schema or Motoko canister logic changes.",
-    "No redesign of the popup system beyond updating copy and bolding headings/subheadings within the specified new text blocks.",
-    "No language-switching or i18n feature expansion as part of this request."
+    "Do not add new challenge/assignment features beyond fixing mapping and recording CRUD behavior.",
+    "Do not introduce external databases or non-Motoko backend services."
   ],
   "imageRequirements": {
     "required": [],

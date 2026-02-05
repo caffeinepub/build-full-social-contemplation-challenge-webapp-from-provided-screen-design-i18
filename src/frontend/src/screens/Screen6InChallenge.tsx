@@ -235,7 +235,8 @@ export function Screen6InChallenge({ onNavigateToManage, onNavigateBack }: Scree
         }));
       });
 
-      // Save recording - pass UI day (1-7) directly, hook will normalize to backend day (0-6)
+      // Save recording - pass UI day (1-7) and canonical assignment ID
+      // The hook will normalize both to backend format
       await saveRecordingMutation.mutateAsync({
         challengeId,
         day: selectedDay,
@@ -277,7 +278,8 @@ export function Screen6InChallenge({ onNavigateToManage, onNavigateBack }: Scree
     if (!challengeId) return;
     
     try {
-      // Pass UI day (1-7) directly, hook will normalize to backend day (0-6)
+      // Pass UI day (1-7) and canonical assignment ID
+      // The hook will normalize both to backend format
       await deleteRecordingMutation.mutateAsync({
         challengeId,
         day: selectedDay,
@@ -291,7 +293,7 @@ export function Screen6InChallenge({ onNavigateToManage, onNavigateBack }: Scree
         return newState;
       });
     } catch (error) {
-      console.error('Failed to delete recording:', sanitizeErrorMessage(error));
+      console.error('Failed to delete recording:', error);
       
       // Check if challenge was deleted
       if (isChallengeNotFoundError(error)) {
@@ -300,7 +302,18 @@ export function Screen6InChallenge({ onNavigateToManage, onNavigateBack }: Scree
         if (onNavigateBack) {
           onNavigateBack();
         }
+        return;
       }
+      
+      // Show error in upload state
+      setUploadStates(prev => ({
+        ...prev,
+        [assignmentId]: {
+          progress: 0,
+          error: sanitizeErrorMessage(error),
+          isUploading: false,
+        }
+      }));
     }
   };
 
@@ -611,7 +624,8 @@ function AssignmentCard({
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Fetch the recording for this assignment - pass UI day (1-7), hook will normalize
+  // Fetch the recording for this assignment - pass UI day (1-7) and canonical assignment ID
+  // The hook will normalize both to backend format
   const recordingQuery = useGetRecording(challengeId, day, assignment.id);
   const hasRecording = !!recordingQuery.data;
   
@@ -759,7 +773,8 @@ function ParticipantAssignmentCard({
 }: ParticipantAssignmentCardProps) {
   const { t } = useTranslation();
   
-  // Fetch the recording for this participant and assignment - pass UI day (1-7), hook will normalize
+  // Fetch the recording for this participant and assignment - pass UI day (1-7) and canonical assignment ID
+  // The hook will normalize both to backend format
   const recordingQuery = useGetParticipantRecording(challengeId, participant, day, assignment.id);
   const hasRecording = !!recordingQuery.data;
   const isThisAssignmentPlaying = playingAssignment === `${participant.toString()}-${assignment.id}`;

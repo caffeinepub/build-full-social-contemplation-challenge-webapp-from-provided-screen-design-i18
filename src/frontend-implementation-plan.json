@@ -1,57 +1,32 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Update assignment + info popup copy and bold step subheadings in assignment detail popups",
+  "title": "Align frontend recording day/assignment identifiers and ensure immediate UI updates after upload/delete",
   "requirements": [
     {
-      "id": "REQ-1",
-      "summary": "Replace the instructional text for the 5 fixed daily assignments in the in-challenge assignment detail popups with the user-provided new English copy.",
+      "id": "REQ-4",
+      "summary": "Use a single canonical day (UI 1–7 => backend 0–6) and canonical assignment identifiers across all recording operations, with React Query cache updates so upload/delete state updates immediately.",
       "acceptanceCriteria": [
-        "Opening any assignment detail popup in the in-challenge screen shows the updated copy exactly matching the user-provided text for that assignment (including punctuation and the 1–3 minutes range).",
-        "The Small Steps Step 1 text reads: \"Think of your current screen habits. Give yourself a rating from 0 to 10 that reflects how satisfied you are with your current screen behavior.\" (not the previous \"drawing\" wording).",
-        "The Awareness Step 3 paragraph includes: \"Listen to your previous recordings and to those of others.\" (not \"and, if relevant, to those of others\")."
+        "For the same selected UI day and assignment, the UI uses consistent parameters across save/get/delete calls (no mismatched day index or assignment id between operations).",
+        "After upload succeeds, the assignment card shows the recorded state and disables upload until delete.",
+        "After delete succeeds, the recorded state clears and upload is re-enabled for that slot without a manual refresh.",
+        "User-facing error messages shown in the UI for recording operations remain in English."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/utils/assignments.ts",
-          "operation": "modify",
-          "description": "Fully replace the `content` strings for the 5 `FIXED_ASSIGNMENTS` (Awareness, Utopia, Small Steps, Support Strategies, Other Contemplations) with the exact new English copy provided by the user, ensuring the in-popup assignment details reflect the new text verbatim (including punctuation, line breaks, and the 1–3 minutes range)."
-        }
-      ]
-    },
-    {
-      "id": "REQ-2",
-      "summary": "Render Step 1/2/3 subheading labels in bold within the new assignment detail text blocks, without changing typography globally.",
-      "acceptanceCriteria": [
-        "In each assignment detail popup, the text \"Step 1: ...\", \"Step 2: ...\", and \"Step 3: ...\" headings are visually bold.",
-        "Only the new assignment detail text blocks are affected; no global typography change is introduced for other screens/components."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/components/AssignmentDetailText.tsx",
+          "path": "frontend/src/utils/recordingIds.ts",
           "operation": "create",
-          "description": "Create a small, scoped renderer for assignment detail popup text that preserves existing whitespace/newlines while rendering only the step labels (\"Step 1:\", \"Step 2:\", \"Step 3:\") in bold and keeping the step body text normal weight."
+          "description": "Add shared frontend-only normalizers for recording identifiers: (1) normalize UI day values to the backend canonical range 0–6 using the existing day conversion utility, and (2) normalize/validate assignment identifiers to the canonical IDs used by the app (awareness, utopia, small-steps, support-strategies, other-contemplations). This ensures every recording call path uses the same canonical identifiers."
+        },
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Update all recording-related React Query hooks (save/get/delete/getAssignmentRecordings/getParticipantRecording) to apply the shared canonical identifier normalization (day and assignment) before calling backend capabilities and before building query keys. Also, on successful delete, proactively clear/remove the cached recording query data (not just invalidate) so the UI does not keep showing stale 'Recorded' state if a refetch returns a not-found error."
         },
         {
           "path": "frontend/src/screens/Screen6InChallenge.tsx",
           "operation": "modify",
-          "description": "Update the assignment detail popup body rendering (currently a plain `whitespace-pre-wrap` block) to use the new `AssignmentDetailText` renderer so step labels are bolded only inside these assignment detail popups, without altering any global text styles."
-        }
-      ]
-    },
-    {
-      "id": "REQ-3",
-      "summary": "Replace the Social Contemplation and About the challenge info popup content with the user-provided new English copy while keeping existing popup structure and bold section headings.",
-      "acceptanceCriteria": [
-        "The Social Contemplation info popup includes the user-provided sections: \"What is social contemplation\", \"Solution-focused psychology\", and \"Making meaning together\", with their provided paragraphs.",
-        "The About the challenge info popup includes the user-provided intro line \"Contemplate for about 15 to 30 minutes a day and let others inspire you\" plus Step 1/2/3 and Privacy & Security content exactly as provided, including the final sentence: \"If you end your participation in the challenge, all your data will be deleted\".",
-        "Popup section headings in these info popups render bold (consistent with existing section heading styling)."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/i18n/translations.ts",
-          "operation": "modify",
-          "description": "Fully replace the English copy for `infoPopups.socialContemplation` and `infoPopups.aboutChallenge` (trigger/title/description/sections) with the exact new English text provided by the user, preserving the current structure (title/description + sectioned body) and ensuring section headings match the specified headings verbatim."
+          "description": "Ensure the in-challenge UI passes canonical assignment IDs consistently to upload/get/delete/team playback flows (using the shared normalizer where appropriate) and surfaces delete failures to the user using existing English error sanitization. After a successful delete, ensure any per-assignment UI error state is cleared so upload is immediately re-enabled and the recorded badge/state disappears without a manual refresh."
         }
       ]
     }

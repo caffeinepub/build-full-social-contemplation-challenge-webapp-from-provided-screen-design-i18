@@ -13,7 +13,9 @@ import Time "mo:core/Time";
 import Iter "mo:core/Iter";
 import Principal "mo:core/Principal";
 import Array "mo:core/Array";
+import Migration "migration";
 
+(with migration = Migration.run)
 actor {
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
@@ -67,18 +69,10 @@ actor {
   let validAssignments = [
     "awareness",
     "utopia",
-    "warmup",
-    "repOneOne",
-    "repOneTwo",
-    "repTwoOne",
-    "repTwoTwo",
-    "repThreeOne",
-    "repThreeTwo",
+    "small-steps",
+    "support-strategies",
+    "other-contemplations",
   ];
-
-  let assignIdLegacyMapping = Map.fromIter(
-    [("awareness", "assignment1"), ("utopia", "assignment2")].values()
-  );
 
   let maxNameLength = 30;
   let maxMessageLength = 250;
@@ -816,17 +810,34 @@ actor {
     };
   };
 
-  func normalizeDay(day : Nat) : Nat {
-    if (day == 0) { 0 }
-    else if (day == 1) { 1 }
-    else if (day > 1 and day <= 7) { day - 1 }
-    else { Runtime.trap("Invalid day value. Supported range: 0–6 for 7 day challenge.") };
+  let legacyDay0Mapping : [(Nat, [Nat])] = [(0, [0, 1, 2])];
+  let legacyDay1Mapping : [(Nat, [Nat])] = [(1, [3])];
+
+  func normalizeDay(originalDay : Nat) : Nat {
+    let findDay = func(pair : (Nat, [Nat])) : Bool {
+      let (normalizedDay, validDays) = pair;
+      validDays.find(func(validDay) { validDay == originalDay }) != null;
+    };
+
+    switch (legacyDay0Mapping.find(findDay)) {
+      case (?pair) { pair.0 };
+      case (null) {
+        switch (legacyDay1Mapping.find(findDay)) {
+          case (?pair) { pair.0 };
+          case (null) { originalDay };
+        };
+      };
+    };
   };
 
   func normalizeAssignment(assignment : Text) : Text {
-    switch (assignIdLegacyMapping.get(assignment)) {
-      case (?legacy) { legacy };
-      case (null) { assignment };
+    switch (assignment) {
+      case ("assignment1") { "awareness" };
+      case ("assignment2") { "utopia" };
+      case ("assignment3") { "small-steps" };
+      case ("assignment4") { "support-strategies" };
+      case ("assignment5") { "other-contemplations" };
+      case (_) { assignment };
     };
   };
 };
