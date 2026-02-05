@@ -37,6 +37,7 @@ export interface RSVP {
   'timestamp' : Time,
   'attending' : boolean,
 }
+export interface Recording { 'value' : ExternalBlob, 'isShared' : boolean }
 export type Time = bigint;
 export interface UserChallengeStatus { 'hasActiveChallenge' : boolean }
 export interface UserProfile { 'name' : string }
@@ -87,7 +88,7 @@ export interface _SERVICE {
   'getAllRSVPs' : ActorMethod<[], Array<RSVP>>,
   'getAssignmentRecordings' : ActorMethod<
     [bigint, bigint, string],
-    Array<[Principal, [] | [ExternalBlob]]>
+    Array<[Principal, [] | [Recording]]>
   >,
   'getAvailableInvitationCodes' : ActorMethod<[bigint], Array<string>>,
   'getBuildInfo' : ActorMethod<[], BuildInfo>,
@@ -116,6 +117,7 @@ export interface _SERVICE {
     [bigint, bigint, string, ExternalBlob],
     undefined
   >,
+  'shareRecording' : ActorMethod<[bigint, bigint, string, boolean], undefined>,
   'submitRSVP' : ActorMethod<[string, boolean, string], undefined>,
   'updateStartTime' : ActorMethod<[bigint, Time], undefined>,
 }

@@ -1,47 +1,86 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-05T22:02:03.431Z",
+  "generatedAt": "2026-02-05T22:23:06.187Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 2,
-    "implemented": 2,
+    "total": 5,
+    "implemented": 3,
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Remove (hide/disable) all UI elements that allow users to upload an existing audio file (e.g., file picker, \"Upload\" button meant for selecting a local file) anywhere in the app.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/components/AudioRecorder.tsx",
-          "frontend/src/screens/Screen6InChallenge.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/components/AudioRecorder.tsx"
-        ]
+        "summary": "Add challenge-scoped recording sharing so that a newly recorded audio is not visible to other challenge participants unless the recording owner explicitly confirms sharing (Yes/No). Team membership must be defined exclusively as: users who are participants of the same challenge; recordings must never be accessible outside that challenge.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
       },
       {
         "id": "REQ-2",
-        "summary": "Ensure the in-app audio recorder flow is active and usable: users can start recording, stop recording, review the recorded audio, and proceed with the existing save/share action without exposing a user-facing control labeled \"Upload\".",
+        "summary": "Implement backend APIs to support team view rendering of shared recordings grouped by participant, day, and exercise (assignment). The APIs must allow the frontend to: (1) mark a caller’s saved recording as shared for a specific (challengeId, day, assignment), and (2) fetch a specific participant’s shared recording for a specific (challengeId, day, assignment).",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-3",
+        "summary": "Add a Yes/No confirmation prompt in the recording save flow: when the user attempts to save a newly recorded audio, show a modal dialog that asks whether to share the recording with the team. If the user selects \"No\", the recording is saved privately and not shared. If the user selects \"Yes\", the recording is saved and then shared to the team within the same challenge. The prompt must be confirmation-only (no extra fields).",
         "status": "implemented",
         "plannedFiles": [
           "frontend/src/components/AudioRecorder.tsx",
+          "frontend/src/screens/Screen6InChallenge.tsx",
+          "frontend/src/hooks/useQueries.ts"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/AudioRecorder.tsx",
+          "frontend/src/screens/Screen6InChallenge.tsx",
+          "frontend/src/hooks/useQueries.ts"
+        ]
+      },
+      {
+        "id": "REQ-4",
+        "summary": "Update the Team tab to display only shared recordings (not private recordings). The team view must allow browsing by participant, then by day, then by exercise/assignment, and must play audio only when that participant has shared a recording for that specific day+exercise.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/hooks/useQueries.ts",
           "frontend/src/screens/Screen6InChallenge.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/components/AudioRecorder.tsx"
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/screens/Screen6InChallenge.tsx"
+        ]
+      },
+      {
+        "id": "REQ-5",
+        "summary": "Ensure deletion behavior prevents unintended sharing: when a user deletes a recording from the 'My' tab, any shared version of that same (challengeId, day, assignment) recording must no longer be accessible by other participants in the Team tab.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/screens/Screen6InChallenge.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/screens/Screen6InChallenge.tsx"
         ]
       }
     ]
   },
   "changedFiles": [
+    "backend/main.mo",
+    "backend/migration.mo",
     "build-request.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
+    "frontend/src/backend.d.ts",
+    "frontend/src/backend.ts",
     "frontend/src/components/AudioRecorder.tsx",
+    "frontend/src/declarations/backend.did.d.ts",
+    "frontend/src/declarations/backend.did.js",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/screens/Screen6InChallenge.tsx",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

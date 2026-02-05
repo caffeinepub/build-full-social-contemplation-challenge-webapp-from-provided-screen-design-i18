@@ -1,28 +1,35 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "Update the assignment and audio recording flow: remove the upload button, support recording/delete in the audio recorder with confirmed sharing to team members, and restore/standardize assignment titles across UI including pop-up menus.",
+  "summary": "Implement challenge-scoped team audio sharing: recorded audio is only shared with team members after a Yes/No confirmation prompt, and shared recordings are displayed in the team view grouped per user, per day, per exercise.",
   "architectural_notes": [
-    "Sharing recorded audio with team members requires an explicit user confirmation step before becoming visible."
+    "Team membership is defined solely by being in the same challenge; information is only shared within a challenge.",
+    "Recorded audio should not be shared automatically; require explicit user confirmation (Yes/No) prior to sharing."
   ],
-  "known_issues": [
-    "Build engine may fail on large/combined prompts; changes may need to be submitted as smaller sequential steps."
-  ],
+  "known_issues": [],
   "isFixRequest": false,
   "existing_features": [
     {
-      "id": "feature-remove-hide-disable-all-ui-elements-that-allow-users-to-upload-an-existing-audio-file-e-g-file-picker-upload-button-meant-for-selecting-a-local-file-anywhere-in-the-app",
-      "title": "Remove (hide/disable) all UI elements that allow users to upload an existing audio file (e.g., file picker, \"Upload\" button meant for selecting a local file) anywhere in the app.",
+      "id": "feature-add-a-yes-no-confirmation-prompt-in-the-recording-save-flow-when-the-user-attempts-to-save-a-newly-recorded-audio-show-a-modal-dialog-that-asks-whether-to-share-the-recording-with-the-team-if-the-user-selects-no-the-recording-is-saved-privately-and-not-shared-if-the-user-selects-yes-the-recording-is-saved-and-then-shared-to-the-team-within-the-same-challenge-the-prompt-must-be-confirmation-only-no-extra-fields",
+      "title": "Add a Yes/No confirmation prompt in the recording save flow: when the user attempts to save a newly recorded audio, show a modal dialog that asks whether to share the recording with the team. If the user selects \"No\", the recording is saved privately and not shared. If the user selects \"Yes\", the recording is saved and then shared to the team within the same challenge. The prompt must be confirmation-only (no extra fields).",
       "reqIds": [
-        "REQ-1"
+        "REQ-3"
       ],
       "version": 1
     },
     {
-      "id": "feature-ensure-the-in-app-audio-recorder-flow-is-active-and-usable-users-can-start-recording-stop-recording-review-the-recorded-audio-and-proceed-with-the-existing-save-share-action-without-exposing-a-user-facing-control-labeled-upload",
-      "title": "Ensure the in-app audio recorder flow is active and usable: users can start recording, stop recording, review the recorded audio, and proceed with the existing save/share action without exposing a user-facing control labeled \"Upload\".",
+      "id": "feature-update-the-team-tab-to-display-only-shared-recordings-not-private-recordings-the-team-view-must-allow-browsing-by-participant-then-by-day-then-by-exercise-assignment-and-must-play-audio-only-when-that-participant-has-shared-a-recording-for-that-specific-day-exercise",
+      "title": "Update the Team tab to display only shared recordings (not private recordings). The team view must allow browsing by participant, then by day, then by exercise/assignment, and must play audio only when that participant has shared a recording for that specific day+exercise.",
       "reqIds": [
-        "REQ-2"
+        "REQ-4"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-deletion-behavior-prevents-unintended-sharing-when-a-user-deletes-a-recording-from-the-my-tab-any-shared-version-of-that-same-challengeid-day-assignment-recording-must-no-longer-be-accessible-by-other-participants-in-the-team-tab",
+      "title": "Ensure deletion behavior prevents unintended sharing: when a user deletes a recording from the 'My' tab, any shared version of that same (challengeId, day, assignment) recording must no longer be accessible by other participants in the Team tab.",
+      "reqIds": [
+        "REQ-5"
       ],
       "version": 1
     }
@@ -30,30 +37,40 @@
   "new_feature_requests": [
     {
       "id": "AR-1",
-      "summary": "Remove the upload button everywhere (disable uploading existing audio files) and re-enable the audio recorder flow.",
+      "summary": "Add confirmation prompt (Yes/No) before sharing recorded audio to team members",
       "reqIds": [],
-      "status": "in_progress"
+      "status": "pending"
     },
     {
       "id": "AR-2",
-      "summary": "Add confirmation step before sharing a recorded audio to team members; after confirmation the recording becomes visible to the team.",
+      "summary": "Build challenge-scoped team sharing: users in the same challenge can see shared audio; data is not shared outside the challenge",
       "reqIds": [],
       "status": "pending"
     },
     {
       "id": "AR-3",
-      "summary": "Ensure recordings can be recorded and deleted within the audio recorder.",
+      "summary": "Display shared recordings in Team view grouped per user, per day, per exercise",
       "reqIds": [],
       "status": "pending"
     },
     {
       "id": "AR-4",
-      "summary": "Rename all assignments to: Awareness, Utopia, Small steps, Support strategie, Other contemplations, and ensure these names are used correctly in all pop-up menus.",
-      "reqIds": [],
+      "summary": "Add challenge-scoped recording sharing so that a newly recorded audio is not visible to other challenge participants unless the recording owner explicitly confirms sharing (Yes/No). Team membership must be defined exclusively as: users who are participants of the same challenge; recordings must never be accessible outside that challenge.",
+      "reqIds": [
+        "REQ-1"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-5",
+      "summary": "Implement backend APIs to support team view rendering of shared recordings grouped by participant, day, and exercise (assignment). The APIs must allow the frontend to: (1) mark a caller’s saved recording as shared for a specific (challengeId, day, assignment), and (2) fetch a specific participant’s shared recording for a specific (challengeId, day, assignment).",
+      "reqIds": [
+        "REQ-2"
+      ],
       "status": "pending"
     }
   ],
-  "projectName": "Step 1: Remove audio file upload UI and ensure the in-app audio recorder is active",
+  "projectName": "Add challenge-scoped confirmation prompt before sharing audio recordings to the team",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

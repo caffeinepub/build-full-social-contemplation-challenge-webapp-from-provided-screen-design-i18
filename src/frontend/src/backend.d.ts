@@ -14,6 +14,10 @@ export class ExternalBlob {
     static fromBytes(blob: Uint8Array<ArrayBuffer>): ExternalBlob;
     withUploadProgress(onProgress: (percentage: number) => void): ExternalBlob;
 }
+export interface Recording {
+    value: ExternalBlob;
+    isShared: boolean;
+}
 export interface RSVP {
     name: string;
     inviteCode: string;
@@ -25,13 +29,13 @@ export interface InviteCode {
     code: string;
     used: boolean;
 }
+export type Time = bigint;
 export interface BuildInfo {
     stableDeployTime?: bigint;
     deployTime: bigint;
     version: string;
     buildTime: bigint;
 }
-export type Time = bigint;
 export interface UserChallengeStatus {
     hasActiveChallenge: boolean;
 }
@@ -64,7 +68,7 @@ export interface backendInterface {
     getActiveChallengeIdForParticipant(): Promise<bigint | null>;
     getAllChallengeParticipantProfiles(challengeId: bigint): Promise<Array<[Principal, UserProfile | null]>>;
     getAllRSVPs(): Promise<Array<RSVP>>;
-    getAssignmentRecordings(challengeId: bigint, day: bigint, assignment: string): Promise<Array<[Principal, ExternalBlob | null]>>;
+    getAssignmentRecordings(challengeId: bigint, day: bigint, assignment: string): Promise<Array<[Principal, Recording | null]>>;
     getAvailableInvitationCodes(challengeId: bigint): Promise<Array<string>>;
     getBuildInfo(): Promise<BuildInfo>;
     getCallerUserProfile(): Promise<UserProfile | null>;
@@ -86,6 +90,7 @@ export interface backendInterface {
     removeParticipant(challengeId: bigint, participant: Principal): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     saveRecording(challengeId: bigint, day: bigint, assignment: string, recording: ExternalBlob): Promise<void>;
+    shareRecording(challengeId: bigint, day: bigint, assignment: string, isShared: boolean): Promise<void>;
     submitRSVP(name: string, attending: boolean, inviteCode: string): Promise<void>;
     updateStartTime(challengeId: bigint, newStartTime: Time): Promise<void>;
 }

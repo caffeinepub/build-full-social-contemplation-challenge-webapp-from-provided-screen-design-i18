@@ -1,51 +1,109 @@
 {
   "kind": "build_request",
-  "title": "Step 1: Remove audio file upload UI and ensure the in-app audio recorder is active",
+  "title": "Add challenge-scoped confirmation prompt before sharing audio recordings to the team",
   "priority": "normal",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Remove (hide/disable) all UI elements that allow users to upload an existing audio file (e.g., file picker, \"Upload\" button meant for selecting a local file) anywhere in the app.",
-      "target": "frontend",
+      "text": "Add challenge-scoped recording sharing so that a newly recorded audio is not visible to other challenge participants unless the recording owner explicitly confirms sharing (Yes/No). Team membership must be defined exclusively as: users who are participants of the same challenge; recordings must never be accessible outside that challenge.",
+      "target": "backend",
       "source": {
         "messageIds": [
-          "msg-1"
+          "msg-6"
         ],
         "quotes": [
-          "Voer stap 1 uit"
+          "Zorg dat opgenomen audio pas wordt gedeeld met teamleden na een bevestigingsprompt.",
+          "je zit in een team als je in dezelfde challenge zit. Dat is alles. Informatie binnen een challenge wordt alleen onderling gedeeld.",
+          "alleen vraagt om te bevestigen yes/no"
         ]
       },
       "acceptanceCriteria": [
-        "There is no file-input based audio upload control visible anywhere in the UI.",
-        "Users cannot select a local audio file for upload via the UI."
+        "If user A saves a recording and answers \"No\" to sharing, user B (in the same challenge) cannot access that recording via any backend query/method.",
+        "If user A saves a recording and answers \"Yes\" to sharing, user B (in the same challenge) can access that recording via backend query/method(s).",
+        "A user who is not a participant in the challenge cannot access any shared recordings for that challenge (backend traps/denies)."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Ensure the in-app audio recorder flow is active and usable: users can start recording, stop recording, review the recorded audio, and proceed with the existing save/share action without exposing a user-facing control labeled \"Upload\".",
-      "target": "frontend",
+      "text": "Implement backend APIs to support team view rendering of shared recordings grouped by participant, day, and exercise (assignment). The APIs must allow the frontend to: (1) mark a caller’s saved recording as shared for a specific (challengeId, day, assignment), and (2) fetch a specific participant’s shared recording for a specific (challengeId, day, assignment).",
+      "target": "backend",
       "source": {
         "messageIds": [
-          "msg-1"
+          "msg-6"
         ],
         "quotes": [
-          "Voer stap 1 uit"
+          "Ik wil dat je die bouwt, en dat ze worden weergegeven in teamview, per user per dag per oefening."
         ]
       },
       "acceptanceCriteria": [
-        "On the in-challenge screen, users can start and stop a microphone recording successfully.",
-        "After stopping, users can review playback of the recorded audio and then proceed with the action that sends it to the backend, but the control is not labeled \"Upload\" (use English UI text).",
-        "No user-facing button labeled \"Upload\" is shown in the recorder UI."
+        "There is a backend method to share (or publish) a caller’s recording for (challengeId, day, assignment) that only works if the caller is a participant in that challenge and the caller has a saved recording for that slot.",
+        "There is a backend method to fetch a participant’s shared recording for (challengeId, participant, day, assignment) that only works for callers who are participants in the same challenge.",
+        "The backend distinguishes between 'saved privately' and 'shared to team' so that team fetches do not accidentally return unshared/private recordings."
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "text": "Add a Yes/No confirmation prompt in the recording save flow: when the user attempts to save a newly recorded audio, show a modal dialog that asks whether to share the recording with the team. If the user selects \"No\", the recording is saved privately and not shared. If the user selects \"Yes\", the recording is saved and then shared to the team within the same challenge. The prompt must be confirmation-only (no extra fields).",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-6"
+        ],
+        "quotes": [
+          "Zorg dat opgenomen audio pas wordt gedeeld met teamleden na een bevestigingsprompt.",
+          "alleen vraagt om te bevestigen yes/no"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Clicking Save in the recorder shows a modal with exactly two choices (Yes / No) and no additional required inputs.",
+        "Choosing \"No\" results in the recording being available in the 'My' tab but not playable/visible in the 'Team' tab for other participants.",
+        "Choosing \"Yes\" results in the recording being playable/visible in the 'Team' tab for other participants in the same challenge."
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "text": "Update the Team tab to display only shared recordings (not private recordings). The team view must allow browsing by participant, then by day, then by exercise/assignment, and must play audio only when that participant has shared a recording for that specific day+exercise.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-6"
+        ],
+        "quotes": [
+          "weergegeven in teamview, per user per dag per oefening.",
+          "Informatie binnen een challenge wordt alleen onderling gedeeld."
+        ]
+      },
+      "acceptanceCriteria": [
+        "In the Team tab, selecting a participant and day shows a list of exercises/assignments where only shared recordings are indicated as available.",
+        "If a recording exists privately but was not shared, the Team tab must behave as if no recording exists for that slot.",
+        "The Team tab does not attempt to call any backend method that returns private recordings for other participants."
+      ]
+    },
+    {
+      "id": "REQ-5",
+      "text": "Ensure deletion behavior prevents unintended sharing: when a user deletes a recording from the 'My' tab, any shared version of that same (challengeId, day, assignment) recording must no longer be accessible by other participants in the Team tab.",
+      "target": "both",
+      "source": {
+        "messageIds": [
+          "msg-6"
+        ]
+      },
+      "acceptanceCriteria": [
+        "After deleting a recording, other participants can no longer fetch/play it in the Team tab (it is no longer shared/available).",
+        "The recording is also removed from the owner’s 'My' tab state after deletion."
       ]
     }
   ],
   "constraints": [
-    "Do not edit files under frontend/src/components/ui (shadcn components are read-only).",
-    "Do not edit frontend immutable hook files (frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx)."
+    "Use English for any user-facing UI text (e.g., the confirmation prompt buttons and message).",
+    "Backend must remain a single Motoko actor in backend/main.mo (no additional backend services).",
+    "Do not modify files under frontend/src/components/ui (compose existing shadcn components instead).",
+    "Do not modify frontend immutable paths listed in SYSTEM_CONTEXT."
   ],
   "nonGoals": [
-    "Do not implement the confirmation-before-sharing behavior in this step (that is a later step).",
-    "Do not change backend Motoko logic or schemas for this step."
+    "Do not implement third-party auth; only Internet Identity is allowed.",
+    "Do not add cross-challenge sharing or any global/team directory beyond 'same challenge participants'.",
+    "Do not add additional sharing settings beyond a simple Yes/No confirmation."
   ],
   "imageRequirements": {
     "required": [],

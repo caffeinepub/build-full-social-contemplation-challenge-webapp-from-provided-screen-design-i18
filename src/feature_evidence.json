@@ -2,10 +2,12 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-remove-hide-disable-all-ui-elements-that-allow-users-to-upload-an-existing-audio-file-e-g-file-picker-upload-button-meant-for-selecting-a-local-file-anywhere-in-the-app",
-      "featureTitle": "Remove (hide/disable) all UI elements that allow users to upload an existing audio file (e.g., file picker, \"Upload\" button meant for selecting a local file) anywhere in the app.",
+      "featureId": "feature-add-a-yes-no-confirmation-prompt-in-the-recording-save-flow-when-the-user-attempts-to-save-a-newly-recorded-audio-show-a-modal-dialog-that-asks-whether-to-share-the-recording-with-the-team-if-the-user-selects-no-the-recording-is-saved-privately-and-not-shared-if-the-user-selects-yes-the-recording-is-saved-and-then-shared-to-the-team-within-the-same-challenge-the-prompt-must-be-confirmation-only-no-extra-fields",
+      "featureTitle": "Add a Yes/No confirmation prompt in the recording save flow: when the user attempts to save a newly recorded audio, show a modal dialog that asks whether to share the recording with the team. If the user selects \"No\", the recording is saved privately and not shared. If the user selects \"Yes\", the recording is saved and then shared to the team within the same challenge. The prompt must be confirmation-only (no extra fields).",
       "files": [
-        "frontend/src/components/AudioRecorder.tsx"
+        "frontend/src/components/AudioRecorder.tsx",
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/screens/Screen6InChallenge.tsx"
       ],
       "components": [
         "authorization@4.0.0",
@@ -18,15 +20,16 @@
         "invite-links@3.0.0"
       ],
       "testIds": [
-        "REQ-1"
+        "REQ-3"
       ],
       "confidence": "high"
     },
     {
-      "featureId": "feature-ensure-the-in-app-audio-recorder-flow-is-active-and-usable-users-can-start-recording-stop-recording-review-the-recorded-audio-and-proceed-with-the-existing-save-share-action-without-exposing-a-user-facing-control-labeled-upload",
-      "featureTitle": "Ensure the in-app audio recorder flow is active and usable: users can start recording, stop recording, review the recorded audio, and proceed with the existing save/share action without exposing a user-facing control labeled \"Upload\".",
+      "featureId": "feature-update-the-team-tab-to-display-only-shared-recordings-not-private-recordings-the-team-view-must-allow-browsing-by-participant-then-by-day-then-by-exercise-assignment-and-must-play-audio-only-when-that-participant-has-shared-a-recording-for-that-specific-day-exercise",
+      "featureTitle": "Update the Team tab to display only shared recordings (not private recordings). The team view must allow browsing by participant, then by day, then by exercise/assignment, and must play audio only when that participant has shared a recording for that specific day+exercise.",
       "files": [
-        "frontend/src/components/AudioRecorder.tsx"
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/screens/Screen6InChallenge.tsx"
       ],
       "components": [
         "authorization@4.0.0",
@@ -39,7 +42,29 @@
         "invite-links@3.0.0"
       ],
       "testIds": [
-        "REQ-2"
+        "REQ-4"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-ensure-deletion-behavior-prevents-unintended-sharing-when-a-user-deletes-a-recording-from-the-my-tab-any-shared-version-of-that-same-challengeid-day-assignment-recording-must-no-longer-be-accessible-by-other-participants-in-the-team-tab",
+      "featureTitle": "Ensure deletion behavior prevents unintended sharing: when a user deletes a recording from the 'My' tab, any shared version of that same (challengeId, day, assignment) recording must no longer be accessible by other participants in the Team tab.",
+      "files": [
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/screens/Screen6InChallenge.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0",
+        "invite-links@3.0.0"
+      ],
+      "testIds": [
+        "REQ-5"
       ],
       "confidence": "high"
     }

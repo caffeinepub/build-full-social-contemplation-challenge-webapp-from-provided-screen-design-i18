@@ -1,47 +1,72 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-05T22:02:03.428Z",
-  "summary": "Diff shows changes primarily to the in-app AudioRecorder UI, adding/adjusting recording/review/save states. However, based on the provided diff summary, there is insufficient evidence that all file-upload UI elements across the app were removed, and the recorder’s full start/stop/review/save flow (including absence of any \"Upload\" label) cannot be fully verified due to truncation. Additionally, project metadata files were modified with items beyond this step’s scope.",
+  "generatedAt": "2026-02-05T22:23:06.184Z",
+  "summary": "Diff adds a new recording data model with an `isShared` flag (plus a migration that initializes legacy recordings as unshared) and introduces a frontend Yes/No share confirmation dialog in the recording save flow. However, the diff summary does not provide enough evidence that the required backend sharing/fetch APIs, Team-tab shared-only behavior, and delete-unshare behavior are fully implemented and enforced as specified.",
   "missing_requirements": [
     {
       "id": "REQ-1",
-      "requirement": "Remove (hide/disable) all UI elements that allow users to upload an existing audio file anywhere in the app (no file-input based audio upload control visible; users cannot select a local audio file).",
-      "reason": "The diff summary only shows changes to `AudioRecorder.tsx` and does not show removal of any `<input type=\"file\">` (or similar file picker) controls elsewhere in the app. With the limited evidence provided, global removal of file-upload UI cannot be confirmed.",
+      "requirement": "Backend must ensure recordings are not visible to other challenge participants unless explicitly shared, and must deny access outside the challenge (participant-only access).",
+      "reason": "While `Recording` now includes `isShared` and migration sets it to false, the diff summary does not show any backend query/method changes that (a) prevent access to unshared recordings by other participants, (b) allow access when shared, and (c) deny/trap non-participants.",
       "evidence": [
-        "frontend/src/components/AudioRecorder.tsx (truncated)",
-        "frontend-file-summaries.txt (truncated)"
+        "backend/main.mo (truncated)",
+        "backend/migration.mo"
       ]
     },
     {
       "id": "REQ-2",
-      "requirement": "Ensure the in-app audio recorder flow is active and usable (start, stop, review playback, proceed with save/share) and no user-facing control labeled \"Upload\" is shown.",
-      "reason": "`AudioRecorder.tsx` shows stop/review/save-related UI, but the file is truncated before the primary save button label is fully visible, and the start-recording UI is not shown in the excerpt. Therefore, the full end-to-end recorder flow and the explicit absence of any \"Upload\" label cannot be conclusively verified from the provided diff summary.",
+      "requirement": "Backend APIs to (1) mark caller’s recording as shared for (challengeId, day, assignment) and (2) fetch a participant’s shared recording for (challengeId, participant, day, assignment), with participant-only access control and private/shared separation.",
+      "reason": "The diff summary shows the new `isShared` field and frontend usage of hooks like `useShareRecording` / `useGetAssignmentRecordings`, but does not show the corresponding backend actor methods (signatures/implementations) or access-control checks to satisfy the acceptance criteria.",
       "evidence": [
-        "frontend/src/components/AudioRecorder.tsx (truncated)"
+        "backend/main.mo (truncated)",
+        "frontend/src/screens/Screen6InChallenge.tsx (truncated)",
+        "frontend/src/hooks/useQueries.ts (truncated)"
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "requirement": "Team tab must display only shared recordings, browsable by participant → day → exercise, and must not call any backend method that returns private recordings for other participants.",
+      "reason": "Screen6 imports team-related hooks and has state for selected participant/day, but the diff summary is truncated before showing the Team tab rendering logic and what backend methods it calls (shared-only vs private).",
+      "evidence": [
+        "frontend/src/screens/Screen6InChallenge.tsx (truncated)",
+        "frontend/src/hooks/useQueries.ts (truncated)"
+      ]
+    },
+    {
+      "id": "REQ-5",
+      "requirement": "Deleting a recording must also remove/unshare any shared version so other participants can no longer fetch/play it, and it must disappear from the owner’s My tab state.",
+      "reason": "The diff summary shows delete-related hooks are used (`useDeleteRecording`) but does not show backend delete logic updating `isShared`/removing shared availability, nor the frontend invalidation/state updates that ensure Team can no longer fetch it after deletion.",
+      "evidence": [
+        "frontend/src/screens/Screen6InChallenge.tsx (truncated)",
+        "backend/main.mo (truncated)"
       ]
     }
   ],
   "hallucinated_features": [
     {
-      "description": "Project metadata updates describing additional future features (e.g., confirmation-before-sharing step, assignment renaming) beyond this step’s scope.",
-      "reason": "The BuildRequest explicitly lists confirmation-before-sharing as a non-goal for this step, and does not request updating project tracking metadata; the diff includes updates describing these items in `project_state.json`.",
+      "description": "Added a backend migration module and enabled migration in the main actor.",
+      "reason": "The BuildRequest did not explicitly request data migration functionality or a new migration module; it may be necessary due to the recording type change, but it is additional implementation not spelled out as a requirement.",
       "evidence": [
-        "project_state.json"
+        "backend/migration.mo",
+        "backend/main.mo (truncated)"
       ]
     },
     {
-      "description": "Updates to a generated/summary inventory file (`frontend-file-summaries.txt`).",
-      "reason": "Not requested by the BuildRequest; appears to be ancillary documentation/state rather than implementation of REQ-1/REQ-2.",
+      "description": "Added/expanded assignment canonicalization/title mapping and validation sets in backend.",
+      "reason": "The BuildRequest focuses on sharing confirmation, shared-only team views, and access control. The diff summary shows new/expanded assignment mapping/title/validation logic which is not explicitly requested in the requirements provided.",
       "evidence": [
-        "frontend-file-summaries.txt (truncated)"
+        "backend/main.mo (truncated)"
       ]
     }
   ],
-  "confidence": 0.56,
+  "confidence": 0.62,
   "changed_files": [
+    "backend/main.mo",
+    "backend/migration.mo",
     "frontend-file-summaries.txt",
     "frontend/src/components/AudioRecorder.tsx",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/screens/Screen6InChallenge.tsx",
     "project_state.json"
   ]
 }

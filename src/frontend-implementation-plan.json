@@ -1,46 +1,72 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Step 1: Remove audio file upload UI and keep in-app recorder active",
+  "title": "Challenge-scoped recording share confirmation + shared-only Team tab rendering",
   "requirements": [
     {
-      "id": "REQ-1",
-      "summary": "Remove/hide any UI that allows selecting an existing local audio file for upload anywhere in the app.",
+      "id": "REQ-3",
+      "summary": "Add a Yes/No confirmation modal to the recorder Save action to decide whether to share the new recording with the challenge team.",
       "acceptanceCriteria": [
-        "There is no file-input based audio upload control visible anywhere in the UI.",
-        "Users cannot select a local audio file for upload via the UI."
+        "Clicking Save in the recorder shows a modal with exactly two choices (Yes / No) and no additional required inputs.",
+        "Choosing \"No\" results in the recording being available in the 'My' tab but not playable/visible in the 'Team' tab for other participants.",
+        "Choosing \"Yes\" results in the recording being playable/visible in the 'Team' tab for other participants in the same challenge."
       ],
       "file_operations": [
         {
           "path": "frontend/src/components/AudioRecorder.tsx",
           "operation": "modify",
-          "description": "Audit and remove any file-picker style audio upload controls (e.g., input type=\"file\", browse/select-file flows) if present; ensure this component only supports in-app microphone recording + review."
+          "description": "Change the Save flow to open a confirmation-only modal with exactly two actions (Yes / No) in English; on selection, call the provided save callback with the recorded blob plus the user’s share choice. Compose the modal using existing shadcn Dialog primitives (do not modify anything under frontend/src/components/ui). Verify the component's usage instructions before implementing."
         },
         {
           "path": "frontend/src/screens/Screen6InChallenge.tsx",
           "operation": "modify",
-          "description": "Audit the in-challenge screen to ensure it does not render (or conditionally render) any audio file upload UI (e.g., file picker / select-local-file controls), and that it only exposes the recorder-based flow for creating recordings."
+          "description": "Update the recording save handler to accept a share decision from AudioRecorder; after saving, call the backend sharing capability (shareRecording) with isShared=true for \"Yes\" and isShared=false for \"No\"; ensure React Query invalidations refresh both My and Team data for that (challengeId, day, assignment)."
+        },
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Add a React Query mutation hook for the backend sharing capability (shareRecording) and wire it into existing recording cache invalidations so Team views reflect newly-shared recordings immediately."
         }
       ]
     },
     {
-      "id": "REQ-2",
-      "summary": "Ensure the in-app audio recorder flow remains usable (start/stop/review/save-share) without any user-facing control labeled \"Upload\".",
+      "id": "REQ-4",
+      "summary": "Update the Team tab to show and play only recordings that have been explicitly shared, browsable by participant, day, then assignment.",
       "acceptanceCriteria": [
-        "On the in-challenge screen, users can start and stop a microphone recording successfully.",
-        "After stopping, users can review playback of the recorded audio and then proceed with the action that sends it to the backend, but the control is not labeled \"Upload\" (use English UI text).",
-        "No user-facing button labeled \"Upload\" is shown in the recorder UI."
+        "In the Team tab, selecting a participant and day shows a list of exercises/assignments where only shared recordings are indicated as available.",
+        "If a recording exists privately but was not shared, the Team tab must behave as if no recording exists for that slot.",
+        "The Team tab does not attempt to call any backend method that returns private recordings for other participants."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/AudioRecorder.tsx",
+          "path": "frontend/src/hooks/useQueries.ts",
           "operation": "modify",
-          "description": "Update recorder review/actions UI to remove/replace the \"Upload\" button label and related wording (e.g., change to \"Save\" / \"Send\" / \"Share\" and adjust loading text accordingly); keep start/stop, playback review, and trigger to send the recorded audio via the existing onUpload callback."
+          "description": "Align the Team-facing query hook(s) to the backend interface for shared recording discovery: update the getAssignmentRecordings hook return typing to use Recording { value, isShared } (not ExternalBlob), and ensure query logic supports detecting availability without fetching private recordings."
         },
         {
           "path": "frontend/src/screens/Screen6InChallenge.tsx",
           "operation": "modify",
-          "description": "Ensure the in-challenge screen wiring continues to provide a complete recorder flow (start, stop, review, then send-to-backend action) while not exposing any user-facing control labeled \"Upload\"; if needed, pass a non-\"Upload\" label down to AudioRecorder via props."
+          "description": "Refactor the Team tab assignment list to determine availability using the assignment-level recordings query (grouped data), then only attempt audio playback when the selected participant has a Recording with isShared=true for the selected day+assignment. Remove/avoid per-assignment calls that directly fetch another participant’s recording when none is shared."
+        }
+      ]
+    },
+    {
+      "id": "REQ-5",
+      "summary": "Ensure My-tab deletion updates UI state and triggers Team-tab refresh so deleted recordings are no longer shown/played as shared.",
+      "acceptanceCriteria": [
+        "After deleting a recording, other participants can no longer fetch/play it in the Team tab (it is no longer shared/available).",
+        "The recording is also removed from the owner’s 'My' tab state after deletion."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Ensure the deleteRecording mutation invalidates/removes all relevant cached queries for both My and Team views (including any assignment-level shared-recording discovery queries) so the UI no longer indicates availability after deletion."
+        },
+        {
+          "path": "frontend/src/screens/Screen6InChallenge.tsx",
+          "operation": "modify",
+          "description": "After successful deletion from the My tab, ensure local UI state and play state are reconciled (e.g., stop playback if the deleted slot was playing) and rely on updated query invalidations so Team availability updates promptly."
         }
       ]
     }

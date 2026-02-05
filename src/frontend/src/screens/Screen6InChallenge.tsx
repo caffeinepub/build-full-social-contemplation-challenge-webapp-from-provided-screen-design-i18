@@ -17,10 +17,12 @@ import {
   useSaveRecording,
   useGetRecording,
   useDeleteRecording,
-  useGetParticipantRecording,
+  useShareRecording,
+  useGetAssignmentRecordings,
   useGetChallengeStartTime
 } from '../hooks/useQueries';
 import { ExternalBlob } from '../backend';
+import type { Recording } from '../backend';
 import { FIXED_ASSIGNMENTS, clampDay } from '../utils/assignments';
 import type { CanonicalAssignmentId } from '../utils/recordingIds';
 import { assertCanonicalAssignmentId } from '../utils/recordingIds';
@@ -76,6 +78,7 @@ export function Screen6InChallenge({ onNavigateToManage, onNavigateBack }: Scree
 
   // Mutations
   const saveRecordingMutation = useSaveRecording();
+  const shareRecordingMutation = useShareRecording();
   const deleteRecordingMutation = useDeleteRecording();
 
   // Detect "Challenge not found" errors and trigger recovery
@@ -182,8 +185,8 @@ export function Screen6InChallenge({ onNavigateToManage, onNavigateBack }: Scree
     setSelectedParticipantDay(clamped);
   };
 
-  // Recording upload handler - accepts canonical assignment ID only
-  const handleRecordingUpload = async (assignmentId: CanonicalAssignmentId, blob: Blob) => {
+  // Recording upload handler - accepts canonical assignment ID and share decision
+  const handleRecordingUpload = async (assignmentId: CanonicalAssignmentId, blob: Blob, shareWithTeam: boolean) => {
     if (!challengeId) return;
 
     // Development-time assertion: ensure assignment is canonical before upload
@@ -234,6 +237,14 @@ export function Screen6InChallenge({ onNavigateToManage, onNavigateBack }: Scree
         day: selectedDay,
         assignment: assignmentId,
         recording: externalBlob,
+      });
+
+      // Share recording based on user's decision
+      await shareRecordingMutation.mutateAsync({
+        challengeId,
+        day: selectedDay,
+        assignment: assignmentId,
+        isShared: shareWithTeam,
       });
 
       // Clear upload state on success
@@ -298,6 +309,15 @@ export function Screen6InChallenge({ onNavigateToManage, onNavigateBack }: Scree
         delete newState[assignmentId];
         return newState;
       });
+
+      // Stop playback if this recording was playing
+      if (playingAssignment === assignmentId) {
+        if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current = null;
+        }
+        setPlayingAssignment(null);
+      }
     } catch (error) {
       console.error('Failed to delete recording:', error);
       
@@ -610,7 +630,7 @@ interface AssignmentCardProps {
   day: number;
   playingAssignment: string | null;
   uploadState?: UploadState;
-  onRecordingUpload: (assignmentId: CanonicalAssignmentId, blob: Blob) => void;
+  onRecordingUpload: (assignmentId: CanonicalAssignmentId, blob: Blob, shareWithTeam: boolean) => void;
   onPlayRecording: (blob: ExternalBlob, assignmentId: string) => void;
   onDeleteRecording: (assignmentId: CanonicalAssignmentId) => void;
   deleteRecordingMutation: any;
@@ -674,7 +694,7 @@ function AssignmentCard({
             isUploading={isUploading}
             uploadProgress={uploadState?.progress || 0}
             uploadError={uploadState?.error || null}
-            onUpload={(blob) => onRecordingUpload(assignment.id, blob)}
+            onUpload={(blob, shareWithTeam) => onRecordingUpload(assignment.id, blob, shareWithTeam)}
             onDelete={() => onDeleteRecording(assignment.id)}
             isDeleting={isDeleting}
           />
@@ -722,32 +742,42 @@ function ParticipantAssignmentCard({
 }: ParticipantAssignmentCardProps) {
   const { t } = useTranslation();
   
-  // Fetch the recording for this participant and assignment
-  const recordingQuery = useGetParticipantRecording(challengeId, participant, day, assignment.id);
-  const hasRecording = !!recordingQuery.data;
+  // Fetch assignment recordings to check if this participant has a shared recording
+  const assignmentRecordingsQuery = useGetAssignmentRecordings(challengeId, day, assignment.id);
+  
+  // Find this participant's recording in the list
+  const participantRecording = assignmentRecordingsQuery.data?.find(
+    ([p]) => p.toString() === participant.toString()
+  )?.[1];
+  
+  const hasSharedRecording = participantRecording !== null && participantRecording !== undefined && participantRecording.isShared;
   const isThisAssignmentPlaying = playingAssignment === `${participant.toString()}-${assignment.id}`;
 
   return (
     <div className="flex items-center justify-between p-3 rounded-md bg-muted/30">
       <div className="flex items-center gap-2">
         <span className="text-sm font-medium">{assignment.title}</span>
-        {hasRecording && (
+        {hasSharedRecording && (
           <Badge variant="outline" className="flex items-center gap-1">
             <CheckCircle2 className="w-3 h-3" />
           </Badge>
         )}
       </div>
       <Button
-        onClick={() => recordingQuery.data && onPlayRecording(recordingQuery.data, `${participant.toString()}-${assignment.id}`)}
+        onClick={() => {
+          if (participantRecording && hasSharedRecording) {
+            onPlayRecording(participantRecording.value, `${participant.toString()}-${assignment.id}`);
+          }
+        }}
         size="sm"
         variant="ghost"
-        disabled={!hasRecording || recordingQuery.isLoading}
+        disabled={!hasSharedRecording || assignmentRecordingsQuery.isLoading}
       >
-        {recordingQuery.isLoading ? (
+        {assignmentRecordingsQuery.isLoading ? (
           <Loader2 className="w-4 h-4 animate-spin" />
         ) : isThisAssignmentPlaying ? (
           <Loader2 className="w-4 h-4 animate-spin" />
-        ) : hasRecording ? (
+        ) : hasSharedRecording ? (
           <Play className="w-4 h-4" />
         ) : (
           <span className="text-xs text-muted-foreground">{t('screen6.my.noRecording')}</span>

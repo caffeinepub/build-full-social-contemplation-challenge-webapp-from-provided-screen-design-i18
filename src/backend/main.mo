@@ -15,15 +15,15 @@ import Iter "mo:core/Iter";
 import Principal "mo:core/Principal";
 import Array "mo:core/Array";
 import Debug "mo:core/Debug";
+import Migration "migration";
 
-
-
-
+// Enable data migration functionality
+(with migration = Migration.run)
 actor {
   public type BuildInfo = {
     version : Text;
-    buildTime : Int;
-    deployTime : Int;
+    buildTime : Nat;
+    deployTime : Nat;
     stableDeployTime : ?Int;
   };
 
@@ -45,6 +45,11 @@ actor {
 
   public type UserProfile = {
     name : Text;
+  };
+
+  public type Recording = {
+    value : Storage.ExternalBlob;
+    isShared : Bool;
   };
 
   public type RecordingSlot = {
@@ -69,7 +74,7 @@ actor {
     participants : Set.Set<Principal>;
     isActive : Bool;
     invitationCodes : Map.Map<Text, Bool>;
-    recordings : Map.Map<Principal, Map.Map<Nat, Map.Map<Text, Storage.ExternalBlob>>>;
+    recordings : Map.Map<Principal, Map.Map<Nat, Map.Map<Text, Recording>>>;
     chatMessages : List.List<ChatMessage>;
     nextChatId : Nat;
   };
@@ -198,7 +203,7 @@ actor {
 
     let participants = Set.singleton(caller);
     let invitationCodes = Map.empty<Text, Bool>();
-    let recordings = Map.empty<Principal, Map.Map<Nat, Map.Map<Text, Storage.ExternalBlob>>>();
+    let recordings = Map.empty<Principal, Map.Map<Nat, Map.Map<Text, Recording>>>();
     let chatMessages = List.empty<ChatMessage>();
 
     let challenge : Challenge = {
@@ -471,7 +476,6 @@ actor {
     };
 
     validateAssignment(mappedAssignment);
-    Debug.print("MC: saveRecording day=" # day.toText() # " assignment=" # assignment # " mappedAssignment=" # mappedAssignment);
 
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
@@ -482,20 +486,25 @@ actor {
 
         let existingUserRecordings = switch (challenge.recordings.get(caller)) {
           case (?userRecordings) { userRecordings };
-          case (null) { Map.empty<Nat, Map.Map<Text, Storage.ExternalBlob>>() };
+          case (null) { Map.empty<Nat, Map.Map<Text, Recording>>() };
         };
 
         let existingDayRecordings = switch (existingUserRecordings.get(day)) {
           case (?dayRecordings) { dayRecordings };
-          case (null) { Map.empty<Text, Storage.ExternalBlob>() };
+          case (null) { Map.empty<Text, Recording>() };
         };
 
         if (existingDayRecordings.containsKey(mappedAssignment)) {
           Runtime.trap("Recording already exists for this assignment. Delete the existing recording before uploading a new one. Users cannot overwrite an existing recording.");
         };
 
+        let newRecording : Recording = {
+          value = recording;
+          isShared = false;
+        };
+
         let updatedDayRecordings = existingDayRecordings.clone();
-        updatedDayRecordings.add(mappedAssignment, recording);
+        updatedDayRecordings.add(mappedAssignment, newRecording);
 
         let updatedUserRecordings = existingUserRecordings.clone();
         updatedUserRecordings.add(day, updatedDayRecordings);
@@ -512,6 +521,65 @@ actor {
     };
   };
 
+  public shared ({ caller }) func shareRecording(
+    challengeId : Nat,
+    day : Nat,
+    assignment : Text,
+    isShared : Bool,
+  ) : async () {
+    checkDay(day);
+
+    let canonicalAssignment = canonicalizeAssignment(assignment);
+    let mappedAssignment = switch (assignmentMap.get(canonicalAssignment)) {
+      case (null) { canonicalAssignment };
+      case (?mapped) { mapped };
+    };
+
+    validateAssignment(mappedAssignment);
+    validateAuthenticatedUser(caller);
+
+    switch (challenges.get(challengeId)) {
+      case (null) { Runtime.trap("Challenge not found") };
+      case (?challenge) {
+        if (not challenge.participants.contains(caller)) {
+          Runtime.trap("Only participants can share recordings");
+        };
+
+        let existingUserRecordings = switch (challenge.recordings.get(caller)) {
+          case (?userRecordings) { userRecordings };
+          case (null) { Runtime.trap("No recordings found for user") };
+        };
+
+        let existingDayRecordings = switch (existingUserRecordings.get(day)) {
+          case (?dayRecordings) { dayRecordings };
+          case (null) { Runtime.trap("No recordings found for day") };
+        };
+
+        switch (existingDayRecordings.get(mappedAssignment)) {
+          case (null) { Runtime.trap("Recording not found for assignment") };
+          case (?recording) {
+            let updatedRecording : Recording = {
+              value = recording.value;
+              isShared;
+            };
+
+            let updatedDayRecordings = existingDayRecordings.clone();
+            updatedDayRecordings.add(mappedAssignment, updatedRecording);
+
+            let updatedUserRecordings = existingUserRecordings.clone();
+            updatedUserRecordings.add(day, updatedDayRecordings);
+
+            let newRecordings = challenge.recordings.clone();
+            newRecordings.add(caller, updatedUserRecordings);
+
+            let updatedChallenge = { challenge with recordings = newRecordings };
+            challenges.add(challengeId, updatedChallenge);
+          };
+        };
+      };
+    };
+  };
+
   public shared query ({ caller }) func getRecording(challengeId : Nat, day : Nat, assignment : Text) : async Storage.ExternalBlob {
     checkDay(day);
 
@@ -522,7 +590,6 @@ actor {
     };
 
     validateAssignment(mappedAssignment);
-    Debug.print("MC: getRecording day=" # day.toText() # " assignment=" # assignment # " mappedAssignment=" # mappedAssignment);
 
     validateAuthenticatedUser(caller);
 
@@ -541,7 +608,7 @@ actor {
               case (?dayRecordings) {
                 switch (dayRecordings.get(mappedAssignment)) {
                   case (null) { Runtime.trap("Recording not found for assignment") };
-                  case (?recording) { recording };
+                  case (?recording) { recording.value };
                 };
               };
             };
@@ -561,8 +628,6 @@ actor {
     };
 
     validateAssignment(mappedAssignment);
-    Debug.print("MC: deleteRecording day=" # day.toText() # " assignment=" # assignment # " mappedAssignment=" # mappedAssignment);
-
     validateAuthenticatedUser(caller);
 
     switch (challenges.get(challengeId)) {
@@ -601,7 +666,7 @@ actor {
     };
   };
 
-  public shared query ({ caller }) func getAssignmentRecordings(challengeId : Nat, day : Nat, assignment : Text) : async [(Principal, ?Storage.ExternalBlob)] {
+  public shared query ({ caller }) func getAssignmentRecordings(challengeId : Nat, day : Nat, assignment : Text) : async [(Principal, ?Recording)] {
     checkDay(day);
 
     let canonicalAssignment = canonicalizeAssignment(assignment);
@@ -611,8 +676,6 @@ actor {
     };
 
     validateAssignment(mappedAssignment);
-    Debug.print("MC: getAssignmentRecordings day=" # day.toText() # " assignment=" # assignment # " mappedAssignment=" # mappedAssignment);
-
     validateAuthenticatedUser(caller);
 
     switch (challenges.get(challengeId)) {
@@ -624,15 +687,38 @@ actor {
 
         challenge.participants.toArray().map(
           func(participant) {
-            switch (challenge.recordings.get(participant)) {
-              case (null) { (participant, null : ?Storage.ExternalBlob) };
-              case (?userRecordings) {
-                switch (userRecordings.get(day)) {
-                  case (null) { (participant, null : ?Storage.ExternalBlob) };
-                  case (?dayRecordings) {
-                    switch (dayRecordings.get(mappedAssignment)) {
-                      case (null) { (participant, null : ?Storage.ExternalBlob) };
-                      case (?recording) { (participant, ?recording) };
+            if (participant == caller) {
+              switch (challenge.recordings.get(participant)) {
+                case (null) { (participant, null : ?Recording) };
+                case (?userRecordings) {
+                  switch (userRecordings.get(day)) {
+                    case (null) { (participant, null : ?Recording) };
+                    case (?dayRecordings) {
+                      switch (dayRecordings.get(mappedAssignment)) {
+                        case (null) { (participant, null : ?Recording) };
+                        case (?recording) { (participant, ?recording) };
+                      };
+                    };
+                  };
+                };
+              };
+            } else {
+              switch (challenge.recordings.get(participant)) {
+                case (null) { (participant, null : ?Recording) };
+                case (?userRecordings) {
+                  switch (userRecordings.get(day)) {
+                    case (null) { (participant, null : ?Recording) };
+                    case (?dayRecordings) {
+                      switch (dayRecordings.get(mappedAssignment)) {
+                        case (null) { (participant, null : ?Recording) };
+                        case (?recording) {
+                          if (recording.isShared) {
+                            (participant, ?recording)
+                          } else {
+                            (participant, null : ?Recording)
+                          };
+                        };
+                      };
                     };
                   };
                 };
@@ -654,8 +740,6 @@ actor {
     };
 
     validateAssignment(mappedAssignment);
-    Debug.print("MC: getParticipantRecording day=" # day.toText() # " assignment=" # assignment # " mappedAssignment=" # mappedAssignment);
-
     validateAuthenticatedUser(caller);
 
     switch (challenges.get(challengeId)) {
@@ -663,6 +747,10 @@ actor {
       case (?challenge) {
         if (not challenge.participants.contains(caller)) {
           Runtime.trap("Only participants can get recordings");
+        };
+
+        if (not challenge.participants.contains(participant)) {
+          Runtime.trap("Requested participant is not in this challenge");
         };
 
         switch (challenge.recordings.get(participant)) {
@@ -673,7 +761,12 @@ actor {
               case (?dayRecordings) {
                 switch (dayRecordings.get(mappedAssignment)) {
                   case (null) { Runtime.trap("Recording not found for assignment") };
-                  case (?recording) { recording };
+                  case (?recording) {
+                    if (participant != caller and not recording.isShared) {
+                      Runtime.trap("Recording not shared");
+                    };
+                    recording.value;
+                  };
                 };
               };
             };

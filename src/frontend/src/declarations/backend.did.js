@@ -33,11 +33,15 @@ export const RSVP = IDL.Record({
   'attending' : IDL.Bool,
 });
 export const ExternalBlob = IDL.Vec(IDL.Nat8);
+export const Recording = IDL.Record({
+  'value' : ExternalBlob,
+  'isShared' : IDL.Bool,
+});
 export const BuildInfo = IDL.Record({
   'stableDeployTime' : IDL.Opt(IDL.Int),
-  'deployTime' : IDL.Int,
+  'deployTime' : IDL.Nat,
   'version' : IDL.Text,
-  'buildTime' : IDL.Int,
+  'buildTime' : IDL.Nat,
 });
 export const InviteCode = IDL.Record({
   'created' : Time,
@@ -110,7 +114,7 @@ export const idlService = IDL.Service({
   'getAllRSVPs' : IDL.Func([], [IDL.Vec(RSVP)], ['query']),
   'getAssignmentRecordings' : IDL.Func(
       [IDL.Nat, IDL.Nat, IDL.Text],
-      [IDL.Vec(IDL.Tuple(IDL.Principal, IDL.Opt(ExternalBlob)))],
+      [IDL.Vec(IDL.Tuple(IDL.Principal, IDL.Opt(Recording)))],
       ['query'],
     ),
   'getAvailableInvitationCodes' : IDL.Func(
@@ -166,6 +170,7 @@ export const idlService = IDL.Service({
       [],
       [],
     ),
+  'shareRecording' : IDL.Func([IDL.Nat, IDL.Nat, IDL.Text, IDL.Bool], [], []),
   'submitRSVP' : IDL.Func([IDL.Text, IDL.Bool, IDL.Text], [], []),
   'updateStartTime' : IDL.Func([IDL.Nat, Time], [], []),
 });
@@ -198,11 +203,15 @@ export const idlFactory = ({ IDL }) => {
     'attending' : IDL.Bool,
   });
   const ExternalBlob = IDL.Vec(IDL.Nat8);
+  const Recording = IDL.Record({
+    'value' : ExternalBlob,
+    'isShared' : IDL.Bool,
+  });
   const BuildInfo = IDL.Record({
     'stableDeployTime' : IDL.Opt(IDL.Int),
-    'deployTime' : IDL.Int,
+    'deployTime' : IDL.Nat,
     'version' : IDL.Text,
-    'buildTime' : IDL.Int,
+    'buildTime' : IDL.Nat,
   });
   const InviteCode = IDL.Record({
     'created' : Time,
@@ -273,7 +282,7 @@ export const idlFactory = ({ IDL }) => {
     'getAllRSVPs' : IDL.Func([], [IDL.Vec(RSVP)], ['query']),
     'getAssignmentRecordings' : IDL.Func(
         [IDL.Nat, IDL.Nat, IDL.Text],
-        [IDL.Vec(IDL.Tuple(IDL.Principal, IDL.Opt(ExternalBlob)))],
+        [IDL.Vec(IDL.Tuple(IDL.Principal, IDL.Opt(Recording)))],
         ['query'],
       ),
     'getAvailableInvitationCodes' : IDL.Func(
@@ -329,6 +338,7 @@ export const idlFactory = ({ IDL }) => {
         [],
         [],
       ),
+    'shareRecording' : IDL.Func([IDL.Nat, IDL.Nat, IDL.Text, IDL.Bool], [], []),
     'submitRSVP' : IDL.Func([IDL.Text, IDL.Bool, IDL.Text], [], []),
     'updateStartTime' : IDL.Func([IDL.Nat, Time], [], []),
   });

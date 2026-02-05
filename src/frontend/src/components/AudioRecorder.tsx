@@ -5,6 +5,14 @@ import { useAudioRecording } from '../hooks/useAudioRecording';
 import { RecordingLevelMeter } from './RecordingLevelMeter';
 import { RecordingPlayer } from './RecordingPlayer';
 import { Progress } from './ui/progress';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
 import type { CanonicalAssignmentId } from '../utils/recordingIds';
 
 interface AudioRecorderProps {
@@ -14,7 +22,7 @@ interface AudioRecorderProps {
   isUploading: boolean;
   uploadProgress: number;
   uploadError: string | null;
-  onUpload: (blob: Blob) => void;
+  onUpload: (blob: Blob, shareWithTeam: boolean) => void;
   onDelete: () => void;
   isDeleting: boolean;
   className?: string;
@@ -45,6 +53,7 @@ export function AudioRecorder({
   } = useAudioRecording();
 
   const [localError, setLocalError] = useState<string | null>(null);
+  const [showShareDialog, setShowShareDialog] = useState(false);
 
   const handleStartRecording = async () => {
     setLocalError(null);
@@ -55,10 +64,16 @@ export function AudioRecorder({
     stopRecording();
   };
 
-  const handleSave = () => {
+  const handleSaveClick = () => {
     if (!recordedBlob) return;
     setLocalError(null);
-    onUpload(recordedBlob);
+    setShowShareDialog(true);
+  };
+
+  const handleShareDecision = (shareWithTeam: boolean) => {
+    if (!recordedBlob) return;
+    setShowShareDialog(false);
+    onUpload(recordedBlob, shareWithTeam);
   };
 
   const handleClearRecording = () => {
@@ -77,136 +92,166 @@ export function AudioRecorder({
   const canSave = recordedBlob && !isUploading && !hasExistingRecording;
 
   return (
-    <div className={`space-y-4 ${className}`}>
-      {/* Recording State */}
-      {isRecording && (
-        <div className="space-y-3 p-4 bg-primary/5 rounded-lg border border-primary/20">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-              <span className="text-sm font-medium">Recording</span>
+    <>
+      <div className={`space-y-4 ${className}`}>
+        {/* Recording State */}
+        {isRecording && (
+          <div className="space-y-3 p-4 bg-primary/5 rounded-lg border border-primary/20">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+                <span className="text-sm font-medium">Recording</span>
+              </div>
+              <span className="text-sm font-mono text-muted-foreground">
+                {formatTime(elapsedSeconds)}
+              </span>
             </div>
-            <span className="text-sm font-mono text-muted-foreground">
-              {formatTime(elapsedSeconds)}
-            </span>
-          </div>
-          
-          <RecordingLevelMeter level={level} />
-          
-          <Button
-            onClick={handleStopRecording}
-            size="default"
-            variant="destructive"
-            className="w-full"
-          >
-            <Square className="w-4 h-4 mr-2" />
-            Stop Recording
-          </Button>
-        </div>
-      )}
-
-      {/* Review State */}
-      {recordedBlob && recordedUrl && !isRecording && (
-        <div className="space-y-3 p-4 bg-muted/30 rounded-lg">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">Review Recording</span>
-            <span className="text-xs text-muted-foreground">
-              {formatTime(elapsedSeconds)}
-            </span>
-          </div>
-          
-          <RecordingPlayer audioUrl={recordedUrl} />
-          
-          <div className="flex items-center gap-2">
+            
+            <RecordingLevelMeter level={level} />
+            
             <Button
-              onClick={handleSave}
+              onClick={handleStopRecording}
               size="default"
-              variant="default"
-              className="flex-1"
-              disabled={!canSave || isUploading}
+              variant="destructive"
+              className="w-full"
             >
-              {isUploading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4 mr-2" />
-                  Save
-                </>
-              )}
-            </Button>
-            <Button
-              onClick={handleClearRecording}
-              size="default"
-              variant="ghost"
-              disabled={isUploading}
-            >
-              <Trash2 className="w-4 h-4" />
+              <Square className="w-4 h-4 mr-2" />
+              Stop Recording
             </Button>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Upload Progress */}
-      {isUploading && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Saving...</span>
-            <span>{Math.round(uploadProgress)}%</span>
-          </div>
-          <Progress value={uploadProgress} className="h-2" />
-        </div>
-      )}
-
-      {/* Initial State / Existing Recording State */}
-      {!isRecording && !recordedBlob && (
-        <div className="space-y-3">
-          <Button
-            onClick={handleStartRecording}
-            size="default"
-            variant="default"
-            className="w-full"
-            disabled={!canRecord || isDeleting}
-          >
-            <Mic className="w-4 h-4 mr-2" />
-            {hasExistingRecording ? 'Recording Saved' : 'Start Recording'}
-          </Button>
-          
-          {hasExistingRecording && (
-            <>
+        {/* Review State */}
+        {recordedBlob && recordedUrl && !isRecording && (
+          <div className="space-y-3 p-4 bg-muted/30 rounded-lg">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Review Recording</span>
+              <span className="text-xs text-muted-foreground">
+                {formatTime(elapsedSeconds)}
+              </span>
+            </div>
+            
+            <RecordingPlayer audioUrl={recordedUrl} />
+            
+            <div className="flex items-center gap-2">
               <Button
-                onClick={onDelete}
+                onClick={handleSaveClick}
                 size="default"
-                variant="ghost"
-                className="w-full"
-                disabled={isDeleting || isUploading}
+                variant="default"
+                className="flex-1"
+                disabled={!canSave || isUploading}
               >
-                {isDeleting ? (
+                {isUploading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Deleting...
+                    Saving...
                   </>
                 ) : (
                   <>
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete Recording
+                    <Save className="w-4 h-4 mr-2" />
+                    Save
                   </>
                 )}
               </Button>
-              <p className="text-xs text-muted-foreground text-center">
-                Delete the existing recording to record a new one.
-              </p>
-            </>
-          )}
-        </div>
-      )}
+              <Button
+                onClick={handleClearRecording}
+                size="default"
+                variant="ghost"
+                disabled={isUploading}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        )}
 
-      {/* Error Messages */}
-      {displayError && (
-        <p className="text-xs text-destructive">{displayError}</p>
-      )}
-    </div>
+        {/* Upload Progress */}
+        {isUploading && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Saving...</span>
+              <span>{Math.round(uploadProgress)}%</span>
+            </div>
+            <Progress value={uploadProgress} className="h-2" />
+          </div>
+        )}
+
+        {/* Initial State / Existing Recording State */}
+        {!isRecording && !recordedBlob && (
+          <div className="space-y-3">
+            <Button
+              onClick={handleStartRecording}
+              size="default"
+              variant="default"
+              className="w-full"
+              disabled={!canRecord || isDeleting}
+            >
+              <Mic className="w-4 h-4 mr-2" />
+              {hasExistingRecording ? 'Recording Saved' : 'Start Recording'}
+            </Button>
+            
+            {hasExistingRecording && (
+              <>
+                <Button
+                  onClick={onDelete}
+                  size="default"
+                  variant="ghost"
+                  className="w-full"
+                  disabled={isDeleting || isUploading}
+                >
+                  {isDeleting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete Recording
+                    </>
+                  )}
+                </Button>
+                <p className="text-xs text-muted-foreground text-center">
+                  Delete the existing recording to record a new one.
+                </p>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Error Messages */}
+        {displayError && (
+          <p className="text-xs text-destructive">{displayError}</p>
+        )}
+      </div>
+
+      {/* Share Confirmation Dialog */}
+      <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Share with team?</DialogTitle>
+            <DialogDescription>
+              Would you like to share this recording with your challenge team?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => handleShareDecision(false)}
+              className="w-full sm:w-auto"
+            >
+              No
+            </Button>
+            <Button
+              variant="default"
+              onClick={() => handleShareDecision(true)}
+              className="w-full sm:w-auto"
+            >
+              Yes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

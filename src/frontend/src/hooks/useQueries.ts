@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useActor } from './useActor';
-import type { UserProfile, UserChallengeStatus, ChatMessage } from '../backend';
+import type { UserProfile, UserChallengeStatus, ChatMessage, Recording } from '../backend';
 import { Principal } from '@dfinity/principal';
 import type { ExternalBlob } from '../backend';
 import { normalizeRecordingDay, assertCanonicalAssignmentId } from '../utils/recordingIds';
@@ -428,6 +428,50 @@ export function useSaveRecording() {
   });
 }
 
+export function useShareRecording() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      challengeId,
+      day,
+      assignment,
+      isShared,
+    }: {
+      challengeId: bigint;
+      day: number;
+      assignment: CanonicalAssignmentId;
+      isShared: boolean;
+    }) => {
+      if (!actor) throw new Error('Actor not available');
+      
+      // Development-time assertion: ensure assignment is canonical
+      assertCanonicalAssignmentId(assignment, 'useShareRecording');
+      
+      // Normalize UI day (1-7) to backend day (0-6)
+      const backendDay = normalizeRecordingDay(day);
+      
+      // Call backend shareRecording method
+      return actor.shareRecording(challengeId, BigInt(backendDay), assignment, isShared);
+    },
+    onSuccess: (_, variables) => {
+      const backendDay = normalizeRecordingDay(variables.day);
+      
+      // Invalidate all recording-related queries to reflect the new share status
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.recording(variables.challengeId.toString(), backendDay.toString(), variables.assignment),
+      });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.assignmentRecordings(variables.challengeId.toString(), backendDay.toString(), variables.assignment),
+      });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.participantRecording(variables.challengeId.toString(), '', backendDay.toString(), variables.assignment),
+      });
+    },
+  });
+}
+
 export function useGetRecording(challengeId: bigint | null, day: number, assignment: CanonicalAssignmentId) {
   const { actor, isFetching: actorFetching } = useActor();
 
@@ -496,7 +540,7 @@ export function useGetAssignmentRecordings(challengeId: bigint | null, day: numb
   // Normalize UI day (1-7) to backend day (0-6)
   const backendDay = normalizeRecordingDay(day);
 
-  return useQuery<Array<[Principal, ExternalBlob | null]>>({
+  return useQuery<Array<[Principal, Recording | null]>>({
     queryKey: QUERY_KEYS.assignmentRecordings(challengeId?.toString() || '', backendDay.toString(), assignment),
     queryFn: async () => {
       if (!actor || challengeId === null) throw new Error('Actor or challenge ID not available');
