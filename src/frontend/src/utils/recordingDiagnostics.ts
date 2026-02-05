@@ -4,6 +4,7 @@
  */
 
 import { getRunningAppVersion } from './appVersion';
+import { getBackendBuildIdentifier } from './backendBuildInfo';
 
 interface UploadAttemptContext {
   challengeId: string;
@@ -30,11 +31,12 @@ export function logUploadAttempt(context: UploadAttemptContext): void {
 }
 
 /**
- * Log an upload failure with sanitized error message, context, and app version.
+ * Log an upload failure with sanitized error message, context, app version, and backend build ID.
  * Safe to keep in production - error message should already be sanitized by caller.
  */
 export function logUploadFailure(context: UploadFailureContext): void {
   const appVersion = getRunningAppVersion();
+  const backendBuildId = getBackendBuildIdentifier();
   
   console.error('[Recording Upload] Failed:', {
     challengeId: context.challengeId,
@@ -42,6 +44,7 @@ export function logUploadFailure(context: UploadFailureContext): void {
     assignment: context.assignment,
     error: context.error,
     appVersion: appVersion || 'unknown',
+    backendBuildId,
   });
 }
 

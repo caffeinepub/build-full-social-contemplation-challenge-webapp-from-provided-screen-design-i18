@@ -16,9 +16,14 @@ import Principal "mo:core/Principal";
 import Array "mo:core/Array";
 import Debug "mo:core/Debug";
 
-
-
 actor {
+  public type BuildInfo = {
+    version : Text;
+    buildTime : Int;
+    deployTime : Int;
+    stableDeployTime : ?Int;
+  };
+
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
   include MixinStorage();
@@ -30,6 +35,10 @@ actor {
 
   let creatorToChallengeId = Map.empty<Principal, Nat>();
   let participantToChallengeId = Map.empty<Principal, Nat>();
+
+  var stableDeployTime : ?Int = null;
+  let buildTimeNanos = 1711806280000000000;
+  let deployTimeNanos = 1716668741092035846;
 
   public type UserProfile = {
     name : Text;
@@ -86,6 +95,15 @@ actor {
   let maxMessageLength = 250;
   let maxChatMessages = 250;
   let maxRSVPNameLength = 100;
+
+  public query ({ caller }) func getBuildInfo() : async BuildInfo {
+    {
+      version = "1.0.0";
+      buildTime = buildTimeNanos;
+      deployTime = deployTimeNanos;
+      stableDeployTime;
+    };
+  };
 
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
     validateAuthenticatedUser(caller);
@@ -833,4 +851,3 @@ actor {
     };
   };
 };
-

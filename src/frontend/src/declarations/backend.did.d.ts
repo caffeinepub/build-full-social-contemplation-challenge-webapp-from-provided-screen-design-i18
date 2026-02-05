@@ -10,6 +10,12 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
+export interface BuildInfo {
+  'stableDeployTime' : [] | [bigint],
+  'deployTime' : bigint,
+  'version' : string,
+  'buildTime' : bigint,
+}
 export interface ChatMessage {
   'id' : bigint,
   'text' : string,
@@ -84,6 +90,7 @@ export interface _SERVICE {
     Array<[Principal, [] | [ExternalBlob]]>
   >,
   'getAvailableInvitationCodes' : ActorMethod<[bigint], Array<string>>,
+  'getBuildInfo' : ActorMethod<[], BuildInfo>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getChallengeAudioRecordings' : ActorMethod<[bigint], Array<Principal>>,

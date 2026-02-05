@@ -27,6 +27,13 @@ export function useAppUpdateGuard(): { isUpdating: boolean } {
         if (!needsRefresh) {
           // No refresh needed - clear any stale protection flags
           clearRefreshProtection();
+          
+          // Also clear any per-version session flags when versions match
+          if (runningVersion) {
+            const sessionKey = `${SESSION_KEY_PREFIX}${runningVersion}`;
+            sessionStorage.removeItem(sessionKey);
+          }
+          
           return;
         }
         

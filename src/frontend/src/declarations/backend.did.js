@@ -33,6 +33,12 @@ export const RSVP = IDL.Record({
   'attending' : IDL.Bool,
 });
 export const ExternalBlob = IDL.Vec(IDL.Nat8);
+export const BuildInfo = IDL.Record({
+  'stableDeployTime' : IDL.Opt(IDL.Int),
+  'deployTime' : IDL.Int,
+  'version' : IDL.Text,
+  'buildTime' : IDL.Int,
+});
 export const InviteCode = IDL.Record({
   'created' : Time,
   'code' : IDL.Text,
@@ -112,6 +118,7 @@ export const idlService = IDL.Service({
       [IDL.Vec(IDL.Text)],
       ['query'],
     ),
+  'getBuildInfo' : IDL.Func([], [BuildInfo], ['query']),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
   'getChallengeAudioRecordings' : IDL.Func(
@@ -191,6 +198,12 @@ export const idlFactory = ({ IDL }) => {
     'attending' : IDL.Bool,
   });
   const ExternalBlob = IDL.Vec(IDL.Nat8);
+  const BuildInfo = IDL.Record({
+    'stableDeployTime' : IDL.Opt(IDL.Int),
+    'deployTime' : IDL.Int,
+    'version' : IDL.Text,
+    'buildTime' : IDL.Int,
+  });
   const InviteCode = IDL.Record({
     'created' : Time,
     'code' : IDL.Text,
@@ -268,6 +281,7 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(IDL.Text)],
         ['query'],
       ),
+    'getBuildInfo' : IDL.Func([], [BuildInfo], ['query']),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
     'getChallengeAudioRecordings' : IDL.Func(

@@ -2,12 +2,31 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-harden-the-app-s-forced-refresh-mechanism-so-that-when-a-version-mismatch-is-detected-the-app-performs-a-one-time-hard-refresh-that-bypasses-caches-as-aggressively-as-possible-and-avoids-refresh-loops",
-      "featureTitle": "Harden the app’s forced-refresh mechanism so that when a version mismatch is detected, the app performs a one-time hard refresh that bypasses caches as aggressively as possible and avoids refresh loops.",
+      "featureId": "feature-remove-the-waveform-visualization-from-the-recording-ui-so-users-no-longer-see-an-empty-black-waveform-area-while-recording",
+      "featureTitle": "Remove the waveform visualization from the recording UI so users no longer see an empty/black waveform area while recording.",
       "files": [
-        "frontend/src/hooks/useAppUpdateGuard.ts",
-        "frontend/src/utils/hardRefresh.ts",
-        "frontend/src/utils/versionCheck.ts"
+        "frontend/src/components/AudioRecorder.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0",
+        "invite-links@3.0.0"
+      ],
+      "testIds": [
+        "REQ-1"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-ensure-a-clearly-visible-real-time-input-level-vu-meter-is-shown-during-recording-and-reliably-updates-in-response-to-incoming-microphone-audio",
+      "featureTitle": "Ensure a clearly visible, real-time input level (VU meter) is shown during recording and reliably updates in response to incoming microphone audio.",
+      "files": [
+        "frontend/src/hooks/useAudioRecording.ts"
       ],
       "components": [
         "authorization@4.0.0",
@@ -25,12 +44,11 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-when-a-recording-upload-fails-with-a-backend-error-indicating-an-invalid-assignment-e-g-invalid-assignment-awareness-show-a-clear-english-user-facing-recovery-message-and-provide-an-in-app-action-to-perform-a-hard-refresh-cache-busted-reload",
-      "featureTitle": "When a recording upload fails with a backend error indicating an invalid assignment (e.g., \"Invalid assignment: \\\"awareness\\\"\"), show a clear English user-facing recovery message and provide an in-app action to perform a hard refresh (cache-busted reload).",
+      "featureId": "feature-remove-waveform-related-state-logic-from-the-audio-recording-hook-and-component-interfaces-so-the-app-no-longer-computes-or-stores-waveform-samples",
+      "featureTitle": "Remove waveform-related state/logic from the audio recording hook and component interfaces so the app no longer computes or stores waveform samples.",
       "files": [
-        "frontend/src/screens/Screen6InChallenge.tsx",
-        "frontend/src/utils/hardRefresh.ts",
-        "frontend/src/utils/sanitizeErrorMessage.ts"
+        "frontend/src/components/AudioRecorder.tsx",
+        "frontend/src/hooks/useAudioRecording.ts"
       ],
       "components": [
         "authorization@4.0.0",
@@ -44,30 +62,6 @@
       ],
       "testIds": [
         "REQ-3"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-add-lightweight-diagnostics-to-help-confirm-stale-asset-situations-in-production-by-logging-the-running-app-version-and-the-latest-fetched-app-version-when-a-mismatch-is-detected-and-logging-the-running-app-version-when-an-invalid-assignment-upload-error-occurs-no-sensitive-data",
-      "featureTitle": "Add lightweight diagnostics to help confirm stale-asset situations in production by logging the running app version and the latest fetched app version when a mismatch is detected, and logging the running app version when an invalid-assignment upload error occurs (no sensitive data).",
-      "files": [
-        "frontend/src/hooks/useAppUpdateGuard.ts",
-        "frontend/src/hooks/useQueries.ts",
-        "frontend/src/utils/recordingDiagnostics.ts",
-        "frontend/src/utils/versionCheck.ts"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0",
-        "blob-storage@4.0.0",
-        "invite-links@3.0.0"
-      ],
-      "testIds": [
-        "REQ-4"
       ],
       "confidence": "high"
     }

@@ -6,11 +6,11 @@ import { SharedPopup } from '../components/SharedPopup';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import { Progress } from '../components/ui/progress';
-import { Settings, Upload, Play, Trash2, Loader2, Users, Info, User, MessageCircle, CheckCircle2, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Settings, Play, Loader2, Users, User, MessageCircle, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { AuthIconButton } from '../components/AuthIconButton';
 import { AssignmentDetailText } from '../components/AssignmentDetailText';
+import { AudioRecorder } from '../components/AudioRecorder';
 import { 
   useGetUnifiedChallengeId,
   useGetAllChallengeParticipantProfiles,
@@ -24,14 +24,13 @@ import { ExternalBlob } from '../backend';
 import { FIXED_ASSIGNMENTS, clampDay } from '../utils/assignments';
 import type { CanonicalAssignmentId } from '../utils/recordingIds';
 import { assertCanonicalAssignmentId } from '../utils/recordingIds';
-import { sanitizeErrorMessage, isChallengeNotFoundError, isInvalidAssignmentError } from '../utils/sanitizeErrorMessage';
+import { sanitizeErrorMessage, isChallengeNotFoundError } from '../utils/sanitizeErrorMessage';
 import { formatDayHeader } from '../utils/challengeDayFormat';
 import { readAppUrlState, writeAppUrlState } from '../utils/appUrlState';
 import { ChallengeChatTab } from '../components/ChallengeChatTab';
 import { useQueryClient } from '@tanstack/react-query';
 import { resetChallengeState } from '../utils/challengeRecovery';
 import { setChallengeDeletedNotice } from '../utils/challengeDeletedNotice';
-import { performHardRefresh } from '../utils/hardRefresh';
 import type { Principal } from '@icp-sdk/core/principal';
 
 interface Screen6InChallengeProps {
@@ -41,12 +40,6 @@ interface Screen6InChallengeProps {
 
 // Maximum days for the 7-day challenge
 const MAX_DAYS = 7;
-
-// Allowed audio formats
-const ALLOWED_FORMATS = {
-  extensions: ['.m4a', '.3gp', '.wav', '.mp3'],
-  mimeTypes: ['audio/mp4', 'audio/x-m4a', 'audio/3gpp', 'audio/wav', 'audio/mpeg', 'audio/mp3'],
-};
 
 interface UploadState {
   progress: number;
@@ -65,7 +58,7 @@ export function Screen6InChallenge({ onNavigateToManage, onNavigateBack }: Scree
   const [selectedParticipant, setSelectedParticipant] = useState<Principal | null>(null);
   const [selectedParticipantDay, setSelectedParticipantDay] = useState(1);
   
-  // Track upload state per assignment (keyed by canonical ID) - use Partial to allow empty object
+  // Track upload state per assignment (keyed by canonical ID)
   const [uploadStates, setUploadStates] = useState<Partial<Record<CanonicalAssignmentId, UploadState>>>({});
   
   // Track which assignment audio is currently playing
@@ -128,9 +121,7 @@ export function Screen6InChallenge({ onNavigateToManage, onNavigateBack }: Scree
       
       if (urlState.participant) {
         try {
-          // Parse principal from URL
           const principal = urlState.participant;
-          // We'll set it after profiles load
           setSelectedParticipant(principal as any);
         } catch (e) {
           console.error('Failed to parse participant from URL:', e);
@@ -191,13 +182,13 @@ export function Screen6InChallenge({ onNavigateToManage, onNavigateBack }: Scree
     setSelectedParticipantDay(clamped);
   };
 
-  // File upload handler - accepts canonical assignment ID only
-  const handleFileUpload = async (assignmentId: CanonicalAssignmentId, file: File) => {
+  // Recording upload handler - accepts canonical assignment ID only
+  const handleRecordingUpload = async (assignmentId: CanonicalAssignmentId, blob: Blob) => {
     if (!challengeId) return;
 
     // Development-time assertion: ensure assignment is canonical before upload
     try {
-      assertCanonicalAssignmentId(assignmentId, 'handleFileUpload');
+      assertCanonicalAssignmentId(assignmentId, 'handleRecordingUpload');
     } catch (error) {
       console.error(error);
       setUploadStates(prev => ({
@@ -205,23 +196,6 @@ export function Screen6InChallenge({ onNavigateToManage, onNavigateBack }: Scree
         [assignmentId]: {
           progress: 0,
           error: 'Development error: Invalid assignment ID. Please refresh and try again.',
-          isUploading: false,
-        }
-      }));
-      return;
-    }
-
-    // Validate file format
-    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
-    const isValidExtension = ALLOWED_FORMATS.extensions.includes(fileExtension);
-    const isValidMimeType = ALLOWED_FORMATS.mimeTypes.includes(file.type);
-
-    if (!isValidExtension && !isValidMimeType) {
-      setUploadStates(prev => ({
-        ...prev,
-        [assignmentId]: {
-          progress: 0,
-          error: 'Invalid file format. Please upload M4A, 3GP, WAV, or MP3 files only.',
           isUploading: false,
         }
       }));
@@ -239,8 +213,8 @@ export function Screen6InChallenge({ onNavigateToManage, onNavigateBack }: Scree
     }));
 
     try {
-      // Read file as bytes
-      const arrayBuffer = await file.arrayBuffer();
+      // Convert blob to bytes
+      const arrayBuffer = await blob.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
       
       // Create ExternalBlob with progress tracking
@@ -255,7 +229,6 @@ export function Screen6InChallenge({ onNavigateToManage, onNavigateBack }: Scree
       });
 
       // Save recording - pass UI day (1-7) and canonical assignment ID
-      // The hook expects CanonicalAssignmentId type and will NOT normalize
       await saveRecordingMutation.mutateAsync({
         challengeId,
         day: selectedDay,
@@ -313,8 +286,6 @@ export function Screen6InChallenge({ onNavigateToManage, onNavigateBack }: Scree
     }
     
     try {
-      // Pass UI day (1-7) and canonical assignment ID
-      // The hook expects CanonicalAssignmentId type and will NOT normalize
       await deleteRecordingMutation.mutateAsync({
         challengeId,
         day: selectedDay,
@@ -465,7 +436,7 @@ export function Screen6InChallenge({ onNavigateToManage, onNavigateBack }: Scree
               <h2 className="text-base sm:text-lg font-semibold">{dayHeader}</h2>
             </div>
 
-            {/* Day Selector - Separate label with numeric-only buttons */}
+            {/* Day Selector */}
             <div className="space-y-2">
               <p className="text-sm font-medium">
                 Day
@@ -495,7 +466,7 @@ export function Screen6InChallenge({ onNavigateToManage, onNavigateBack }: Scree
                   day={selectedDay}
                   playingAssignment={playingAssignment}
                   uploadState={uploadStates[assignment.id]}
-                  onFileUpload={handleFileUpload}
+                  onRecordingUpload={handleRecordingUpload}
                   onPlayRecording={handlePlayRecording}
                   onDeleteRecording={handleDeleteRecording}
                   deleteRecordingMutation={deleteRecordingMutation}
@@ -566,7 +537,7 @@ export function Screen6InChallenge({ onNavigateToManage, onNavigateBack }: Scree
                     <h3 className="text-sm sm:text-base font-semibold">{participantDayHeader}</h3>
                   </div>
 
-                  {/* Day Selector for Team - Separate label with numeric-only buttons */}
+                  {/* Day Selector for Team */}
                   <div className="space-y-2">
                     <p className="text-sm font-medium">
                       Day
@@ -639,7 +610,7 @@ interface AssignmentCardProps {
   day: number;
   playingAssignment: string | null;
   uploadState?: UploadState;
-  onFileUpload: (assignmentId: CanonicalAssignmentId, file: File) => void;
+  onRecordingUpload: (assignmentId: CanonicalAssignmentId, blob: Blob) => void;
   onPlayRecording: (blob: ExternalBlob, assignmentId: string) => void;
   onDeleteRecording: (assignmentId: CanonicalAssignmentId) => void;
   deleteRecordingMutation: any;
@@ -651,50 +622,26 @@ function AssignmentCard({
   day,
   playingAssignment,
   uploadState,
-  onFileUpload,
+  onRecordingUpload,
   onPlayRecording,
   onDeleteRecording,
   deleteRecordingMutation,
 }: AssignmentCardProps) {
   const { t } = useTranslation();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Fetch the recording for this assignment - pass UI day (1-7) and canonical assignment ID
-  // The hook expects CanonicalAssignmentId type and will NOT normalize
+  // Fetch the recording for this assignment
   const recordingQuery = useGetRecording(challengeId, day, assignment.id);
   const hasRecording = !!recordingQuery.data;
   
   const isThisAssignmentPlaying = playingAssignment === assignment.id;
   const isDeleting = deleteRecordingMutation.isPending;
   const isUploading = uploadState?.isUploading || false;
-  
-  // Check if this is an invalid assignment error (stale frontend)
-  const isInvalidAssignment = uploadState?.error && isInvalidAssignmentError({ message: uploadState.error });
-
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // Pass canonical assignment ID directly - no normalization needed
-      onFileUpload(assignment.id, file);
-    }
-    // Reset input so the same file can be selected again
-    event.target.value = '';
-  };
-  
-  const handleHardRefresh = () => {
-    performHardRefresh('invalid-assignment');
-  };
 
   return (
     <Card>
       <CardContent className="p-6">
-        {/* Vertical flex layout with explicit equal spacing */}
         <div className="flex flex-col gap-6">
-          {/* Top section: Recorded badge with minimum height for consistent spacing */}
+          {/* Top section: Recorded badge */}
           <div className="min-h-[28px] flex items-start">
             {hasRecording && (
               <Badge variant="default" className="flex items-center gap-1 flex-shrink-0">
@@ -719,90 +666,36 @@ function AssignmentCard({
             </SharedPopup>
           </div>
 
-          {/* Bottom section: Upload controls and status */}
-          <div className="space-y-3">
-            {/* Upload Progress Bar */}
-            {isUploading && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Uploading...</span>
-                  <span>{Math.round(uploadState?.progress || 0)}%</span>
-                </div>
-                <Progress value={uploadState?.progress || 0} className="h-2" />
-              </div>
-            )}
+          {/* Bottom section: Audio recorder */}
+          <AudioRecorder
+            assignmentId={assignment.id}
+            day={day}
+            hasExistingRecording={hasRecording}
+            isUploading={isUploading}
+            uploadProgress={uploadState?.progress || 0}
+            uploadError={uploadState?.error || null}
+            onUpload={(blob) => onRecordingUpload(assignment.id, blob)}
+            onDelete={() => onDeleteRecording(assignment.id)}
+            isDeleting={isDeleting}
+          />
 
-            {/* Upload/Action Controls */}
-            <div className="flex items-center gap-2">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept={ALLOWED_FORMATS.extensions.join(',') + ',' + ALLOWED_FORMATS.mimeTypes.join(',')}
-                onChange={handleFileChange}
-                className="hidden"
-              />
-              <Button
-                onClick={handleUploadClick}
-                size="default"
-                variant="default"
-                className="flex-1"
-                disabled={isUploading || isDeleting || hasRecording}
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Upload
-              </Button>
-              <Button
-                onClick={() => recordingQuery.data && onPlayRecording(recordingQuery.data, assignment.id)}
-                size="default"
-                variant="outline"
-                disabled={!hasRecording || isDeleting || isUploading}
-              >
-                {isThisAssignmentPlaying ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Play className="w-4 h-4" />
-                )}
-              </Button>
-              <Button
-                onClick={() => onDeleteRecording(assignment.id)}
-                size="default"
-                variant="ghost"
-                disabled={!hasRecording || isDeleting || isUploading}
-              >
-                {isDeleting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Trash2 className="w-4 h-4" />
-                )}
-              </Button>
-            </div>
-            
-            {/* Status Messages */}
-            {uploadState?.error && (
-              <div className="space-y-2">
-                <p className="text-xs text-destructive">{uploadState.error}</p>
-                {isInvalidAssignment && (
-                  <Button
-                    onClick={handleHardRefresh}
-                    size="sm"
-                    variant="outline"
-                    className="w-full"
-                  >
-                    <RefreshCw className="w-3 h-3 mr-2" />
-                    Refresh App
-                  </Button>
-                )}
-              </div>
-            )}
-            {hasRecording && !isUploading && !uploadState?.error && (
-              <p className="text-xs text-muted-foreground">
-                You must delete this recording before uploading another.
-              </p>
-            )}
-            {!hasRecording && !isUploading && !uploadState?.error && (
-              <p className="text-xs text-muted-foreground">{t('screen6.my.noRecording')}</p>
-            )}
-          </div>
+          {/* Play button for existing recording */}
+          {hasRecording && !isUploading && (
+            <Button
+              onClick={() => recordingQuery.data && onPlayRecording(recordingQuery.data, assignment.id)}
+              size="default"
+              variant="outline"
+              disabled={isDeleting}
+              className="w-full"
+            >
+              {isThisAssignmentPlaying ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Play className="w-4 h-4 mr-2" />
+              )}
+              Play Recording
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -829,8 +722,7 @@ function ParticipantAssignmentCard({
 }: ParticipantAssignmentCardProps) {
   const { t } = useTranslation();
   
-  // Fetch the recording for this participant and assignment - pass UI day (1-7) and canonical assignment ID
-  // The hook expects CanonicalAssignmentId type and will NOT normalize
+  // Fetch the recording for this participant and assignment
   const recordingQuery = useGetParticipantRecording(challengeId, participant, day, assignment.id);
   const hasRecording = !!recordingQuery.data;
   const isThisAssignmentPlaying = playingAssignment === `${participant.toString()}-${assignment.id}`;

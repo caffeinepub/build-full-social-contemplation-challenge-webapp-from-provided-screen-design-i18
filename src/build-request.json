@@ -1,97 +1,85 @@
 {
   "kind": "build_request",
-  "title": "Fix production stale-asset caching causing invalid assignment errors (hard cache-bust + forced refresh)",
-  "priority": "high",
+  "title": "Add reliable live VU meter feedback during recording and remove waveform visualization",
+  "priority": "normal",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Ensure every production build deploys a unique, non-placeholder app version identifier and that the running app can reliably read it at runtime (used for update detection and cache-busting).",
+      "text": "Remove the waveform visualization from the recording UI so users no longer see an empty/black waveform area while recording.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-1",
-          "msg-2"
+          "msg-1"
         ],
         "quotes": [
-          "build",
-          "Nu heb ik dit weer"
+          "Input level vi meter is genoeg \nWaveform hoeft niet zichtbaar\nJa (de waveform kan dus weg)"
         ]
       },
       "acceptanceCriteria": [
-        "The rendered HTML contains a non-placeholder value for <meta name=\"app-version\" ...> (not \"BUILD_VERSION_PLACEHOLDER\").",
-        "getRunningAppVersion() returns a non-null string in production builds.",
-        "After a new production deploy, the app-version value differs from the previous deploy."
+        "When `isRecording` is true, the UI does not render `RecordingWaveform` (no canvas/placeholder waveform area is visible).",
+        "No waveform is shown during recording or in the review state after recording.",
+        "The rest of the record → stop → review → upload flow remains unchanged."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Harden the app’s forced-refresh mechanism so that when a version mismatch is detected, the app performs a one-time hard refresh that bypasses caches as aggressively as possible and avoids refresh loops.",
+      "text": "Ensure a clearly visible, real-time input level (VU meter) is shown during recording and reliably updates in response to incoming microphone audio.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-1",
-          "msg-2"
+          "msg-1"
         ],
         "quotes": [
-          "build",
-          "Nu heb ik dit weer"
+          "Dus dat je niet ziet dat er daadwerkelijk geluid binnenkomt als je opneemt.",
+          "Of in ieder geval wil ik dat je een input level ziet, zodat je het gevoel hebt dat je dat eigenlijk opneemt."
         ]
       },
       "acceptanceCriteria": [
-        "When shouldForceRefresh() detects runningVersion != latestVersion, the UI shows the existing updating overlay and then navigates to a URL with a cache-busting query param.",
-        "The forced refresh is only attempted once per session per running version (no infinite reload loops).",
-        "The version check request uses cache-busting (no-store + unique query param) and does not rely on any previously cached HTML."
+        "While recording, the `RecordingLevelMeter` is visible and updates multiple times per second as audio is detected (level changes are observable when speaking/clapping).",
+        "On iOS/Safari and desktop browsers, the audio analysis starts successfully after the user taps “Start Recording” (e.g., AudioContext is resumed from a user gesture if needed).",
+        "If microphone permission is denied or no microphone exists, an English error message is shown (existing error behavior preserved)."
       ]
     },
     {
       "id": "REQ-3",
-      "text": "When a recording upload fails with a backend error indicating an invalid assignment (e.g., \"Invalid assignment: \\\"awareness\\\"\"), show a clear English user-facing recovery message and provide an in-app action to perform a hard refresh (cache-busted reload).",
+      "text": "Remove waveform-related state/logic from the audio recording hook and component interfaces so the app no longer computes or stores waveform samples.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-2"
+          "msg-1"
         ],
         "quotes": [
-          "Nu heb ik dit weer"
+          "Waveform hoeft niet zichtbaar\nJa (de waveform kan dus weg)"
         ]
       },
       "acceptanceCriteria": [
-        "If the backend returns an error containing \"Invalid assignment\", the UI displays an English message instructing the user to refresh and try again.",
-        "The UI provides a button/link that triggers a cache-busted reload (similar to the update guard reload).",
-        "After using the in-app hard refresh action, a user on the latest deploy can upload using canonical assignment IDs without seeing the invalid-assignment error caused by stale frontend assets."
-      ]
-    },
-    {
-      "id": "REQ-4",
-      "text": "Add lightweight diagnostics to help confirm stale-asset situations in production by logging the running app version and the latest fetched app version when a mismatch is detected, and logging the running app version when an invalid-assignment upload error occurs (no sensitive data).",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-2"
-        ],
-        "quotes": [
-          "Nu heb ik dit weer"
-        ]
-      },
-      "acceptanceCriteria": [
-        "On version mismatch detection, console logs include runningVersion and latestVersion.",
-        "On invalid-assignment upload errors, console logs include the running app version (if available) and the assignment value being attempted.",
-        "Logs do not include principals, tokens, invite codes, or raw recording blobs."
+        "`useAudioRecording` no longer exposes `waveformSamples` and does not update waveform sample arrays during `updateAudioLevel`.",
+        "Any waveform-only components/props are removed from the active render path of the app (no unused waveform data is required by `AudioRecorder`).",
+        "Recording still produces a playable `recordedBlob`/`recordedUrl`, and upload continues to work as before."
       ]
     }
   ],
   "constraints": [
-    "Backend must remain a single Motoko actor in backend/main.mo (no additional backend services).",
-    "Do not edit files under frontend/src/components/ui (compose them instead).",
-    "Do not edit frontend immutable paths: frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, frontend/src/components/ui."
+    "Do not edit any files under `frontend/src/components/ui` or other paths listed in `frontend.immutablePaths`.",
+    "Keep all existing recording, review, upload, and delete behaviors unchanged aside from removing the waveform visualization and improving the live level feedback."
   ],
   "nonGoals": [
-    "Changing the set of canonical assignment IDs or challenge content.",
-    "Adding third-party caching/CDN configuration outside the codebase.",
-    "Introducing service-worker-based offline caching."
+    "Adding waveform visualization back (static or scrolling).",
+    "Changing backend APIs, recording storage, or metadata formats.",
+    "Introducing new recording features (pause, noise gate controls, device selection, etc.)."
   ],
   "imageRequirements": {
     "required": [],
     "edits": []
+  },
+  "userProfileUpdate": {
+    "goalsToAdd": [],
+    "goalsToRemove": [],
+    "preferencesToAdd": [],
+    "preferencesToRemove": [],
+    "miscToAdd": [],
+    "miscToRemove": [],
+    "fieldsToSet": {},
+    "fieldsToDelete": []
   }
 }

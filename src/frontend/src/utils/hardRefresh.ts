@@ -46,7 +46,7 @@ export function performHardRefresh(reason?: string): void {
 
 /**
  * Clears the loop protection flag.
- * Should be called after successful app initialization.
+ * Should be called after successful app initialization when versions match.
  */
 export function clearRefreshProtection(): void {
   sessionStorage.removeItem(LOOP_PROTECTION_KEY);

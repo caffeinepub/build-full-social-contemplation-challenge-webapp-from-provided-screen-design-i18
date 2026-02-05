@@ -59,6 +59,19 @@ export async function checkVersion(): Promise<VersionCheckResult> {
     
     const needsRefresh = runningVersion !== latestVersion;
     
+    // Log comparison with both versions
+    if (needsRefresh) {
+      console.log('[VersionCheck] Version mismatch detected:', {
+        runningVersion,
+        latestVersion,
+      });
+    } else {
+      console.log('[VersionCheck] Versions match:', {
+        runningVersion,
+        latestVersion,
+      });
+    }
+    
     return {
       needsRefresh,
       runningVersion,

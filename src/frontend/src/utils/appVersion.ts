@@ -5,21 +5,37 @@
 
 /**
  * Reads the running app version from the current document's meta tag.
- * Returns null if the meta tag is not found or has no content.
+ * Returns null if the meta tag is not found, has no content, or contains a placeholder.
  */
 export function getRunningAppVersion(): string | null {
   const metaTag = document.querySelector('meta[name="app-version"]');
-  if (!metaTag) return null;
+  if (!metaTag) {
+    console.warn('[AppVersion] No app-version meta tag found');
+    return null;
+  }
   
   const content = metaTag.getAttribute('content');
-  if (!content || content === 'BUILD_VERSION_PLACEHOLDER') return null;
   
-  return content.trim();
+  // Reject empty, whitespace-only, or placeholder values
+  if (!content || !content.trim()) {
+    console.warn('[AppVersion] app-version meta tag is empty');
+    return null;
+  }
+  
+  const trimmed = content.trim();
+  
+  // Reject known placeholder patterns
+  if (trimmed === 'BUILD_VERSION_PLACEHOLDER' || trimmed.includes('VITE_BUILD_TIMESTAMP')) {
+    console.warn('[AppVersion] app-version contains placeholder:', trimmed);
+    return null;
+  }
+  
+  return trimmed;
 }
 
 /**
  * Extracts the app version from fetched HTML text.
- * Returns null if the version meta tag cannot be found or parsed.
+ * Returns null if the version meta tag cannot be found, parsed, or contains a placeholder.
  */
 export function extractVersionFromHTML(html: string): string | null {
   try {
@@ -31,11 +47,20 @@ export function extractVersionFromHTML(html: string): string | null {
     if (!metaTag) return null;
     
     const content = metaTag.getAttribute('content');
-    if (!content || content === 'BUILD_VERSION_PLACEHOLDER') return null;
     
-    return content.trim();
+    // Reject empty, whitespace-only, or placeholder values
+    if (!content || !content.trim()) return null;
+    
+    const trimmed = content.trim();
+    
+    // Reject known placeholder patterns
+    if (trimmed === 'BUILD_VERSION_PLACEHOLDER' || trimmed.includes('VITE_BUILD_TIMESTAMP')) {
+      return null;
+    }
+    
+    return trimmed;
   } catch (error) {
-    console.error('Failed to extract version from HTML:', error);
+    console.error('[AppVersion] Failed to extract version from HTML:', error);
     return null;
   }
 }

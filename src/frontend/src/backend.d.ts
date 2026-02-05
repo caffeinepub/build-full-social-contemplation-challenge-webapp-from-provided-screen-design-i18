@@ -25,6 +25,12 @@ export interface InviteCode {
     code: string;
     used: boolean;
 }
+export interface BuildInfo {
+    stableDeployTime?: bigint;
+    deployTime: bigint;
+    version: string;
+    buildTime: bigint;
+}
 export type Time = bigint;
 export interface UserChallengeStatus {
     hasActiveChallenge: boolean;
@@ -60,6 +66,7 @@ export interface backendInterface {
     getAllRSVPs(): Promise<Array<RSVP>>;
     getAssignmentRecordings(challengeId: bigint, day: bigint, assignment: string): Promise<Array<[Principal, ExternalBlob | null]>>;
     getAvailableInvitationCodes(challengeId: bigint): Promise<Array<string>>;
+    getBuildInfo(): Promise<BuildInfo>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getChallengeAudioRecordings(challengeId: bigint): Promise<Array<Principal>>;

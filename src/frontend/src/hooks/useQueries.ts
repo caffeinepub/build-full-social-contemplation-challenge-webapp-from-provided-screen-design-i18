@@ -421,6 +421,9 @@ export function useSaveRecording() {
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.assignmentRecordings(variables.challengeId.toString(), backendDay.toString(), variables.assignment),
       });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.participantRecording(variables.challengeId.toString(), '', backendDay.toString(), variables.assignment),
+      });
     },
   });
 }
@@ -476,6 +479,9 @@ export function useDeleteRecording() {
       });
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.assignmentRecordings(variables.challengeId.toString(), backendDay.toString(), variables.assignment),
+      });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.participantRecording(variables.challengeId.toString(), '', backendDay.toString(), variables.assignment),
       });
     },
   });

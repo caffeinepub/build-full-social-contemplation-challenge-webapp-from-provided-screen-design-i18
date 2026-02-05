@@ -1,88 +1,60 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-05T15:01:21.663Z",
+  "generatedAt": "2026-02-05T20:10:27.187Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 4,
+    "total": 3,
     "implemented": 3,
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Ensure every production build deploys a unique, non-placeholder app version identifier and that the running app can reliably read it at runtime (used for update detection and cache-busting).",
-        "status": "missing",
+        "summary": "Remove the waveform visualization from the recording UI so users no longer see an empty/black waveform area while recording.",
+        "status": "implemented",
         "plannedFiles": [
-          "frontend/index.html",
-          "frontend/src/utils/appVersion.ts"
+          "frontend/src/components/AudioRecorder.tsx"
         ],
-        "matchedFiles": []
+        "matchedFiles": [
+          "frontend/src/components/AudioRecorder.tsx"
+        ]
       },
       {
         "id": "REQ-2",
-        "summary": "Harden the app’s forced-refresh mechanism so that when a version mismatch is detected, the app performs a one-time hard refresh that bypasses caches as aggressively as possible and avoids refresh loops.",
+        "summary": "Ensure a clearly visible, real-time input level (VU meter) is shown during recording and reliably updates in response to incoming microphone audio.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/utils/versionCheck.ts",
-          "frontend/src/utils/hardRefresh.ts",
-          "frontend/src/hooks/useAppUpdateGuard.ts",
-          "frontend/src/App.tsx"
+          "frontend/src/hooks/useAudioRecording.ts"
         ],
         "matchedFiles": [
-          "frontend/src/utils/versionCheck.ts",
-          "frontend/src/utils/hardRefresh.ts",
-          "frontend/src/hooks/useAppUpdateGuard.ts"
+          "frontend/src/hooks/useAudioRecording.ts"
         ]
       },
       {
         "id": "REQ-3",
-        "summary": "When a recording upload fails with a backend error indicating an invalid assignment (e.g., \"Invalid assignment: \\\"awareness\\\"\"), show a clear English user-facing recovery message and provide an in-app action to perform a hard refresh (cache-busted reload).",
+        "summary": "Remove waveform-related state/logic from the audio recording hook and component interfaces so the app no longer computes or stores waveform samples.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/utils/sanitizeErrorMessage.ts",
-          "frontend/src/screens/Screen6InChallenge.tsx",
-          "frontend/src/utils/hardRefresh.ts"
+          "frontend/src/hooks/useAudioRecording.ts",
+          "frontend/src/components/AudioRecorder.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/utils/sanitizeErrorMessage.ts",
-          "frontend/src/screens/Screen6InChallenge.tsx",
-          "frontend/src/utils/hardRefresh.ts"
-        ]
-      },
-      {
-        "id": "REQ-4",
-        "summary": "Add lightweight diagnostics to help confirm stale-asset situations in production by logging the running app version and the latest fetched app version when a mismatch is detected, and logging the running app version when an invalid-assignment upload error occurs (no sensitive data).",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/utils/versionCheck.ts",
-          "frontend/src/hooks/useAppUpdateGuard.ts",
-          "frontend/src/utils/recordingDiagnostics.ts",
-          "frontend/src/hooks/useQueries.ts"
-        ],
-        "matchedFiles": [
-          "frontend/src/utils/versionCheck.ts",
-          "frontend/src/hooks/useAppUpdateGuard.ts",
-          "frontend/src/utils/recordingDiagnostics.ts",
-          "frontend/src/hooks/useQueries.ts"
+          "frontend/src/hooks/useAudioRecording.ts",
+          "frontend/src/components/AudioRecorder.tsx"
         ]
       }
     ]
   },
   "changedFiles": [
     "build-request.json",
-    "caffeine.lock.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/hooks/useAppUpdateGuard.ts",
-    "frontend/src/hooks/useQueries.ts",
-    "frontend/src/screens/Screen6InChallenge.tsx",
-    "frontend/src/utils/hardRefresh.ts",
-    "frontend/src/utils/recordingDiagnostics.ts",
-    "frontend/src/utils/sanitizeErrorMessage.ts",
-    "frontend/src/utils/versionCheck.ts",
+    "frontend/src/components/AudioRecorder.tsx",
+    "frontend/src/components/RecordingWaveform.tsx",
+    "frontend/src/hooks/useAudioRecording.ts",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

@@ -1,12 +1,11 @@
 # Specification
 
 ## Summary
-**Goal:** Fix production stale-asset caching that causes invalid assignment upload errors by ensuring unique build versioning, robust update detection, and a safe one-time hard refresh flow.
+**Goal:** Provide reliable live input level (VU meter) feedback during recording and remove the waveform visualization so users don’t see an empty/black waveform area.
 
 **Planned changes:**
-- Ensure each production build injects a unique, non-placeholder app version into the rendered HTML (e.g., via `<meta name="app-version" ...>`) and make it reliably readable at runtime for update detection.
-- Harden the version-mismatch forced-refresh flow to perform an aggressive, cache-busted one-time reload (including cache-busted version-check requests) while preventing refresh loops.
-- On upload failures where the backend error contains “Invalid assignment”, show a clear English recovery message and provide an in-app “hard refresh” action that triggers a cache-busted reload.
-- Add lightweight, non-sensitive diagnostics: log running app version and latest fetched app version on mismatch; log running app version (if available) and the attempted assignment value on invalid-assignment upload errors.
+- Remove the waveform UI from the recording and post-record review states so no waveform canvas/placeholder is shown.
+- Ensure a clearly visible real-time recording level meter is displayed during recording and updates multiple times per second based on microphone input, including on iOS/Safari (resume/start audio analysis from the “Start Recording” user gesture when required).
+- Simplify the recording hook/component interfaces by removing waveform-related state and logic so waveform samples are no longer computed or stored, while keeping recorded audio playback and upload behavior unchanged.
 
-**User-visible outcome:** After a new deploy, users reliably receive the latest frontend without getting stuck on stale cached assets; if a stale-asset “Invalid assignment” upload error occurs, the app clearly instructs the user and provides an in-app hard refresh button to recover.
+**User-visible outcome:** While recording, users see a responsive live level meter that confirms audio is coming in, and they no longer see a black/empty waveform area; recording, review, and upload continue to work as before.

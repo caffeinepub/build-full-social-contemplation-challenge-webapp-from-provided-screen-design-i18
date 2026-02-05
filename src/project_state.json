@@ -1,36 +1,34 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "New project",
-  "architectural_notes": [
-    "Add a hard cache-bust + forced rebuild step to ensure production serves the latest frontend assets (e.g., assignments.ts) after deploys."
-  ],
+  "summary": "Add a live audio input-level (VU meter) indicator to the recording UI and remove the waveform visualization, providing real-time feedback that audio is being captured while keeping the rest of the recording functionality unchanged.",
+  "architectural_notes": [],
   "known_issues": [
-    "Production/live build may serve cached/older frontend assets, causing invalid/old assignment IDs (e.g., \"awareness\") to be sent and rejected by the canister."
+    "During recording, the waveform display appears black/empty so users cannot see that audio input is being received."
   ],
   "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-harden-the-app-s-forced-refresh-mechanism-so-that-when-a-version-mismatch-is-detected-the-app-performs-a-one-time-hard-refresh-that-bypasses-caches-as-aggressively-as-possible-and-avoids-refresh-loops",
-      "title": "Harden the app’s forced-refresh mechanism so that when a version mismatch is detected, the app performs a one-time hard refresh that bypasses caches as aggressively as possible and avoids refresh loops.",
+      "id": "feature-remove-the-waveform-visualization-from-the-recording-ui-so-users-no-longer-see-an-empty-black-waveform-area-while-recording",
+      "title": "Remove the waveform visualization from the recording UI so users no longer see an empty/black waveform area while recording.",
+      "reqIds": [
+        "REQ-1"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-a-clearly-visible-real-time-input-level-vu-meter-is-shown-during-recording-and-reliably-updates-in-response-to-incoming-microphone-audio",
+      "title": "Ensure a clearly visible, real-time input level (VU meter) is shown during recording and reliably updates in response to incoming microphone audio.",
       "reqIds": [
         "REQ-2"
       ],
       "version": 1
     },
     {
-      "id": "feature-when-a-recording-upload-fails-with-a-backend-error-indicating-an-invalid-assignment-e-g-invalid-assignment-awareness-show-a-clear-english-user-facing-recovery-message-and-provide-an-in-app-action-to-perform-a-hard-refresh-cache-busted-reload",
-      "title": "When a recording upload fails with a backend error indicating an invalid assignment (e.g., \"Invalid assignment: \\\"awareness\\\"\"), show a clear English user-facing recovery message and provide an in-app action to perform a hard refresh (cache-busted reload).",
+      "id": "feature-remove-waveform-related-state-logic-from-the-audio-recording-hook-and-component-interfaces-so-the-app-no-longer-computes-or-stores-waveform-samples",
+      "title": "Remove waveform-related state/logic from the audio recording hook and component interfaces so the app no longer computes or stores waveform samples.",
       "reqIds": [
         "REQ-3"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-add-lightweight-diagnostics-to-help-confirm-stale-asset-situations-in-production-by-logging-the-running-app-version-and-the-latest-fetched-app-version-when-a-mismatch-is-detected-and-logging-the-running-app-version-when-an-invalid-assignment-upload-error-occurs-no-sensitive-data",
-      "title": "Add lightweight diagnostics to help confirm stale-asset situations in production by logging the running app version and the latest fetched app version when a mismatch is detected, and logging the running app version when an invalid-assignment upload error occurs (no sensitive data).",
-      "reqIds": [
-        "REQ-4"
       ],
       "version": 1
     }
@@ -38,14 +36,12 @@
   "new_feature_requests": [
     {
       "id": "AR-1",
-      "summary": "Ensure every production build deploys a unique, non-placeholder app version identifier and that the running app can reliably read it at runtime (used for update detection and cache-busting).",
-      "reqIds": [
-        "REQ-1"
-      ],
+      "summary": "Add a real-time audio input level (VU meter) to the recording interface and remove/disable the waveform visualization entirely.",
+      "reqIds": [],
       "status": "pending"
     }
   ],
-  "projectName": "Fix production stale-asset caching causing invalid assignment errors (hard cache-bust + forced refresh)",
+  "projectName": "Add reliable live VU meter feedback during recording and remove waveform visualization",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

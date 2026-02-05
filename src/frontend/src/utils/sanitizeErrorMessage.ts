@@ -47,6 +47,29 @@ export function isInvalidAssignmentError(error: unknown): boolean {
 }
 
 /**
+ * Check if an error indicates a stale build or interface mismatch.
+ * Includes invalid assignment errors and common call/decoding failures.
+ */
+export function isStaleBuildError(error: unknown): boolean {
+  const message = extractErrorMessage(error).toLowerCase();
+  
+  // Invalid assignment is the primary indicator
+  if (message.includes('invalid assignment')) {
+    return true;
+  }
+  
+  // Common patterns for actor/interface mismatch
+  if (message.includes('call failed') || 
+      message.includes('decode error') ||
+      message.includes('validation failed') ||
+      message.includes('interface mismatch')) {
+    return true;
+  }
+  
+  return false;
+}
+
+/**
  * Check if an error is related to invalid recording parameters.
  */
 export function isRecordingParameterError(error: unknown): boolean {
@@ -87,9 +110,9 @@ export function sanitizeErrorMessage(error: unknown): string {
     // Extract the invalid assignment name if present
     const match = rawMessage.match(/invalid assignment[:\s]+([a-z_-]+)/i);
     if (match) {
-      return `Invalid assignment: "${match[1]}". Your app may be out of date.`;
+      return `Invalid assignment: "${match[1]}". Your app may be out of date. Please refresh.`;
     }
-    return 'Invalid assignment. Your app may be out of date.';
+    return 'Invalid assignment. Your app may be out of date. Please refresh.';
   }
   
   if (lowerMessage.includes('invalid day')) {
