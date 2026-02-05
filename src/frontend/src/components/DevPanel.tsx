@@ -5,6 +5,11 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { RefreshCw } from 'lucide-react';
 
+/**
+ * Developer Panel - Currently disabled/not rendered by default.
+ * Kept for potential future debugging purposes.
+ * To re-enable, add <DevPanel /> to App.tsx where needed.
+ */
 export function DevPanel() {
   const queryClient = useQueryClient();
   const { isAuthenticated, principal } = useAuthPrincipal();

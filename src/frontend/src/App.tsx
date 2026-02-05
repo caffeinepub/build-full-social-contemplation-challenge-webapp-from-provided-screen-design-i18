@@ -4,24 +4,27 @@ import { useAuthPrincipal } from './hooks/useAuthPrincipal';
 import { useUserChallengeStatus } from './hooks/useUserChallengeStatus';
 import { QueryStateGate } from './components/QueryStateGate';
 import { AppShell } from './components/AppShell';
-import { DevPanel } from './components/DevPanel';
-import { Screen1Placeholder } from './screens/Screen1Placeholder';
+import { ProfileCompletionGate } from './components/ProfileCompletionGate';
+import { AutoInvitationRedeemGate } from './components/AutoInvitationRedeemGate';
+import { ChallengeDeletedNotice } from './components/ChallengeDeletedNotice';
+import { UnifiedEntryMenu } from './screens/UnifiedEntryMenu';
 import { Screen3Placeholder } from './screens/Screen3Placeholder';
 import { Screen4Placeholder } from './screens/Screen4Placeholder';
 import { Screen6InChallenge } from './screens/Screen6InChallenge';
-import { useResolvedActiveChallengeId } from './hooks/useQueries';
+import { useGetUnifiedChallengeId } from './hooks/useQueries';
 import { readAppUrlState, writeAppUrlState } from './utils/appUrlState';
-import { parseInvitationFromURL } from './utils/invitationLinks';
-import { persistInvitationParams } from './utils/urlParams';
+import { parseInvitationFromURL, persistInvitationParams } from './utils/invitationLinks';
+import { hasChallengeDeletedNotice, clearChallengeDeletedNotice } from './utils/challengeDeletedNotice';
 
-type AppScreen = 'screen1' | 'screen3' | 'screen4' | 'screen6';
+type AppScreen = 'menu' | 'screen3' | 'screen4' | 'screen6';
 
 function AppContent() {
   const { isAuthenticated } = useAuthPrincipal();
   const userStatusQuery = useUserChallengeStatus();
-  const resolvedChallengeId = useResolvedActiveChallengeId();
-  const [currentScreen, setCurrentScreen] = useState<AppScreen>('screen1');
+  const { challengeId: resolvedChallengeId } = useGetUnifiedChallengeId();
+  const [currentScreen, setCurrentScreen] = useState<AppScreen>('menu');
   const [isInitialized, setIsInitialized] = useState(false);
+  const [showDeletedNotice, setShowDeletedNotice] = useState(false);
 
   // Persist invitation params before authentication if present
   useEffect(() => {
@@ -31,25 +34,28 @@ function AppContent() {
     }
   }, []);
 
+  // Check for challenge deleted notice on mount and when authenticated
+  useEffect(() => {
+    if (isAuthenticated && hasChallengeDeletedNotice()) {
+      setShowDeletedNotice(true);
+    }
+  }, [isAuthenticated]);
+
   // Initialize screen from URL on mount
   useEffect(() => {
     if (!isInitialized && isAuthenticated && userStatusQuery.data) {
       const urlState = readAppUrlState();
       const requestedScreen = urlState.screen as AppScreen | undefined;
       
-      // Determine base screen from challenge status
-      let baseScreen: AppScreen = 'screen3';
-      if (userStatusQuery.data.hasActiveChallenge && resolvedChallengeId !== null) {
-        baseScreen = 'screen6';
-      }
-      
       // Restore URL-requested screen if valid
       if (requestedScreen === 'screen6' && userStatusQuery.data.hasActiveChallenge && resolvedChallengeId !== null) {
         setCurrentScreen('screen6');
       } else if (requestedScreen === 'screen4') {
         setCurrentScreen('screen4');
+      } else if (requestedScreen === 'screen3') {
+        setCurrentScreen('screen3');
       } else {
-        setCurrentScreen(baseScreen);
+        setCurrentScreen('menu');
       }
       
       setIsInitialized(true);
@@ -63,79 +69,87 @@ function AppContent() {
     }
   }, [currentScreen, isInitialized]);
 
-  // Show loading/error states while resolving auth and user state
+  const handleDismissDeletedNotice = () => {
+    clearChallengeDeletedNotice();
+    setShowDeletedNotice(false);
+    // Ensure we're on the menu screen
+    setCurrentScreen('menu');
+  };
+
+  // Show unified entry menu when not authenticated
   if (!isAuthenticated) {
     return (
       <AppShell>
-        <Screen1Placeholder />
-        <DevPanel />
+        <UnifiedEntryMenu />
       </AppShell>
     );
   }
 
-  // User is authenticated - check challenge status
+  // User is authenticated - wrap with ProfileCompletionGate and AutoInvitationRedeemGate
   return (
     <AppShell>
-      <QueryStateGate query={userStatusQuery}>
-        {(userStatus) => {
-          // Determine the base screen based on challenge status and resolved ID
-          let baseScreen: AppScreen = 'screen3';
-          
-          // Only route to Screen 6 if we have both hasActiveChallenge AND a valid challengeId
-          if (userStatus && userStatus.hasActiveChallenge && resolvedChallengeId !== null) {
-            baseScreen = 'screen6';
-          }
+      <ChallengeDeletedNotice 
+        open={showDeletedNotice} 
+        onDismiss={handleDismissDeletedNotice}
+      />
+      <ProfileCompletionGate>
+        <QueryStateGate query={userStatusQuery}>
+          {(userStatus) => (
+            <AutoInvitationRedeemGate hasActiveChallenge={userStatus?.hasActiveChallenge || false}>
+              {(() => {
+                const handleNavigateToMenu = () => setCurrentScreen('menu');
+                const handleNavigateToScreen4 = () => setCurrentScreen('screen4');
+                const handleNavigateToScreen6 = () => setCurrentScreen('screen6');
+                const handleNavigateToScreen3 = () => setCurrentScreen('screen3');
+                
+                const handleLeaveSuccess = () => {
+                  setCurrentScreen('menu');
+                };
+                
+                const handleDeleteSuccess = () => {
+                  setCurrentScreen('menu');
+                };
 
-          // Allow navigation between screens
-          const effectiveScreen = currentScreen === 'screen4' || currentScreen === 'screen6'
-            ? currentScreen 
-            : baseScreen;
+                const handleJoinSuccess = () => {
+                  setCurrentScreen('screen6');
+                };
 
-          const handleNavigateToScreen4 = () => setCurrentScreen('screen4');
-          const handleNavigateToScreen6 = () => setCurrentScreen('screen6');
-          
-          const handleNavigateBackFromScreen4 = () => {
-            setCurrentScreen(baseScreen);
-          };
-          
-          const handleLeaveSuccess = () => {
-            setCurrentScreen('screen3');
-          };
-          
-          const handleDeleteSuccess = () => {
-            setCurrentScreen('screen3');
-          };
-
-          const handleJoinSuccess = () => {
-            setCurrentScreen('screen6');
-          };
-
-          return (
-            <>
-              {effectiveScreen === 'screen3' && (
-                <Screen3Placeholder 
-                  onNavigateToScreen4={handleNavigateToScreen4}
-                  onJoinSuccess={handleJoinSuccess}
-                  hasInconsistentState={userStatus?.hasActiveChallenge === true && resolvedChallengeId === null}
-                />
-              )}
-              {effectiveScreen === 'screen4' && (
-                <Screen4Placeholder 
-                  onNavigateBack={handleNavigateBackFromScreen4}
-                  onLeaveSuccess={handleLeaveSuccess}
-                  onDeleteSuccess={handleDeleteSuccess}
-                />
-              )}
-              {effectiveScreen === 'screen6' && (
-                <Screen6InChallenge 
-                  onNavigateToManage={handleNavigateToScreen4}
-                />
-              )}
-              <DevPanel />
-            </>
-          );
-        }}
-      </QueryStateGate>
+                return (
+                  <>
+                    {currentScreen === 'menu' && (
+                      <UnifiedEntryMenu 
+                        onNavigateToCreate={handleNavigateToScreen4}
+                        onNavigateToChallenge={handleNavigateToScreen6}
+                        onNavigateToManage={handleNavigateToScreen4}
+                      />
+                    )}
+                    {currentScreen === 'screen3' && (
+                      <Screen3Placeholder 
+                        onNavigateToScreen4={handleNavigateToScreen4}
+                        onJoinSuccess={handleJoinSuccess}
+                        hasInconsistentState={userStatus?.hasActiveChallenge === true && resolvedChallengeId === null}
+                      />
+                    )}
+                    {currentScreen === 'screen4' && (
+                      <Screen4Placeholder 
+                        onNavigateBack={handleNavigateToMenu}
+                        onLeaveSuccess={handleLeaveSuccess}
+                        onDeleteSuccess={handleDeleteSuccess}
+                      />
+                    )}
+                    {currentScreen === 'screen6' && (
+                      <Screen6InChallenge 
+                        onNavigateToManage={handleNavigateToScreen4}
+                        onNavigateBack={handleNavigateToMenu}
+                      />
+                    )}
+                  </>
+                );
+              })()}
+            </AutoInvitationRedeemGate>
+          )}
+        </QueryStateGate>
+      </ProfileCompletionGate>
     </AppShell>
   );
 }

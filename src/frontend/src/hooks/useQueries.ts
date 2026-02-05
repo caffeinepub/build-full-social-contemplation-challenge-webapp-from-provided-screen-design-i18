@@ -1,9 +1,30 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useActor } from './useActor';
-import { useAuthPrincipal } from './useAuthPrincipal';
-import type { UserProfile, UserChallengeStatus, ExternalBlob } from '../backend';
-import type { Principal } from '@icp-sdk/core/principal';
-import { persistActiveChallengeId, clearPersistedActiveChallengeId, getPersistedActiveChallengeId } from '../utils/challengeContext';
+import type { UserProfile, UserChallengeStatus, ChatMessage } from '../backend';
+import { Principal } from '@dfinity/principal';
+import type { ExternalBlob } from '../backend';
+import { uiDayToBackendDay } from '../utils/recordingDayIndex';
+
+// ============================================================================
+// React Query Key Constants (exported for consistent invalidation)
+// ============================================================================
+
+export const QUERY_KEYS = {
+  currentUserProfile: ['currentUserProfile'],
+  userProfile: (principal: string) => ['userProfile', principal],
+  userChallengeStatus: ['userChallengeStatus'],
+  activeChallengeIdForCreator: ['activeChallengeIdForCreator'],
+  activeChallengeIdForParticipant: ['activeChallengeIdForParticipant'],
+  availableInvitationCodes: (challengeId: string) => ['availableInvitationCodes', challengeId],
+  challengeParticipants: (challengeId: string) => ['challengeParticipants', challengeId],
+  participantProfiles: (challengeId: string) => ['participantProfiles', challengeId],
+  challengeStartTime: (challengeId: string) => ['challengeStartTime', challengeId],
+  recording: (challengeId: string, day: string, assignment: string) => ['recording', challengeId, day, assignment],
+  assignmentRecordings: (challengeId: string, day: string, assignment: string) => ['assignmentRecordings', challengeId, day, assignment],
+  participantRecording: (challengeId: string, participant: string, day: string, assignment: string) => ['participantRecording', challengeId, participant, day, assignment],
+  chatMessages: (challengeId: string) => ['chatMessages', challengeId],
+  chatMessage: (challengeId: string, messageId: string) => ['chatMessage', challengeId, messageId],
+} as const;
 
 // ============================================================================
 // User Profile Queries
@@ -11,15 +32,14 @@ import { persistActiveChallengeId, clearPersistedActiveChallengeId, getPersisted
 
 export function useGetCallerUserProfile() {
   const { actor, isFetching: actorFetching } = useActor();
-  const { isAuthenticated } = useAuthPrincipal();
 
   const query = useQuery<UserProfile | null>({
-    queryKey: ['currentUserProfile'],
+    queryKey: QUERY_KEYS.currentUserProfile,
     queryFn: async () => {
       if (!actor) throw new Error('Actor not available');
       return actor.getCallerUserProfile();
     },
-    enabled: !!actor && !actorFetching && isAuthenticated,
+    enabled: !!actor && !actorFetching,
     retry: false,
   });
 
@@ -28,6 +48,20 @@ export function useGetCallerUserProfile() {
     isLoading: actorFetching || query.isLoading,
     isFetched: !!actor && query.isFetched,
   };
+}
+
+export function useGetUserProfile(userPrincipal: Principal | null) {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<UserProfile | null>({
+    queryKey: QUERY_KEYS.userProfile(userPrincipal?.toString() || ''),
+    queryFn: async () => {
+      if (!actor || !userPrincipal) throw new Error('Actor or user principal not available');
+      return actor.getUserProfile(userPrincipal);
+    },
+    enabled: !!actor && !actorFetching && !!userPrincipal,
+    retry: false,
+  });
 }
 
 export function useSaveCallerUserProfile() {
@@ -40,90 +74,75 @@ export function useSaveCallerUserProfile() {
       return actor.saveCallerUserProfile(profile);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.currentUserProfile });
+      queryClient.invalidateQueries({ queryKey: ['participantProfiles'] });
     },
   });
 }
 
 // ============================================================================
-// Challenge Status Query
+// Challenge Status & ID Resolution
 // ============================================================================
 
-export function useUserChallengeStatus() {
+export function useGetUserChallengeStatus() {
   const { actor, isFetching: actorFetching } = useActor();
-  const { isAuthenticated } = useAuthPrincipal();
 
   return useQuery<UserChallengeStatus>({
-    queryKey: ['userChallengeStatus'],
+    queryKey: QUERY_KEYS.userChallengeStatus,
     queryFn: async () => {
       if (!actor) throw new Error('Actor not available');
       return actor.getUserChallengeStatus();
     },
-    enabled: !!actor && !actorFetching && isAuthenticated,
-    retry: 2,
-    staleTime: 30000, // 30 seconds
+    enabled: !!actor && !actorFetching,
+    retry: false,
   });
 }
 
-// ============================================================================
-// Challenge ID Resolution
-// ============================================================================
-
 export function useGetActiveChallengeIdForCreator() {
   const { actor, isFetching: actorFetching } = useActor();
-  const { isAuthenticated } = useAuthPrincipal();
 
   return useQuery<bigint | null>({
-    queryKey: ['activeChallengeIdCreator'],
+    queryKey: QUERY_KEYS.activeChallengeIdForCreator,
     queryFn: async () => {
       if (!actor) throw new Error('Actor not available');
       return actor.getActiveChallengeIdForCreator();
     },
-    enabled: !!actor && !actorFetching && isAuthenticated,
-    staleTime: 10000, // 10 seconds
+    enabled: !!actor && !actorFetching,
+    retry: false,
   });
 }
 
 export function useGetActiveChallengeIdForParticipant() {
   const { actor, isFetching: actorFetching } = useActor();
-  const { isAuthenticated } = useAuthPrincipal();
 
   return useQuery<bigint | null>({
-    queryKey: ['activeChallengeIdParticipant'],
+    queryKey: QUERY_KEYS.activeChallengeIdForParticipant,
     queryFn: async () => {
       if (!actor) throw new Error('Actor not available');
       return actor.getActiveChallengeIdForParticipant();
     },
-    enabled: !!actor && !actorFetching && isAuthenticated,
-    staleTime: 10000, // 10 seconds
+    enabled: !!actor && !actorFetching,
+    retry: false,
   });
 }
 
-/**
- * Unified hook that resolves the active challenge ID from multiple sources:
- * 1. Creator's active challenge
- * 2. Participant's active challenge
- * 3. Persisted challenge ID (sessionStorage)
- */
-export function useResolvedActiveChallengeId(): bigint | null {
+export function useGetUnifiedChallengeId() {
   const creatorQuery = useGetActiveChallengeIdForCreator();
   const participantQuery = useGetActiveChallengeIdForParticipant();
-  const persistedId = getPersistedActiveChallengeId();
 
-  // Priority: creator > participant > persisted
-  if (creatorQuery.data !== null && creatorQuery.data !== undefined) {
-    return creatorQuery.data;
-  }
-  
-  if (participantQuery.data !== null && participantQuery.data !== undefined) {
-    return participantQuery.data;
-  }
-  
-  return persistedId;
+  const challengeId = creatorQuery.data ?? participantQuery.data ?? null;
+  const isLoading = creatorQuery.isLoading || participantQuery.isLoading;
+  const error = creatorQuery.error || participantQuery.error;
+
+  return {
+    challengeId,
+    isLoading,
+    error,
+  };
 }
 
 // ============================================================================
-// Challenge Mutations
+// Challenge Management
 // ============================================================================
 
 export function useCreateChallenge() {
@@ -135,54 +154,10 @@ export function useCreateChallenge() {
       if (!actor) throw new Error('Actor not available');
       return actor.createChallenge(startTime);
     },
-    onSuccess: (challengeId) => {
-      // Persist the created challenge ID
-      persistActiveChallengeId(challengeId);
-      queryClient.invalidateQueries({ queryKey: ['userChallengeStatus'] });
-      queryClient.invalidateQueries({ queryKey: ['challengeDetails'] });
-      queryClient.invalidateQueries({ queryKey: ['activeChallengeIdCreator'] });
-      queryClient.invalidateQueries({ queryKey: ['activeChallengeIdParticipant'] });
-    },
-  });
-}
-
-export function useGenerateInvitationCode() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ challengeId, code }: { challengeId: bigint; code: string }) => {
-      if (!actor) throw new Error('Actor not available');
-      if (!challengeId) throw new Error('Challenge ID is required');
-      return actor.generateInvitationCode(challengeId, code);
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ 
-        queryKey: ['invitationCodes', variables.challengeId.toString()] 
-      });
-    },
-  });
-}
-
-export function useRedeemInvitationCode() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ challengeId, code }: { challengeId: bigint; code: string }) => {
-      if (!actor) throw new Error('Actor not available');
-      if (!challengeId) throw new Error('Challenge ID is required');
-      if (!code) throw new Error('Invitation code is required');
-      return actor.redeemInvitationCode(challengeId, code);
-    },
-    onSuccess: (_, variables) => {
-      // Persist the joined challenge ID
-      persistActiveChallengeId(variables.challengeId);
-      queryClient.invalidateQueries({ queryKey: ['userChallengeStatus'] });
-      queryClient.invalidateQueries({ queryKey: ['challengeDetails'] });
-      queryClient.invalidateQueries({ queryKey: ['challengeParticipants'] });
-      queryClient.invalidateQueries({ queryKey: ['activeChallengeIdCreator'] });
-      queryClient.invalidateQueries({ queryKey: ['activeChallengeIdParticipant'] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.userChallengeStatus });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.activeChallengeIdForCreator });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.activeChallengeIdForParticipant });
     },
   });
 }
@@ -198,32 +173,8 @@ export function useUpdateStartTime() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ 
-        queryKey: ['challengeDetails', variables.challengeId.toString()] 
+        queryKey: QUERY_KEYS.challengeStartTime(variables.challengeId.toString()) 
       });
-      queryClient.invalidateQueries({ 
-        queryKey: ['challengeStartTime', variables.challengeId.toString()] 
-      });
-    },
-  });
-}
-
-export function useLeaveChallenge() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (challengeId: bigint) => {
-      if (!actor) throw new Error('Actor not available');
-      return actor.leaveChallenge(challengeId);
-    },
-    onSuccess: () => {
-      // Clear persisted challenge ID on leave
-      clearPersistedActiveChallengeId();
-      queryClient.invalidateQueries({ queryKey: ['userChallengeStatus'] });
-      queryClient.invalidateQueries({ queryKey: ['challengeDetails'] });
-      queryClient.invalidateQueries({ queryKey: ['challengeParticipants'] });
-      queryClient.invalidateQueries({ queryKey: ['activeChallengeIdCreator'] });
-      queryClient.invalidateQueries({ queryKey: ['activeChallengeIdParticipant'] });
     },
   });
 }
@@ -238,14 +189,121 @@ export function useDeleteChallenge() {
       return actor.deleteChallenge(challengeId);
     },
     onSuccess: () => {
-      // Clear persisted challenge ID on delete
-      clearPersistedActiveChallengeId();
-      queryClient.invalidateQueries({ queryKey: ['userChallengeStatus'] });
-      queryClient.invalidateQueries({ queryKey: ['challengeDetails'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.userChallengeStatus });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.activeChallengeIdForCreator });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.activeChallengeIdForParticipant });
+      queryClient.invalidateQueries({ queryKey: ['availableInvitationCodes'] });
       queryClient.invalidateQueries({ queryKey: ['challengeParticipants'] });
-      queryClient.invalidateQueries({ queryKey: ['activeChallengeIdCreator'] });
-      queryClient.invalidateQueries({ queryKey: ['activeChallengeIdParticipant'] });
+      queryClient.invalidateQueries({ queryKey: ['participantProfiles'] });
+      queryClient.invalidateQueries({ queryKey: ['challengeStartTime'] });
     },
+  });
+}
+
+export function useLeaveChallenge() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (challengeId: bigint) => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.leaveChallenge(challengeId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.userChallengeStatus });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.activeChallengeIdForCreator });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.activeChallengeIdForParticipant });
+    },
+  });
+}
+
+// ============================================================================
+// Invitation Codes
+// ============================================================================
+
+export function useGenerateInvitationCode() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ challengeId, code }: { challengeId: bigint; code: string }) => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.generateInvitationCode(challengeId, code);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ 
+        queryKey: QUERY_KEYS.availableInvitationCodes(variables.challengeId.toString()) 
+      });
+    },
+  });
+}
+
+export function useRedeemInvitationCode() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ challengeId, code }: { challengeId: bigint; code: string }) => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.redeemInvitationCode(challengeId, code);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.userChallengeStatus });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.activeChallengeIdForCreator });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.activeChallengeIdForParticipant });
+      queryClient.invalidateQueries({ 
+        queryKey: QUERY_KEYS.challengeParticipants(variables.challengeId.toString()) 
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: QUERY_KEYS.participantProfiles(variables.challengeId.toString()) 
+      });
+    },
+  });
+}
+
+export function useGetAvailableInvitationCodes(challengeId: bigint | null) {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<string[]>({
+    queryKey: QUERY_KEYS.availableInvitationCodes(challengeId?.toString() || ''),
+    queryFn: async () => {
+      if (!actor || challengeId === null) throw new Error('Actor or challenge ID not available');
+      return actor.getAvailableInvitationCodes(challengeId);
+    },
+    enabled: !!actor && !actorFetching && challengeId !== null,
+    retry: false,
+  });
+}
+
+// ============================================================================
+// Participants
+// ============================================================================
+
+export function useGetChallengeParticipants(challengeId: bigint | null) {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<Principal[]>({
+    queryKey: QUERY_KEYS.challengeParticipants(challengeId?.toString() || ''),
+    queryFn: async () => {
+      if (!actor || challengeId === null) throw new Error('Actor or challenge ID not available');
+      return actor.getChallengeParticipants(challengeId);
+    },
+    enabled: !!actor && !actorFetching && challengeId !== null,
+    retry: false,
+  });
+}
+
+export function useGetAllChallengeParticipantProfiles(challengeId: bigint | null) {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<Array<[Principal, UserProfile | null]>>({
+    queryKey: QUERY_KEYS.participantProfiles(challengeId?.toString() || ''),
+    queryFn: async () => {
+      if (!actor || challengeId === null) throw new Error('Actor or challenge ID not available');
+      return actor.getAllChallengeParticipantProfiles(challengeId);
+    },
+    enabled: !!actor && !actorFetching && challengeId !== null,
+    retry: false,
   });
 }
 
@@ -260,312 +318,217 @@ export function useRemoveParticipant() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ 
-        queryKey: ['challengeParticipants', variables.challengeId.toString()] 
+        queryKey: QUERY_KEYS.challengeParticipants(variables.challengeId.toString()) 
       });
       queryClient.invalidateQueries({ 
-        queryKey: ['participantProfiles', variables.challengeId.toString()] 
+        queryKey: QUERY_KEYS.participantProfiles(variables.challengeId.toString()) 
       });
     },
   });
 }
 
 // ============================================================================
-// Challenge Detail Queries
+// Recordings
 // ============================================================================
 
-export function useGetChallengeParticipants(challengeId: bigint | null | undefined) {
-  const { actor, isFetching: actorFetching } = useActor();
-  const { isAuthenticated } = useAuthPrincipal();
-
-  // Strict validation: only enable if challengeId is a valid bigint
-  const isValidChallengeId = challengeId !== null && challengeId !== undefined && typeof challengeId === 'bigint';
-
-  return useQuery<Principal[]>({
-    queryKey: ['challengeParticipants', isValidChallengeId ? challengeId.toString() : 'none'],
-    queryFn: async () => {
-      if (!actor) throw new Error('Actor not available');
-      if (!isValidChallengeId) throw new Error('Invalid challenge ID');
-      return actor.getChallengeParticipants(challengeId);
-    },
-    enabled: !!actor && !actorFetching && isAuthenticated && isValidChallengeId,
-    staleTime: 10000, // 10 seconds
-  });
-}
-
-export function useGetAvailableInvitationCodes(challengeId: bigint | null | undefined) {
-  const { actor, isFetching: actorFetching } = useActor();
-  const { isAuthenticated } = useAuthPrincipal();
-
-  // Strict validation: only enable if challengeId is a valid bigint
-  const isValidChallengeId = challengeId !== null && challengeId !== undefined && typeof challengeId === 'bigint';
-
-  return useQuery<string[]>({
-    queryKey: ['invitationCodes', isValidChallengeId ? challengeId.toString() : 'none'],
-    queryFn: async () => {
-      if (!actor) throw new Error('Actor not available');
-      if (!isValidChallengeId) throw new Error('Invalid challenge ID');
-      return actor.getAvailableInvitationCodes(challengeId);
-    },
-    enabled: !!actor && !actorFetching && isAuthenticated && isValidChallengeId,
-    staleTime: 5000, // 5 seconds
-    refetchInterval: 10000, // Refetch every 10 seconds to catch redeemed codes
-  });
-}
-
-// ============================================================================
-// Helper to fetch participant profiles
-// ============================================================================
-
-export function useGetParticipantProfiles(participants: Principal[] | undefined) {
-  const { actor, isFetching: actorFetching } = useActor();
-
-  return useQuery<Array<{ principal: string; name: string }>>({
-    queryKey: ['participantProfiles', participants?.map(p => p.toString()).join(',')],
-    queryFn: async () => {
-      if (!actor || !participants) return [];
-      
-      const profiles = await Promise.all(
-        participants.map(async (principal) => {
-          try {
-            const profile = await actor.getUserProfile(principal);
-            return {
-              principal: principal.toString(),
-              name: profile?.name || 'Unknown User',
-            };
-          } catch {
-            return {
-              principal: principal.toString(),
-              name: 'Unknown User',
-            };
-          }
-        })
-      );
-      
-      return profiles;
-    },
-    enabled: !!actor && !actorFetching && !!participants && participants.length > 0,
-    staleTime: 30000, // 30 seconds
-  });
-}
-
-export function useGetAllChallengeParticipantProfiles(challengeId: bigint | null | undefined) {
-  const { actor, isFetching: actorFetching } = useActor();
-  const { isAuthenticated } = useAuthPrincipal();
-
-  const isValidChallengeId = challengeId !== null && challengeId !== undefined && typeof challengeId === 'bigint';
-
-  return useQuery<Array<[Principal, UserProfile | null]>>({
-    queryKey: ['allParticipantProfiles', isValidChallengeId ? challengeId.toString() : 'none'],
-    queryFn: async () => {
-      if (!actor) throw new Error('Actor not available');
-      if (!isValidChallengeId) throw new Error('Invalid challenge ID');
-      return actor.getAllChallengeParticipantProfiles(challengeId);
-    },
-    enabled: !!actor && !actorFetching && isAuthenticated && isValidChallengeId,
-    staleTime: 30000, // 30 seconds
-  });
-}
-
-// ============================================================================
-// Challenge Start Time Query
-// ============================================================================
-
-export function useGetChallengeStartTime(challengeId: bigint | null | undefined) {
-  const { actor, isFetching: actorFetching } = useActor();
-  const { isAuthenticated } = useAuthPrincipal();
-
-  const isValidChallengeId = challengeId !== null && challengeId !== undefined && typeof challengeId === 'bigint';
-
-  return useQuery<bigint>({
-    queryKey: ['challengeStartTime', isValidChallengeId ? challengeId.toString() : 'none'],
-    queryFn: async () => {
-      if (!actor) throw new Error('Actor not available');
-      if (!isValidChallengeId) throw new Error('Invalid challenge ID');
-      return actor.getChallengeStartTime(challengeId);
-    },
-    enabled: !!actor && !actorFetching && isAuthenticated && isValidChallengeId,
-    staleTime: 60000, // 60 seconds - start time rarely changes
-  });
-}
-
-// ============================================================================
-// Per-Assignment Recording Queries and Mutations
-// ============================================================================
-
-/**
- * Save a recording for a specific day and assignment.
- */
 export function useSaveRecording() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ 
-      challengeId, 
-      day, 
-      assignment, 
-      recording 
-    }: { 
-      challengeId: bigint; 
-      day: number; 
-      assignment: string; 
+    mutationFn: async ({
+      challengeId,
+      day,
+      assignment,
+      recording,
+    }: {
+      challengeId: bigint;
+      day: number;
+      assignment: string;
       recording: ExternalBlob;
     }) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.saveRecording(challengeId, BigInt(day), assignment, recording);
+      
+      // Normalize UI day (1-7) to backend day (0-6)
+      const backendDay = BigInt(uiDayToBackendDay(day));
+      
+      return actor.saveRecording(challengeId, backendDay, assignment, recording);
     },
     onSuccess: (_, variables) => {
-      // Invalidate queries for this specific recording
-      queryClient.invalidateQueries({ 
-        queryKey: ['recording', variables.challengeId.toString(), variables.day.toString(), variables.assignment] 
+      const backendDay = uiDayToBackendDay(variables.day);
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.recording(variables.challengeId.toString(), backendDay.toString(), variables.assignment),
       });
-      // Invalidate all recordings for this day/assignment (for Team tab)
-      queryClient.invalidateQueries({ 
-        queryKey: ['assignmentRecordings', variables.challengeId.toString(), variables.day.toString(), variables.assignment] 
-      });
-      // Invalidate participant recordings
-      queryClient.invalidateQueries({ 
-        queryKey: ['participantRecording'] 
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.assignmentRecordings(variables.challengeId.toString(), backendDay.toString(), variables.assignment),
       });
     },
   });
 }
 
-/**
- * Get the current user's recording for a specific day and assignment.
- */
-export function useGetRecording(
-  challengeId: bigint | null | undefined,
-  day: number,
-  assignment: string
-) {
+export function useGetRecording(challengeId: bigint | null, day: number, assignment: string) {
   const { actor, isFetching: actorFetching } = useActor();
-  const { isAuthenticated } = useAuthPrincipal();
 
-  const isValidChallengeId = challengeId !== null && challengeId !== undefined && typeof challengeId === 'bigint';
+  // Normalize UI day (1-7) to backend day (0-6)
+  const backendDay = uiDayToBackendDay(day);
 
-  return useQuery<ExternalBlob | null>({
-    queryKey: ['recording', isValidChallengeId ? challengeId.toString() : 'none', day.toString(), assignment],
+  return useQuery<ExternalBlob>({
+    queryKey: QUERY_KEYS.recording(challengeId?.toString() || '', backendDay.toString(), assignment),
     queryFn: async () => {
-      if (!actor) throw new Error('Actor not available');
-      if (!isValidChallengeId) throw new Error('Invalid challenge ID');
-      try {
-        return await actor.getRecording(challengeId, BigInt(day), assignment);
-      } catch (error: any) {
-        // If recording not found, return null instead of throwing
-        if (error?.message?.includes('not found') || error?.message?.includes('No recordings')) {
-          return null;
-        }
-        throw error;
-      }
+      if (!actor || challengeId === null) throw new Error('Actor or challenge ID not available');
+      return actor.getRecording(challengeId, BigInt(backendDay), assignment);
     },
-    enabled: !!actor && !actorFetching && isAuthenticated && isValidChallengeId,
-    staleTime: 5000,
+    enabled: !!actor && !actorFetching && challengeId !== null,
     retry: false,
   });
 }
 
-/**
- * Delete the current user's recording for a specific day and assignment.
- */
 export function useDeleteRecording() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ 
-      challengeId, 
-      day, 
-      assignment 
-    }: { 
-      challengeId: bigint; 
-      day: number; 
-      assignment: string;
-    }) => {
+    mutationFn: async ({ challengeId, day, assignment }: { challengeId: bigint; day: number; assignment: string }) => {
       if (!actor) throw new Error('Actor not available');
-      return actor.deleteRecording(challengeId, BigInt(day), assignment);
+      
+      // Normalize UI day (1-7) to backend day (0-6)
+      const backendDay = BigInt(uiDayToBackendDay(day));
+      
+      return actor.deleteRecording(challengeId, backendDay, assignment);
     },
     onSuccess: (_, variables) => {
-      // Invalidate queries for this specific recording
-      queryClient.invalidateQueries({ 
-        queryKey: ['recording', variables.challengeId.toString(), variables.day.toString(), variables.assignment] 
+      const backendDay = uiDayToBackendDay(variables.day);
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.recording(variables.challengeId.toString(), backendDay.toString(), variables.assignment),
       });
-      // Invalidate all recordings for this day/assignment (for Team tab)
-      queryClient.invalidateQueries({ 
-        queryKey: ['assignmentRecordings', variables.challengeId.toString(), variables.day.toString(), variables.assignment] 
-      });
-      // Invalidate participant recordings
-      queryClient.invalidateQueries({ 
-        queryKey: ['participantRecording'] 
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.assignmentRecordings(variables.challengeId.toString(), backendDay.toString(), variables.assignment),
       });
     },
   });
 }
 
-/**
- * Get all participants' recordings for a specific day and assignment (for Team tab).
- */
-export function useGetAssignmentRecordings(
-  challengeId: bigint | null | undefined,
-  day: number,
-  assignment: string
-) {
+export function useGetAssignmentRecordings(challengeId: bigint | null, day: number, assignment: string) {
   const { actor, isFetching: actorFetching } = useActor();
-  const { isAuthenticated } = useAuthPrincipal();
 
-  const isValidChallengeId = challengeId !== null && challengeId !== undefined && typeof challengeId === 'bigint';
+  // Normalize UI day (1-7) to backend day (0-6)
+  const backendDay = uiDayToBackendDay(day);
 
   return useQuery<Array<[Principal, ExternalBlob | null]>>({
-    queryKey: ['assignmentRecordings', isValidChallengeId ? challengeId.toString() : 'none', day.toString(), assignment],
+    queryKey: QUERY_KEYS.assignmentRecordings(challengeId?.toString() || '', backendDay.toString(), assignment),
     queryFn: async () => {
-      if (!actor) throw new Error('Actor not available');
-      if (!isValidChallengeId) throw new Error('Invalid challenge ID');
-      return actor.getAssignmentRecordings(challengeId, BigInt(day), assignment);
+      if (!actor || challengeId === null) throw new Error('Actor or challenge ID not available');
+      return actor.getAssignmentRecordings(challengeId, BigInt(backendDay), assignment);
     },
-    enabled: !!actor && !actorFetching && isAuthenticated && isValidChallengeId,
-    staleTime: 5000,
+    enabled: !!actor && !actorFetching && challengeId !== null,
+    retry: false,
   });
 }
 
-/**
- * Get a specific participant's recording for a specific day and assignment.
- */
 export function useGetParticipantRecording(
-  challengeId: bigint | null | undefined,
+  challengeId: bigint | null,
   participant: Principal | null,
   day: number,
   assignment: string
 ) {
   const { actor, isFetching: actorFetching } = useActor();
-  const { isAuthenticated } = useAuthPrincipal();
 
-  const isValidChallengeId = challengeId !== null && challengeId !== undefined && typeof challengeId === 'bigint';
-  const isValidParticipant = participant !== null;
+  // Normalize UI day (1-7) to backend day (0-6)
+  const backendDay = uiDayToBackendDay(day);
 
-  return useQuery<ExternalBlob | null>({
-    queryKey: [
-      'participantRecording',
-      isValidChallengeId ? challengeId.toString() : 'none',
-      participant?.toString() || 'none',
-      day.toString(),
-      assignment
-    ],
+  return useQuery<ExternalBlob>({
+    queryKey: QUERY_KEYS.participantRecording(challengeId?.toString() || '', participant?.toString() || '', backendDay.toString(), assignment),
     queryFn: async () => {
-      if (!actor) throw new Error('Actor not available');
-      if (!isValidChallengeId) throw new Error('Invalid challenge ID');
-      if (!isValidParticipant) throw new Error('Invalid participant');
-      try {
-        return await actor.getParticipantRecording(challengeId, participant, BigInt(day), assignment);
-      } catch (error: any) {
-        // If recording not found, return null instead of throwing
-        if (error?.message?.includes('not found') || error?.message?.includes('No recordings')) {
-          return null;
-        }
-        throw error;
-      }
+      if (!actor || challengeId === null || participant === null)
+        throw new Error('Actor, challenge ID, or participant not available');
+      return actor.getParticipantRecording(challengeId, participant, BigInt(backendDay), assignment);
     },
-    enabled: !!actor && !actorFetching && isAuthenticated && isValidChallengeId && isValidParticipant,
-    staleTime: 5000,
+    enabled: !!actor && !actorFetching && challengeId !== null && participant !== null,
+    retry: false,
+  });
+}
+
+// ============================================================================
+// Challenge Start Time
+// ============================================================================
+
+export function useGetChallengeStartTime(challengeId: bigint | null) {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<bigint>({
+    queryKey: QUERY_KEYS.challengeStartTime(challengeId?.toString() || ''),
+    queryFn: async () => {
+      if (!actor || challengeId === null) throw new Error('Actor or challenge ID not available');
+      return actor.getChallengeStartTime(challengeId);
+    },
+    enabled: !!actor && !actorFetching && challengeId !== null,
+    retry: false,
+  });
+}
+
+// ============================================================================
+// Chat Messages
+// ============================================================================
+
+export function usePostMessage() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ challengeId, text, replyTo }: { challengeId: bigint; text: string; replyTo?: bigint | null }) => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.postMessage(challengeId, text, replyTo ?? null);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.chatMessages(variables.challengeId.toString()),
+      });
+    },
+  });
+}
+
+export function useEditMessage() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ challengeId, messageId, newText }: { challengeId: bigint; messageId: bigint; newText: string }) => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.editMessage(challengeId, messageId, newText);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.chatMessages(variables.challengeId.toString()),
+      });
+    },
+  });
+}
+
+export function useGetMessages(challengeId: bigint | null, isActive: boolean = true) {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<ChatMessage[]>({
+    queryKey: QUERY_KEYS.chatMessages(challengeId?.toString() || ''),
+    queryFn: async () => {
+      if (!actor || challengeId === null) throw new Error('Actor or challenge ID not available');
+      return actor.getMessages(challengeId);
+    },
+    enabled: !!actor && !actorFetching && challengeId !== null,
+    refetchInterval: isActive ? 5000 : false,
+    retry: false,
+  });
+}
+
+export function useGetMessage(challengeId: bigint | null, messageId: bigint | null) {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<ChatMessage>({
+    queryKey: QUERY_KEYS.chatMessage(challengeId?.toString() || '', messageId?.toString() || ''),
+    queryFn: async () => {
+      if (!actor || challengeId === null || messageId === null) throw new Error('Actor, challenge ID, or message ID not available');
+      return actor.getMessage(challengeId, messageId);
+    },
+    enabled: !!actor && !actorFetching && challengeId !== null && messageId !== null,
     retry: false,
   });
 }

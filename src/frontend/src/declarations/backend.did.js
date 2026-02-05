@@ -26,7 +26,27 @@ export const UserRole = IDL.Variant({
 });
 export const Time = IDL.Int;
 export const UserProfile = IDL.Record({ 'name' : IDL.Text });
+export const RSVP = IDL.Record({
+  'name' : IDL.Text,
+  'inviteCode' : IDL.Text,
+  'timestamp' : Time,
+  'attending' : IDL.Bool,
+});
 export const ExternalBlob = IDL.Vec(IDL.Nat8);
+export const InviteCode = IDL.Record({
+  'created' : Time,
+  'code' : IDL.Text,
+  'used' : IDL.Bool,
+});
+export const ChatMessage = IDL.Record({
+  'id' : IDL.Nat,
+  'text' : IDL.Text,
+  'sender' : IDL.Principal,
+  'isEdited' : IDL.Bool,
+  'timestamp' : IDL.Int,
+  'senderName' : IDL.Text,
+  'replyTo' : IDL.Opt(IDL.Nat),
+});
 export const UserChallengeStatus = IDL.Record({
   'hasActiveChallenge' : IDL.Bool,
 });
@@ -63,7 +83,9 @@ export const idlService = IDL.Service({
   'createChallenge' : IDL.Func([Time], [IDL.Nat], []),
   'deleteChallenge' : IDL.Func([IDL.Nat], [], []),
   'deleteRecording' : IDL.Func([IDL.Nat, IDL.Nat, IDL.Text], [], []),
+  'editMessage' : IDL.Func([IDL.Nat, IDL.Nat, IDL.Text], [], []),
   'generateInvitationCode' : IDL.Func([IDL.Nat, IDL.Text], [], []),
+  'generateInviteCode' : IDL.Func([], [IDL.Text], []),
   'getActiveChallengeIdForCreator' : IDL.Func(
       [],
       [IDL.Opt(IDL.Nat)],
@@ -79,6 +101,7 @@ export const idlService = IDL.Service({
       [IDL.Vec(IDL.Tuple(IDL.Principal, IDL.Opt(UserProfile)))],
       ['query'],
     ),
+  'getAllRSVPs' : IDL.Func([], [IDL.Vec(RSVP)], ['query']),
   'getAssignmentRecordings' : IDL.Func(
       [IDL.Nat, IDL.Nat, IDL.Text],
       [IDL.Vec(IDL.Tuple(IDL.Principal, IDL.Opt(ExternalBlob)))],
@@ -102,6 +125,9 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'getChallengeStartTime' : IDL.Func([IDL.Nat], [Time], ['query']),
+  'getInviteCodes' : IDL.Func([], [IDL.Vec(InviteCode)], ['query']),
+  'getMessage' : IDL.Func([IDL.Nat, IDL.Nat], [ChatMessage], ['query']),
+  'getMessages' : IDL.Func([IDL.Nat], [IDL.Vec(ChatMessage)], ['query']),
   'getParticipantRecording' : IDL.Func(
       [IDL.Nat, IDL.Principal, IDL.Nat, IDL.Text],
       [ExternalBlob],
@@ -120,6 +146,11 @@ export const idlService = IDL.Service({
     ),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'leaveChallenge' : IDL.Func([IDL.Nat], [], []),
+  'postMessage' : IDL.Func(
+      [IDL.Nat, IDL.Text, IDL.Opt(IDL.Nat)],
+      [IDL.Nat],
+      [],
+    ),
   'redeemInvitationCode' : IDL.Func([IDL.Nat, IDL.Text], [], []),
   'removeParticipant' : IDL.Func([IDL.Nat, IDL.Principal], [], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
@@ -128,6 +159,7 @@ export const idlService = IDL.Service({
       [],
       [],
     ),
+  'submitRSVP' : IDL.Func([IDL.Text, IDL.Bool, IDL.Text], [], []),
   'updateStartTime' : IDL.Func([IDL.Nat, Time], [], []),
 });
 
@@ -152,7 +184,27 @@ export const idlFactory = ({ IDL }) => {
   });
   const Time = IDL.Int;
   const UserProfile = IDL.Record({ 'name' : IDL.Text });
+  const RSVP = IDL.Record({
+    'name' : IDL.Text,
+    'inviteCode' : IDL.Text,
+    'timestamp' : Time,
+    'attending' : IDL.Bool,
+  });
   const ExternalBlob = IDL.Vec(IDL.Nat8);
+  const InviteCode = IDL.Record({
+    'created' : Time,
+    'code' : IDL.Text,
+    'used' : IDL.Bool,
+  });
+  const ChatMessage = IDL.Record({
+    'id' : IDL.Nat,
+    'text' : IDL.Text,
+    'sender' : IDL.Principal,
+    'isEdited' : IDL.Bool,
+    'timestamp' : IDL.Int,
+    'senderName' : IDL.Text,
+    'replyTo' : IDL.Opt(IDL.Nat),
+  });
   const UserChallengeStatus = IDL.Record({ 'hasActiveChallenge' : IDL.Bool });
   
   return IDL.Service({
@@ -187,7 +239,9 @@ export const idlFactory = ({ IDL }) => {
     'createChallenge' : IDL.Func([Time], [IDL.Nat], []),
     'deleteChallenge' : IDL.Func([IDL.Nat], [], []),
     'deleteRecording' : IDL.Func([IDL.Nat, IDL.Nat, IDL.Text], [], []),
+    'editMessage' : IDL.Func([IDL.Nat, IDL.Nat, IDL.Text], [], []),
     'generateInvitationCode' : IDL.Func([IDL.Nat, IDL.Text], [], []),
+    'generateInviteCode' : IDL.Func([], [IDL.Text], []),
     'getActiveChallengeIdForCreator' : IDL.Func(
         [],
         [IDL.Opt(IDL.Nat)],
@@ -203,6 +257,7 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(IDL.Tuple(IDL.Principal, IDL.Opt(UserProfile)))],
         ['query'],
       ),
+    'getAllRSVPs' : IDL.Func([], [IDL.Vec(RSVP)], ['query']),
     'getAssignmentRecordings' : IDL.Func(
         [IDL.Nat, IDL.Nat, IDL.Text],
         [IDL.Vec(IDL.Tuple(IDL.Principal, IDL.Opt(ExternalBlob)))],
@@ -226,6 +281,9 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'getChallengeStartTime' : IDL.Func([IDL.Nat], [Time], ['query']),
+    'getInviteCodes' : IDL.Func([], [IDL.Vec(InviteCode)], ['query']),
+    'getMessage' : IDL.Func([IDL.Nat, IDL.Nat], [ChatMessage], ['query']),
+    'getMessages' : IDL.Func([IDL.Nat], [IDL.Vec(ChatMessage)], ['query']),
     'getParticipantRecording' : IDL.Func(
         [IDL.Nat, IDL.Principal, IDL.Nat, IDL.Text],
         [ExternalBlob],
@@ -244,6 +302,11 @@ export const idlFactory = ({ IDL }) => {
       ),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'leaveChallenge' : IDL.Func([IDL.Nat], [], []),
+    'postMessage' : IDL.Func(
+        [IDL.Nat, IDL.Text, IDL.Opt(IDL.Nat)],
+        [IDL.Nat],
+        [],
+      ),
     'redeemInvitationCode' : IDL.Func([IDL.Nat, IDL.Text], [], []),
     'removeParticipant' : IDL.Func([IDL.Nat, IDL.Principal], [], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
@@ -252,6 +315,7 @@ export const idlFactory = ({ IDL }) => {
         [],
         [],
       ),
+    'submitRSVP' : IDL.Func([IDL.Text, IDL.Bool, IDL.Text], [], []),
     'updateStartTime' : IDL.Func([IDL.Nat, Time], [], []),
   });
 };

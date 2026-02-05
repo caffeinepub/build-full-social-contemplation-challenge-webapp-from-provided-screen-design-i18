@@ -2,22 +2,30 @@ import MixinStorage "blob-storage/Mixin";
 import Storage "blob-storage/Storage";
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
-import Principal "mo:core/Principal";
-import Map "mo:core/Map";
+import InviteLinksModule "invite-links/invite-links-module";
 import Nat "mo:core/Nat";
 import Set "mo:core/Set";
 import Text "mo:core/Text";
+import Map "mo:core/Map";
+import List "mo:core/List";
 import Runtime "mo:core/Runtime";
 import Time "mo:core/Time";
 import Iter "mo:core/Iter";
+import Principal "mo:core/Principal";
 import Array "mo:core/Array";
-
-
 
 actor {
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
   include MixinStorage();
+
+  let inviteLinksState = InviteLinksModule.initState();
+
+  let challenges = Map.empty<Nat, Challenge>();
+  var nextChallengeId = 0;
+
+  let creatorToChallengeId = Map.empty<Principal, Nat>();
+  let participantToChallengeId = Map.empty<Principal, Nat>();
 
   public type UserProfile = {
     name : Text;
@@ -28,6 +36,16 @@ actor {
     assignment : Text;
   };
 
+  public type ChatMessage = {
+    id : Nat;
+    sender : Principal;
+    senderName : Text;
+    text : Text;
+    timestamp : Int;
+    isEdited : Bool;
+    replyTo : ?Nat;
+  };
+
   public type Challenge = {
     id : Nat;
     creator : Principal;
@@ -36,6 +54,8 @@ actor {
     isActive : Bool;
     invitationCodes : Map.Map<Text, Bool>;
     recordings : Map.Map<Principal, Map.Map<Nat, Map.Map<Text, Storage.ExternalBlob>>>;
+    chatMessages : List.List<ChatMessage>;
+    nextChatId : Nat;
   };
 
   public type UserChallengeStatus = {
@@ -43,77 +63,89 @@ actor {
   };
 
   let userProfiles = Map.empty<Principal, UserProfile>();
-  let challenges = Map.empty<Nat, Challenge>();
-  var nextChallengeId = 0;
 
-  let creatorToChallengeId = Map.empty<Principal, Nat>();
+  let validAssignments = [
+    "awareness",
+    "utopia",
+    "warmup",
+    "repOneOne",
+    "repOneTwo",
+    "repTwoOne",
+    "repTwoTwo",
+    "repThreeOne",
+    "repThreeTwo",
+  ];
+
+  let assignIdLegacyMapping = Map.fromIter(
+    [("awareness", "assignment1"), ("utopia", "assignment2")].values()
+  );
+
+  let maxNameLength = 30;
+  let maxMessageLength = 250;
+  let maxChatMessages = 250;
+  let maxRSVPNameLength = 100;
 
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can access profiles");
-    };
+    validateUserRole(caller);
     userProfiles.get(caller);
   };
 
   public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view profiles");
-    };
+    validateUserRole(caller);
 
-    if (caller == user) {
-      return userProfiles.get(user);
-    };
-
-    if (AccessControl.isAdmin(accessControlState, caller)) {
+    if (caller == user or AccessControl.isAdmin(accessControlState, caller)) {
       return userProfiles.get(user);
     };
 
     let callerIsCreatorOfUserChallenge = challenges.values().any(
-      func(challenge : Challenge) : Bool {
-        challenge.creator == caller and challenge.participants.contains(user)
-      }
+      func(challenge) { challenge.creator == caller and challenge.participants.contains(user) }
     );
 
     if (callerIsCreatorOfUserChallenge) {
-      return userProfiles.get(user);
+      userProfiles.get(user);
+    } else {
+      Runtime.trap("Unauthorized: Can only view your own profile");
     };
-
-    Runtime.trap("Unauthorized: Can only view your own profile");
   };
 
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can save profiles");
+    validateUserRole(caller);
+    if (profile.name.trim(#char ' ').size() == 0) {
+      Runtime.trap("Profile name cannot be empty or whitespace only");
+    };
+    if (profile.name.size() > maxNameLength) {
+      Runtime.trap("Profile name cannot exceed " # maxNameLength.toText() # " characters");
     };
     userProfiles.add(caller, profile);
   };
 
   public query ({ caller }) func getUserChallengeStatus() : async UserChallengeStatus {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can perform this action");
-    };
+    validateUserRole(caller);
+    let hasActiveChallenge = participantToChallengeId.containsKey(caller);
+    { hasActiveChallenge };
+  };
 
-    let hasActiveChallenge = challenges.values().any(func(challenge) { challenge.participants.contains(caller) });
+  public query ({ caller }) func getActiveChallengeIdForCreator() : async ?Nat {
+    validateUserRole(caller);
+    creatorToChallengeId.get(caller);
+  };
 
-    {
-      hasActiveChallenge;
-    };
+  public query ({ caller }) func getActiveChallengeIdForParticipant() : async ?Nat {
+    validateUserRole(caller);
+    participantToChallengeId.get(caller);
   };
 
   public shared ({ caller }) func createChallenge(startTime : Time.Time) : async Nat {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can create challenges");
-    };
+    validateUserRole(caller);
 
-    let userHasActiveChallenge = challenges.values().any(func(challenge) { challenge.participants.contains(caller) });
-
-    if (userHasActiveChallenge) {
+    if (participantToChallengeId.containsKey(caller)) {
       Runtime.trap("User already has an active challenge");
     };
 
     let participants = Set.singleton(caller);
     let invitationCodes = Map.empty<Text, Bool>();
     let recordings = Map.empty<Principal, Map.Map<Nat, Map.Map<Text, Storage.ExternalBlob>>>();
+    let chatMessages = List.empty<ChatMessage>();
 
     let challenge : Challenge = {
       id = nextChallengeId;
@@ -123,49 +155,20 @@ actor {
       isActive = true;
       invitationCodes;
       recordings;
+      chatMessages;
+      nextChatId = 0;
     };
 
     challenges.add(nextChallengeId, challenge);
-
     creatorToChallengeId.add(caller, nextChallengeId);
+    participantToChallengeId.add(caller, nextChallengeId);
 
     nextChallengeId += 1;
-
     challenge.id;
   };
 
-  public query ({ caller }) func getActiveChallengeIdForCreator() : async ?Nat {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can fetch challenge IDs");
-    };
-
-    creatorToChallengeId.get(caller);
-  };
-
-  public query ({ caller }) func getActiveChallengeIdForParticipant() : async ?Nat {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can fetch challenge IDs");
-    };
-
-    var participantChallengeId : ?Nat = null;
-
-    let _ = challenges.values().any(
-      func(challenge) {
-        if (challenge.participants.contains(caller)) {
-          participantChallengeId := ?challenge.id;
-          true;
-        } else {
-          false;
-        };
-      }
-    );
-    participantChallengeId;
-  };
-
   public shared ({ caller }) func generateInvitationCode(challengeId : Nat, code : Text) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can generate invitation codes");
-    };
+    validateUserRole(caller);
 
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
@@ -188,12 +191,8 @@ actor {
   };
 
   public shared ({ caller }) func redeemInvitationCode(challengeId : Nat, code : Text) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can redeem invitation codes");
-    };
-
-    let userHasActiveChallenge = challenges.values().any(func(challenge) { challenge.participants.contains(caller) });
-    if (userHasActiveChallenge) {
+    validateUserRole(caller);
+    if (participantToChallengeId.containsKey(caller)) {
       Runtime.trap("User already has an active challenge");
     };
 
@@ -224,6 +223,7 @@ actor {
             };
 
             challenges.add(challengeId, updatedChallenge);
+            participantToChallengeId.add(caller, challengeId);
           };
         };
       };
@@ -231,10 +231,7 @@ actor {
   };
 
   public shared ({ caller }) func updateStartTime(challengeId : Nat, newStartTime : Time.Time) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can update start time");
-    };
-
+    validateUserRole(caller);
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
       case (?challenge) {
@@ -253,9 +250,7 @@ actor {
   };
 
   public shared ({ caller }) func leaveChallenge(challengeId : Nat) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can leave challenges");
-    };
+    validateUserRole(caller);
 
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
@@ -276,15 +271,18 @@ actor {
           recordings = newRecordings;
         };
         challenges.add(challengeId, updatedChallenge);
+
+        if (caller == challenge.creator) {
+          creatorToChallengeId.remove(caller);
+        };
+
+        participantToChallengeId.remove(caller);
       };
     };
   };
 
   public query ({ caller }) func getChallengeParticipants(challengeId : Nat) : async [Principal] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view participants");
-    };
-
+    validateUserRole(caller);
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
       case (?challenge) {
@@ -298,10 +296,7 @@ actor {
   };
 
   public query ({ caller }) func getAvailableInvitationCodes(challengeId : Nat) : async [Text] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view invitation codes");
-    };
-
+    validateUserRole(caller);
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
       case (?challenge) {
@@ -315,7 +310,7 @@ actor {
               case (?isUsed) { not isUsed };
               case (null) { false };
             };
-          },
+          }
         );
 
         unusedCodes;
@@ -324,9 +319,7 @@ actor {
   };
 
   public query ({ caller }) func getChallengeAudioRecordings(challengeId : Nat) : async [Principal] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view audio recordings");
-    };
+    validateUserRole(caller);
 
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
@@ -342,9 +335,7 @@ actor {
   };
 
   public query ({ caller }) func getAllChallengeParticipantProfiles(challengeId : Nat) : async [(Principal, ?UserProfile)] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can view participants");
-    };
+    validateUserRole(caller);
 
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
@@ -363,9 +354,7 @@ actor {
   };
 
   public shared ({ caller }) func deleteChallenge(challengeId : Nat) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can delete challenges");
-    };
+    validateUserRole(caller);
 
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
@@ -375,16 +364,13 @@ actor {
         };
 
         challenges.remove(challengeId);
-
-        creatorToChallengeId.remove(caller);
+        removeParticipantsFromChallenge(challengeId, challenge);
       };
     };
   };
 
   public shared ({ caller }) func removeParticipant(challengeId : Nat, participant : Principal) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can remove participants");
-    };
+    validateUserRole(caller);
 
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
@@ -409,14 +395,18 @@ actor {
           recordings = newRecordings;
         };
         challenges.add(challengeId, updatedChallenge);
+
+        participantToChallengeId.remove(participant);
       };
     };
   };
 
   public shared ({ caller }) func saveRecording(challengeId : Nat, day : Nat, assignment : Text, recording : Storage.ExternalBlob) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can save recordings");
-    };
+    validateUserRole(caller);
+    let normalizedDay = normalizeDay(day);
+    let normalizedAssignment = normalizeAssignment(assignment);
+    checkDay(normalizedDay);
+    checkAssignment(normalizedAssignment);
 
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
@@ -430,34 +420,40 @@ actor {
           case (null) { Map.empty<Nat, Map.Map<Text, Storage.ExternalBlob>>() };
         };
 
-        let existingDayRecordings = switch (existingUserRecordings.get(day)) {
+        let existingDayRecordings = switch (existingUserRecordings.get(normalizedDay)) {
           case (?dayRecordings) { dayRecordings };
           case (null) { Map.empty<Text, Storage.ExternalBlob>() };
         };
 
-        if (existingDayRecordings.containsKey(assignment)) {
+        if (existingDayRecordings.containsKey(normalizedAssignment)) {
           Runtime.trap("Recording already exists for this assignment. Delete the existing recording before uploading a new one. Users cannot overwrite an existing recording.");
         };
 
         let updatedDayRecordings = existingDayRecordings.clone();
-        updatedDayRecordings.add(assignment, recording);
+        updatedDayRecordings.add(normalizedAssignment, recording);
 
         let updatedUserRecordings = existingUserRecordings.clone();
-        updatedUserRecordings.add(day, updatedDayRecordings);
+        updatedUserRecordings.add(normalizedDay, updatedDayRecordings);
 
         let newRecordings = challenge.recordings.clone();
         newRecordings.add(caller, updatedUserRecordings);
 
-        let updatedChallenge = { challenge with recordings = newRecordings };
+        let updatedChallenge = {
+          challenge with
+          recordings = newRecordings;
+        };
         challenges.add(challengeId, updatedChallenge);
       };
     };
   };
 
   public query ({ caller }) func getRecording(challengeId : Nat, day : Nat, assignment : Text) : async Storage.ExternalBlob {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can get recordings");
-    };
+    let normalizedDay = normalizeDay(day);
+    let normalizedAssignment = normalizeAssignment(assignment);
+    checkDay(normalizedDay);
+    checkAssignment(normalizedAssignment);
+
+    validateUserRole(caller);
 
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
@@ -469,10 +465,10 @@ actor {
         switch (challenge.recordings.get(caller)) {
           case (null) { Runtime.trap("No recordings found for user") };
           case (?userRecordings) {
-            switch (userRecordings.get(day)) {
+            switch (userRecordings.get(normalizedDay)) {
               case (null) { Runtime.trap("No recordings found for day") };
               case (?dayRecordings) {
-                switch (dayRecordings.get(assignment)) {
+                switch (dayRecordings.get(normalizedAssignment)) {
                   case (null) { Runtime.trap("Recording not found for assignment") };
                   case (?recording) { recording };
                 };
@@ -485,9 +481,12 @@ actor {
   };
 
   public shared ({ caller }) func deleteRecording(challengeId : Nat, day : Nat, assignment : Text) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can delete recordings");
-    };
+    let normalizedDay = normalizeDay(day);
+    let normalizedAssignment = normalizeAssignment(assignment);
+    checkDay(normalizedDay);
+    checkAssignment(normalizedAssignment);
+
+    validateUserRole(caller);
 
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
@@ -501,20 +500,20 @@ actor {
           case (null) { Runtime.trap("No recordings found for user") };
         };
 
-        let existingDayRecordings = switch (existingUserRecordings.get(day)) {
+        let existingDayRecordings = switch (existingUserRecordings.get(normalizedDay)) {
           case (?dayRecordings) { dayRecordings };
           case (null) { Runtime.trap("No recordings found for day") };
         };
 
-        if (not existingDayRecordings.containsKey(assignment)) {
+        if (not existingDayRecordings.containsKey(normalizedAssignment)) {
           Runtime.trap("Recording not found for assignment");
         };
 
         let updatedDayRecordings = existingDayRecordings.clone();
-        updatedDayRecordings.remove(assignment);
+        updatedDayRecordings.remove(normalizedAssignment);
 
         let newUserRecordings = existingUserRecordings.clone();
-        newUserRecordings.add(day, updatedDayRecordings);
+        newUserRecordings.add(normalizedDay, updatedDayRecordings);
 
         let newRecordings = challenge.recordings.clone();
         newRecordings.add(caller, newUserRecordings);
@@ -526,15 +525,18 @@ actor {
   };
 
   public query ({ caller }) func getAssignmentRecordings(challengeId : Nat, day : Nat, assignment : Text) : async [(Principal, ?Storage.ExternalBlob)] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only participants can fetch recordings");
-    };
+    let normalizedDay = normalizeDay(day);
+    let normalizedAssignment = normalizeAssignment(assignment);
+    checkDay(normalizedDay);
+    checkAssignment(normalizedAssignment);
+
+    validateUserRole(caller);
 
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
       case (?challenge) {
         if (not challenge.participants.contains(caller)) {
-          Runtime.trap("Unauthorized: Only participants can fetch recordings");
+          Runtime.trap("Only participants can fetch recordings");
         };
 
         challenge.participants.toArray().map(
@@ -542,10 +544,10 @@ actor {
             switch (challenge.recordings.get(participant)) {
               case (null) { (participant, null : ?Storage.ExternalBlob) };
               case (?userRecordings) {
-                switch (userRecordings.get(day)) {
+                switch (userRecordings.get(normalizedDay)) {
                   case (null) { (participant, null : ?Storage.ExternalBlob) };
                   case (?dayRecordings) {
-                    switch (dayRecordings.get(assignment)) {
+                    switch (dayRecordings.get(normalizedAssignment)) {
                       case (null) { (participant, null : ?Storage.ExternalBlob) };
                       case (?recording) { (participant, ?recording) };
                     };
@@ -560,9 +562,12 @@ actor {
   };
 
   public query ({ caller }) func getParticipantRecording(challengeId : Nat, participant : Principal, day : Nat, assignment : Text) : async Storage.ExternalBlob {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can get recordings");
-    };
+    let normalizedDay = normalizeDay(day);
+    let normalizedAssignment = normalizeAssignment(assignment);
+    checkDay(normalizedDay);
+    checkAssignment(normalizedAssignment);
+
+    validateUserRole(caller);
 
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
@@ -574,10 +579,10 @@ actor {
         switch (challenge.recordings.get(participant)) {
           case (null) { Runtime.trap("No recordings found for participant") };
           case (?userRecordings) {
-            switch (userRecordings.get(day)) {
+            switch (userRecordings.get(normalizedDay)) {
               case (null) { Runtime.trap("No recordings found for day") };
               case (?dayRecordings) {
-                switch (dayRecordings.get(assignment)) {
+                switch (dayRecordings.get(normalizedAssignment)) {
                   case (null) { Runtime.trap("Recording not found for assignment") };
                   case (?recording) { recording };
                 };
@@ -590,9 +595,7 @@ actor {
   };
 
   public query ({ caller }) func getChallengeStartTime(challengeId : Nat) : async Time.Time {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can fetch challenge start time");
-    };
+    validateUserRole(caller);
 
     switch (challenges.get(challengeId)) {
       case (null) { Runtime.trap("Challenge not found") };
@@ -602,6 +605,228 @@ actor {
         };
         challenge.startTime;
       };
+    };
+  };
+
+  public query ({ caller }) func getMessage(challengeId : Nat, messageId : Nat) : async ChatMessage {
+    validateUserRole(caller);
+
+    switch (challenges.get(challengeId)) {
+      case (null) { Runtime.trap("Challenge not found") };
+      case (?challenge) {
+        if (not challenge.participants.contains(caller)) {
+          Runtime.trap("Only participants can fetch messages");
+        };
+
+        switch (findMessageById(challenge.chatMessages, messageId)) {
+          case (null) { Runtime.trap("Message not found") };
+          case (?message) { message };
+        };
+      };
+    };
+  };
+
+  func findMessageById(messages : List.List<ChatMessage>, messageId : Nat) : ?ChatMessage {
+    messages.toArray().find(func(message) { message.id == messageId });
+  };
+
+  public shared ({ caller }) func postMessage(challengeId : Nat, text : Text, replyTo : ?Nat) : async Nat {
+    validateUserRole(caller);
+    validateMessageContent(text);
+
+    switch (challenges.get(challengeId)) {
+      case (null) { Runtime.trap("Challenge not found") };
+      case (?challenge) {
+        if (not challenge.participants.contains(caller)) {
+          Runtime.trap("Only participants can post messages");
+        };
+
+        let senderProfile = userProfiles.get(caller);
+        switch (senderProfile) {
+          case (null) {
+            Runtime.trap("Profile required: You must complete your profile before posting messages");
+          };
+          case (?profile) {
+            if (profile.name.trim(#char ' ').size() == 0) {
+              Runtime.trap("Profile required: Your profile name cannot be empty");
+            };
+
+            let newMessage : ChatMessage = {
+              id = challenge.nextChatId;
+              sender = caller;
+              senderName = profile.name;
+              text;
+              timestamp = Time.now();
+              isEdited = false;
+              replyTo;
+            };
+
+            challenge.chatMessages.add(newMessage);
+
+            challenges.add(challengeId, { challenge with nextChatId = challenge.nextChatId + 1 });
+
+            newMessage.id;
+          };
+        };
+      };
+    };
+  };
+
+  public shared ({ caller }) func editMessage(challengeId : Nat, messageId : Nat, newText : Text) : async () {
+    validateUserRole(caller);
+    validateMessageContent(newText);
+
+    switch (challenges.get(challengeId)) {
+      case (null) { Runtime.trap("Challenge not found") };
+      case (?challenge) {
+        if (not challenge.participants.contains(caller)) {
+          Runtime.trap("Only participants can edit messages");
+        };
+
+        switch (findMessageById(challenge.chatMessages, messageId)) {
+          case (null) { Runtime.trap("Message not found") };
+          case (?existingMessage) {
+            if (existingMessage.sender != caller) {
+              Runtime.trap("Unauthorized: Only the author can edit this message");
+            };
+
+            let updatedMessages = challenge.chatMessages.map<ChatMessage, ChatMessage>(
+              func(msg) {
+                if (msg.id == messageId) {
+                  { msg with text = newText; isEdited = true };
+                } else { msg };
+              }
+            );
+
+            challenge.chatMessages.clear();
+            for (msg in updatedMessages.values()) {
+              challenge.chatMessages.add(msg);
+            };
+          };
+        };
+      };
+    };
+  };
+
+  func updateSenderNames(messages : List.List<ChatMessage>, userProfiles : Map.Map<Principal, UserProfile>) : List.List<ChatMessage> {
+    messages.map<ChatMessage, ChatMessage>(
+      func(msg) {
+        let senderName = switch (userProfiles.get(msg.sender)) {
+          case (null) { "" };
+          case (?profile) { profile.name };
+        };
+        { msg with senderName };
+      }
+    );
+  };
+
+  public query ({ caller }) func getMessages(challengeId : Nat) : async [ChatMessage] {
+    validateUserRole(caller);
+
+    switch (challenges.get(challengeId)) {
+      case (null) { Runtime.trap("Challenge not found") };
+      case (?challenge) {
+        if (not challenge.participants.contains(caller)) {
+          Runtime.trap("Only participants can fetch messages");
+        };
+
+        let messagesWithSenderNames = updateSenderNames(challenge.chatMessages, userProfiles);
+        messagesWithSenderNames.toArray();
+      };
+    };
+  };
+
+  public shared ({ caller }) func generateInviteCode() : async Text {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can generate invite codes");
+    };
+    let code = "dummy-invite-code";
+    InviteLinksModule.generateInviteCode(inviteLinksState, code);
+    code;
+  };
+
+  public shared func submitRSVP(name : Text, attending : Bool, inviteCode : Text) : async () {
+    if (name.trim(#char ' ').size() == 0) {
+      Runtime.trap("RSVP name cannot be empty or whitespace only");
+    };
+    if (name.size() > maxRSVPNameLength) {
+      Runtime.trap("RSVP name cannot exceed " # maxRSVPNameLength.toText() # " characters");
+    };
+    if (inviteCode.trim(#char ' ').size() == 0) {
+      Runtime.trap("Invite code cannot be empty");
+    };
+    InviteLinksModule.submitRSVP(inviteLinksState, name, attending, inviteCode);
+  };
+
+  public query ({ caller }) func getAllRSVPs() : async [InviteLinksModule.RSVP] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can view RSVPs");
+    };
+    InviteLinksModule.getAllRSVPs(inviteLinksState);
+  };
+
+  public query ({ caller }) func getInviteCodes() : async [InviteLinksModule.InviteCode] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can view invite codes");
+    };
+    InviteLinksModule.getInviteCodes(inviteLinksState);
+  };
+
+  func validateUserRole(caller : Principal) {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can perform this action");
+    };
+  };
+
+  func checkDay(day : Nat) {
+    if (day > 6) {
+      Runtime.trap("Invalid day: Valid range is 0–6 for 7 day challenge");
+    };
+  };
+
+  func checkAssignment(assignment : Text) {
+    switch (validAssignments.find(func(a) { a == assignment })) {
+      case (null) {
+        Runtime.trap("Invalid assignment: " # assignment);
+      };
+      case (?_) {};
+    };
+  };
+
+  func validateMessageContent(text : Text) {
+    if (text.trim(#char ' ').size() == 0) {
+      Runtime.trap("Message cannot be empty or whitespace only");
+    };
+    if (text.size() > maxMessageLength) {
+      Runtime.trap("Message cannot exceed " # maxMessageLength.toText() # " characters");
+    };
+  };
+
+  func removeParticipantsFromChallenge(challengeId : Nat, challenge : Challenge) {
+    for (participant in challenge.participants.values()) {
+      if (participant == challenge.creator) {
+        if (creatorToChallengeId.get(participant) == ?challengeId) {
+          creatorToChallengeId.remove(participant);
+        };
+      };
+
+      if (participantToChallengeId.get(participant) == ?challengeId) {
+        participantToChallengeId.remove(participant);
+      };
+    };
+  };
+
+  func normalizeDay(day : Nat) : Nat {
+    if (day == 0) { 0 }
+    else if (day == 1) { 1 }
+    else if (day > 1 and day <= 7) { day - 1 }
+    else { Runtime.trap("Invalid day value. Supported range: 0–6 for 7 day challenge.") };
+  };
+
+  func normalizeAssignment(assignment : Text) : Text {
+    switch (assignIdLegacyMapping.get(assignment)) {
+      case (?legacy) { legacy };
+      case (null) { assignment };
     };
   };
 };

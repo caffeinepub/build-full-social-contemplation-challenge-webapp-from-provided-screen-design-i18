@@ -1,65 +1,55 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-04T13:51:14.431Z",
+  "generatedAt": "2026-02-05T00:05:45.007Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
     "total": 3,
-    "implemented": 3,
+    "implemented": 1,
     "items": [
       {
-        "id": "REQ-5",
-        "summary": "Implement a working Manage Challenge screen flow where a challenge is only created/saved via an explicit **Save** action under the start-date section, and invitations are only available after a successful save.",
+        "id": "REQ-1",
+        "summary": "Update the backend recording validation to recognize the frontend assignment IDs (at minimum: \"awareness\" and \"utopia\", plus the other fixed assignments currently used by the frontend) so that recording save/get/delete operations no longer trap with \"Invalid assignment: awareness\".",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-2",
+        "summary": "Fix the day-index mismatch end-to-end so the app can use Day 1–7 in the UI while the backend can safely store/validate against its Day 0–6 model; ensure all recording-related operations (save/get/delete/getParticipantRecording/getAssignmentRecordings) consistently use the same normalized day index.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/screens/Screen4Placeholder.tsx",
+          "frontend/src/utils/recordingDayIndex.ts",
           "frontend/src/hooks/useQueries.ts",
-          "frontend/src/utils/challengeContext.ts"
+          "frontend/src/screens/Screen6InChallenge.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/screens/Screen4Placeholder.tsx"
+          "frontend/src/utils/recordingDayIndex.ts",
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/screens/Screen6InChallenge.tsx"
         ]
       },
       {
-        "id": "REQ-6",
-        "summary": "Fix incorrect 'managed challenge' state when a stale/persisted challengeId exists but no real challenge exists in the backend, so the UI does not get stuck showing Participants with no way to create/save.",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/screens/Screen4Placeholder.tsx",
-          "frontend/src/utils/sanitizeErrorMessage.ts",
-          "frontend/src/hooks/useQueries.ts"
-        ],
-        "matchedFiles": [
-          "frontend/src/screens/Screen4Placeholder.tsx",
-          "frontend/src/utils/sanitizeErrorMessage.ts"
-        ]
-      },
-      {
-        "id": "REQ-7",
-        "summary": "Ensure there is a clear, working 'Create challenge' entry point that opens Manage Challenge in create mode (no challenge created until Save).",
-        "status": "implemented",
-        "plannedFiles": [
-          "frontend/src/screens/Screen3Placeholder.tsx",
-          "frontend/src/App.tsx"
-        ],
-        "matchedFiles": [
-          "frontend/src/screens/Screen3Placeholder.tsx"
-        ]
+        "id": "REQ-3",
+        "summary": "Make the backend tolerant to both legacy and current client inputs by normalizing (a) day values and (b) assignment IDs at the backend boundary before validation/storage, to reduce the risk of future mismatches causing traps.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
       }
     ]
   },
   "changedFiles": [
+    "backend/main.mo",
     "build-request.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/screens/Screen3Placeholder.tsx",
-    "frontend/src/screens/Screen4Placeholder.tsx",
-    "frontend/src/utils/sanitizeErrorMessage.ts",
-    "frontend/src/utils/urlParams.ts",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/screens/Screen6InChallenge.tsx",
+    "frontend/src/utils/recordingDayIndex.ts",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

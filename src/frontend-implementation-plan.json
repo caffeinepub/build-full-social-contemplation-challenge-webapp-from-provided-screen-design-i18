@@ -1,78 +1,32 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Manage Challenge: explicit Save-to-create flow + guard against stale challengeId",
+  "title": "Normalize recording day index at frontend/backend boundary (UI Day 1–7 vs backend Day 0–6)",
   "requirements": [
     {
-      "id": "REQ-5",
-      "summary": "Make Manage Challenge create/update occur only via an explicit Save action and hide Invitations/Participants until save success yields a confirmed challenge ID.",
+      "id": "REQ-2",
+      "summary": "Normalize day indexing for all recording save/get/delete flows so UI remains Day 1–7 while backend calls consistently use a single normalized day index.",
       "acceptanceCriteria": [
-        "On Manage Challenge, the Start Date card contains a primary button labeled exactly \"Save\" (English UI text).",
-        "If the user has no active challenge, clicking \"Save\" creates a new challenge using the selected start date.",
-        "If the user already has a managed challenge and is the creator, clicking \"Save\" updates the challenge start date (respecting the existing Day-1 backend restriction).",
-        "The Invitations section is hidden until the save action succeeds (i.e., until there is a confirmed active challenge ID).",
-        "The Participants section is hidden until a challenge exists (post-save)."
+        "The UI continues to display and allow selecting days 1 through 7.",
+        "Recording upload for Day 1 succeeds (backend receives/stores it under day 0 or otherwise validates without trapping).",
+        "Recording upload for Day 7 succeeds (backend validates without trapping and stores under the correct final-day index).",
+        "Fetching/playing and deleting recordings uses the same day normalization as saving, so a saved recording is retrievable and deletable from the same Day/Assignment selection."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/screens/Screen4Placeholder.tsx",
-          "operation": "modify",
-          "description": "Refactor the Manage Challenge UI into an explicit Save-driven flow: (1) replace the create/update CTAs with a single primary button labeled exactly \"Save\" inside the Start Date card; (2) on Save, create a challenge when none exists, otherwise update the start date when the user is the creator; (3) gate rendering of Invitations and Participants so they remain hidden until Save succeeds and the screen has a confirmed managed challenge ID."
+          "path": "frontend/src/utils/recordingDayIndex.ts",
+          "operation": "create",
+          "description": "Add a small utility that converts UI day selection (1–7) to the backend day model (0–6) deterministically (and optionally supports pass-through when already normalized) for use by all recording-related backend calls."
         },
         {
           "path": "frontend/src/hooks/useQueries.ts",
           "operation": "modify",
-          "description": "Add/adjust query & mutation orchestration needed for the Save flow: ensure the Save action can reliably transition the UI from create-mode to managed-mode by invalidating/refetching active challenge resolution queries after create/update, and provide a way for the screen to distinguish a persisted/tentative challengeId from a backend-confirmed challengeId for gating Invitations/Participants."
+          "description": "Update all recording-related hooks (save/get/delete/getParticipantRecording/getAssignmentRecordings) to normalize the provided day value via frontend/src/utils/recordingDayIndex.ts before calling backend recording capabilities, and to use the normalized day value consistently in React Query keys/invalidation so save/get/delete align."
         },
         {
-          "path": "frontend/src/utils/challengeContext.ts",
+          "path": "frontend/src/screens/Screen6InChallenge.tsx",
           "operation": "modify",
-          "description": "Extend challenge context helpers to support the Save-driven create mode gating (e.g., enabling the UI to treat persisted IDs as tentative until confirmed, and to update/clear persisted state consistently after successful Save)."
-        }
-      ]
-    },
-    {
-      "id": "REQ-6",
-      "summary": "Detect backend 'Challenge not found' errors in Manage Challenge flows and clear stale persisted challenge context so the UI falls back to create mode.",
-      "acceptanceCriteria": [
-        "If any Manage Challenge query/mutation returns a backend error equivalent to \"Challenge not found\" for the currently resolved challengeId, the app clears the persisted active challenge context (sessionStorage) and re-renders Manage Challenge in 'create new challenge' mode.",
-        "In 'create new challenge' mode, the UI shows Start Date + Save, and does not show Invitations or Participants."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/screens/Screen4Placeholder.tsx",
-          "operation": "modify",
-          "description": "Add defensive state recovery in Manage Challenge: when any challenge-scoped query or mutation used by this screen fails with an error equivalent to \"Challenge not found\" for the current challengeId, clear the persisted active challenge ID and re-render the screen in create mode (show Start Date + Save only, hide Invitations/Participants)."
-        },
-        {
-          "path": "frontend/src/utils/sanitizeErrorMessage.ts",
-          "operation": "modify",
-          "description": "Add a stable mapping (or detection helper) for backend errors equivalent to \"Challenge not found\" so the UI can both display an appropriate message and trigger the stale-context recovery behavior consistently."
-        },
-        {
-          "path": "frontend/src/hooks/useQueries.ts",
-          "operation": "modify",
-          "description": "Centralize handling for 'Challenge not found' in Manage-Challenge-related queries/mutations (where applicable) so stale persisted challenge IDs are cleared and relevant queries are invalidated, preventing the UI from getting stuck in a managed state with no real backend challenge."
-        }
-      ]
-    },
-    {
-      "id": "REQ-7",
-      "summary": "Ensure the 'Create challenge' entry point navigates to Manage Challenge in create mode without creating anything until Save is pressed.",
-      "acceptanceCriteria": [
-        "From the 'no active challenge' experience, the user can navigate to Manage Challenge in create mode.",
-        "Navigating to Manage Challenge in create mode does not create a challenge automatically; only the Save button does."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/screens/Screen3Placeholder.tsx",
-          "operation": "modify",
-          "description": "Ensure the 'Create challenge' button always opens Manage Challenge in create mode by clearing any persisted active challenge ID before navigation; confirm no challenge creation is triggered on navigation (creation happens only when the user presses Save in Manage Challenge)."
-        },
-        {
-          "path": "frontend/src/App.tsx",
-          "operation": "modify",
-          "description": "Update screen navigation wiring if needed so that navigating from the no-active-challenge experience to Manage Challenge reliably enters create mode and does not rely on stale/persisted challenge state."
+          "description": "Ensure Screen6 continues to display/select days 1–7, while all recording interactions (upload, fetch/play, delete, participant recording fetches) pass the UI day to the updated hooks so normalization is applied consistently across My and Team tabs."
         }
       ]
     }

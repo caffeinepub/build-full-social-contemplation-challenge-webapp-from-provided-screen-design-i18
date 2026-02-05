@@ -1,44 +1,44 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-04T13:51:14.403Z",
-  "summary": "Diff shows partial implementation toward the requested Manage Challenge save-to-create flow and create-mode entry point: Screen3 adds a navigation handler that clears any persisted activeChallengeId before opening Manage Challenge, and Screen4 introduces a confirmedChallengeId gate for downstream queries plus error utilities for “Challenge not found”. However, key acceptance criteria (explicit \"Save\" button label/placement, and conditional hiding of Invitations/Participants until post-save) are not clearly evidenced in the truncated diff.",
+  "generatedAt": "2026-02-05T00:05:44.981Z",
+  "summary": "Diff shows partial progress toward aligning recording assignment IDs and day indexing: backend/main.mo adds a new validAssignments list including \"awareness\"/\"utopia\" and a legacy mapping, and frontend adds a day-index normalization utility and imports it in useQueries. However, the diff summary does not provide evidence that all recording-related backend entrypoints (save/get/delete/getParticipantRecording/getAssignmentRecordings) consistently normalize both day and assignment IDs at the boundary, so end-to-end consistency and backward tolerance cannot be fully verified from the provided excerpts.",
   "missing_requirements": [
     {
-      "id": "REQ-5",
-      "requirement": "Manage Challenge screen uses an explicit \"Save\" action under the Start Date section to create/update the challenge, and Invitations/Participants are hidden until save succeeds (confirmed active challenge ID).",
-      "reason": "Screen4Placeholder.tsx is truncated; while it introduces confirmedChallengeId and passes it to invitations/participants queries, the diff excerpt does not show the Start Date card UI, a primary button labeled exactly \"Save\", nor the conditional rendering that hides Invitations and Participants until save success.",
+      "id": "REQ-2",
+      "requirement": "Ensure all recording-related operations (save/get/delete/getParticipantRecording/getAssignmentRecordings) consistently use the same normalized day index end-to-end (UI 1–7, backend 0–6).",
+      "reason": "While a frontend normalization helper is added and imported into useQueries, the diff summary does not show actual usage across all recording operations, nor does it show backend-side normalization being applied consistently across all recording methods.",
       "evidence": [
-        "frontend/src/screens/Screen4Placeholder.tsx (truncated)"
+        "frontend/src/utils/recordingDayIndex.ts",
+        "frontend/src/hooks/useQueries.ts (truncated)",
+        "backend/main.mo (truncated)"
       ]
     },
     {
-      "id": "REQ-6",
-      "requirement": "If any Manage Challenge query/mutation returns a backend error equivalent to \"Challenge not found\" for the resolved challengeId, clear persisted active challenge context (sessionStorage) and re-render Manage Challenge in create-new mode (Start Date + Save only; no Invitations/Participants).",
-      "reason": "Although isChallengeNotFoundError and clearPersistedActiveChallengeId are imported in Screen4Placeholder.tsx and a helper is added in sanitizeErrorMessage.ts, the truncated diff does not show any actual error handling path that detects \"Challenge not found\" from queries/mutations and clears sessionStorage + forces create mode UI.",
+      "id": "REQ-3",
+      "requirement": "Backend must accept day input in either 0–6 or 1–7 form and normalize deterministically at the backend boundary before validation/storage for all recording methods.",
+      "reason": "backend/main.mo excerpt shows assignment lists/mapping but does not show any normalizeDay logic or its application to all recording entrypoints; due to truncation, there is insufficient evidence that day normalization is implemented at the backend boundary.",
       "evidence": [
-        "frontend/src/screens/Screen4Placeholder.tsx (truncated)",
-        "frontend/src/utils/sanitizeErrorMessage.ts"
+        "backend/main.mo (truncated)"
       ]
     },
     {
-      "id": "REQ-7",
-      "requirement": "Navigating to Manage Challenge in create mode must not auto-create a challenge; only the Save button creates it.",
-      "reason": "Screen3Placeholder adds a create-challenge navigation handler that clears persisted activeChallengeId before navigating, but the diff does not show how Screen4Placeholder ensures create mode does not auto-create (e.g., no create mutation on mount) because the relevant portions are truncated.",
+      "id": "REQ-3",
+      "requirement": "Backend must normalize assignment IDs at the backend boundary to tolerate legacy/current client inputs before validation/storage (so frontend IDs work without frontend changes).",
+      "reason": "A legacy mapping is introduced, but the diff summary does not show it being applied inside save/get/delete/getParticipantRecording/getAssignmentRecordings prior to validation/storage; due to truncation, this cannot be confirmed.",
       "evidence": [
-        "frontend/src/screens/Screen3Placeholder.tsx (truncated)",
-        "frontend/src/screens/Screen4Placeholder.tsx (truncated)"
+        "backend/main.mo (truncated)"
       ]
     }
   ],
   "hallucinated_features": [],
   "confidence": 0.46,
   "changed_files": [
+    "backend/main.mo",
     "frontend-file-summaries.txt",
-    "frontend/src/screens/Screen3Placeholder.tsx",
-    "frontend/src/screens/Screen4Placeholder.tsx",
-    "frontend/src/utils/sanitizeErrorMessage.ts",
-    "frontend/src/utils/urlParams.ts",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/screens/Screen6InChallenge.tsx",
+    "frontend/src/utils/recordingDayIndex.ts",
     "project_state.json"
   ]
 }

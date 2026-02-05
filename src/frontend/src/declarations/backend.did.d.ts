@@ -10,7 +10,27 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
+export interface ChatMessage {
+  'id' : bigint,
+  'text' : string,
+  'sender' : Principal,
+  'isEdited' : boolean,
+  'timestamp' : bigint,
+  'senderName' : string,
+  'replyTo' : [] | [bigint],
+}
 export type ExternalBlob = Uint8Array;
+export interface InviteCode {
+  'created' : Time,
+  'code' : string,
+  'used' : boolean,
+}
+export interface RSVP {
+  'name' : string,
+  'inviteCode' : string,
+  'timestamp' : Time,
+  'attending' : boolean,
+}
 export type Time = bigint;
 export interface UserChallengeStatus { 'hasActiveChallenge' : boolean }
 export interface UserProfile { 'name' : string }
@@ -49,13 +69,16 @@ export interface _SERVICE {
   'createChallenge' : ActorMethod<[Time], bigint>,
   'deleteChallenge' : ActorMethod<[bigint], undefined>,
   'deleteRecording' : ActorMethod<[bigint, bigint, string], undefined>,
+  'editMessage' : ActorMethod<[bigint, bigint, string], undefined>,
   'generateInvitationCode' : ActorMethod<[bigint, string], undefined>,
+  'generateInviteCode' : ActorMethod<[], string>,
   'getActiveChallengeIdForCreator' : ActorMethod<[], [] | [bigint]>,
   'getActiveChallengeIdForParticipant' : ActorMethod<[], [] | [bigint]>,
   'getAllChallengeParticipantProfiles' : ActorMethod<
     [bigint],
     Array<[Principal, [] | [UserProfile]]>
   >,
+  'getAllRSVPs' : ActorMethod<[], Array<RSVP>>,
   'getAssignmentRecordings' : ActorMethod<
     [bigint, bigint, string],
     Array<[Principal, [] | [ExternalBlob]]>
@@ -66,6 +89,9 @@ export interface _SERVICE {
   'getChallengeAudioRecordings' : ActorMethod<[bigint], Array<Principal>>,
   'getChallengeParticipants' : ActorMethod<[bigint], Array<Principal>>,
   'getChallengeStartTime' : ActorMethod<[bigint], Time>,
+  'getInviteCodes' : ActorMethod<[], Array<InviteCode>>,
+  'getMessage' : ActorMethod<[bigint, bigint], ChatMessage>,
+  'getMessages' : ActorMethod<[bigint], Array<ChatMessage>>,
   'getParticipantRecording' : ActorMethod<
     [bigint, Principal, bigint, string],
     ExternalBlob
@@ -75,6 +101,7 @@ export interface _SERVICE {
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'leaveChallenge' : ActorMethod<[bigint], undefined>,
+  'postMessage' : ActorMethod<[bigint, string, [] | [bigint]], bigint>,
   'redeemInvitationCode' : ActorMethod<[bigint, string], undefined>,
   'removeParticipant' : ActorMethod<[bigint, Principal], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
@@ -82,6 +109,7 @@ export interface _SERVICE {
     [bigint, bigint, string, ExternalBlob],
     undefined
   >,
+  'submitRSVP' : ActorMethod<[string, boolean, string], undefined>,
   'updateStartTime' : ActorMethod<[bigint, Time], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;

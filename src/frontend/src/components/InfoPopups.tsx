@@ -11,7 +11,7 @@ export function InfoPopups() {
       {/* Social Contemplation Dialog */}
       <SharedPopup
         trigger={
-          <Button variant="outline" size="sm" className="flex-1">
+          <Button variant="outline" size="sm" className="flex-1" data-info-social>
             <Info className="w-4 h-4 mr-2" />
             {t('infoPopups.socialContemplation.trigger')}
           </Button>
@@ -41,7 +41,7 @@ export function InfoPopups() {
       {/* About the Challenge Dialog */}
       <SharedPopup
         trigger={
-          <Button variant="outline" size="sm" className="flex-1">
+          <Button variant="outline" size="sm" className="flex-1" data-info-challenge>
             <Info className="w-4 h-4 mr-2" />
             {t('infoPopups.aboutChallenge.trigger')}
           </Button>

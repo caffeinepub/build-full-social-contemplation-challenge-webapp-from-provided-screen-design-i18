@@ -13,7 +13,6 @@ import {
   DialogTrigger,
 } from './ui/dialog';
 import { ScrollArea } from './ui/scroll-area';
-import { useTranslation } from '../i18n/I18nContext';
 
 interface SharedPopupProps {
   trigger: ReactNode;
@@ -25,8 +24,8 @@ interface SharedPopupProps {
 }
 
 /**
- * SharedPopup provides consistent sizing, scroll behavior, close behavior,
- * and RTL-aware layout for all dialogs across the app.
+ * SharedPopup provides consistent sizing, scroll behavior, and close behavior
+ * for all dialogs across the app.
  */
 export function SharedPopup({
   trigger,
@@ -36,17 +35,11 @@ export function SharedPopup({
   open,
   onOpenChange,
 }: SharedPopupProps) {
-  const { direction } = useTranslation();
-  const isRTL = direction === 'rtl';
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent 
-        className="max-w-[90vw] w-full sm:max-w-2xl max-h-[85vh] flex flex-col"
-        dir={direction}
-      >
-        <DialogHeader className={isRTL ? 'text-right' : 'text-left'}>
+      <DialogContent className="max-w-[90vw] w-full sm:max-w-2xl max-h-[85vh] flex flex-col">
+        <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>

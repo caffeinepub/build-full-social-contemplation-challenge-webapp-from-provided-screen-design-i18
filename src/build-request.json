@@ -1,77 +1,70 @@
 {
   "kind": "build_request",
-  "title": "Fix Manage Challenge: add Save-to-create flow and hide invites until saved",
-  "priority": "high",
+  "title": "Fix recording upload failures by aligning assignment IDs and day indexing (frontend 1–7 vs backend 0–6)",
+  "priority": "normal",
   "requirements": [
     {
-      "id": "REQ-5",
-      "text": "Implement a working Manage Challenge screen flow where a challenge is only created/saved via an explicit **Save** action under the start-date section, and invitations are only available after a successful save.",
-      "target": "frontend",
+      "id": "REQ-1",
+      "text": "Update the backend recording validation to recognize the frontend assignment IDs (at minimum: \"awareness\" and \"utopia\", plus the other fixed assignments currently used by the frontend) so that recording save/get/delete operations no longer trap with \"Invalid assignment: awareness\".",
+      "target": "backend",
       "source": {
         "messageIds": [
-          "msg-5",
-          "msg-6",
-          "msg-7"
+          "msg-1"
         ],
         "quotes": [
-          "onder de startdatum instellen, met daaronder het uitnodigen van mensen.",
-          "Uitnodigingscodes zijn na de save, en zijn zelfstandig aan te maken",
-          "Daarom dacht ik aan een 'save' knop, dan wordt er een challenge gemaakt."
+          "bij  assignment-ID awareness bij de oefening awareness, maar kan ook bij andere assignments zoals utopia."
         ]
       },
       "acceptanceCriteria": [
-        "On Manage Challenge, the Start Date card contains a primary button labeled exactly \"Save\" (English UI text).",
-        "If the user has no active challenge, clicking \"Save\" creates a new challenge using the selected start date.",
-        "If the user already has a managed challenge and is the creator, clicking \"Save\" updates the challenge start date (respecting the existing Day-1 backend restriction).",
-        "The Invitations section is hidden until the save action succeeds (i.e., until there is a confirmed active challenge ID).",
-        "The Participants section is hidden until a challenge exists (post-save)."
+        "Backend methods that validate assignment IDs for recordings accept the frontend assignment IDs used in frontend/src/utils/assignments.ts (including \"awareness\" and \"utopia\").",
+        "Uploading a recording for assignmentId \"awareness\" no longer traps with \"Invalid assignment: awareness\"."
       ]
     },
     {
-      "id": "REQ-6",
-      "text": "Fix incorrect 'managed challenge' state when a stale/persisted challengeId exists but no real challenge exists in the backend, so the UI does not get stuck showing Participants with no way to create/save.",
-      "target": "frontend",
+      "id": "REQ-2",
+      "text": "Fix the day-index mismatch end-to-end so the app can use Day 1–7 in the UI while the backend can safely store/validate against its Day 0–6 model; ensure all recording-related operations (save/get/delete/getParticipantRecording/getAssignmentRecordings) consistently use the same normalized day index.",
+      "target": "both",
       "source": {
         "messageIds": [
-          "msg-4",
-          "msg-5"
+          "msg-1"
         ],
         "quotes": [
-          "ik kan geen challenge aanmaken en ik kan geen codes aanmaken. ik zie wel een veld met participants, maar weer geen plek om op te slaan"
+          "neem de  tegelijk de dag‑mismatch (frontend 1–7 vs backend 0–6) mee"
         ]
       },
       "acceptanceCriteria": [
-        "If any Manage Challenge query/mutation returns a backend error equivalent to \"Challenge not found\" for the currently resolved challengeId, the app clears the persisted active challenge context (sessionStorage) and re-renders Manage Challenge in 'create new challenge' mode.",
-        "In 'create new challenge' mode, the UI shows Start Date + Save, and does not show Invitations or Participants."
+        "The UI continues to display and allow selecting days 1 through 7.",
+        "Recording upload for Day 1 succeeds (backend receives/stores it under day 0 or otherwise validates without trapping).",
+        "Recording upload for Day 7 succeeds (backend validates without trapping and stores under the correct final-day index).",
+        "Fetching/playing and deleting recordings uses the same day normalization as saving, so a saved recording is retrievable and deletable from the same Day/Assignment selection."
       ]
     },
     {
-      "id": "REQ-7",
-      "text": "Ensure there is a clear, working 'Create challenge' entry point that opens Manage Challenge in create mode (no challenge created until Save).",
-      "target": "frontend",
+      "id": "REQ-3",
+      "text": "Make the backend tolerant to both legacy and current client inputs by normalizing (a) day values and (b) assignment IDs at the backend boundary before validation/storage, to reduce the risk of future mismatches causing traps.",
+      "target": "backend",
       "source": {
         "messageIds": [
-          "msg-6"
+          "msg-1"
         ],
         "quotes": [
-          "Ik mis ook een knop create challenge. Althans, die knop brengt mij naar dit menu, maar uiteindelijk kan ik het in het menu niet aanmaken, alleen instellen."
+          "bij  assignment-ID awareness bij de oefening awareness, maar kan ook bij andere assignments zoals utopia.",
+          "neem de  tegelijk de dag‑mismatch (frontend 1–7 vs backend 0–6) mee"
         ]
       },
       "acceptanceCriteria": [
-        "From the 'no active challenge' experience, the user can navigate to Manage Challenge in create mode.",
-        "Navigating to Manage Challenge in create mode does not create a challenge automatically; only the Save button does."
+        "Backend recording methods accept day input in either 0–6 or 1–7 form and handle it deterministically (normalize to a single internal representation).",
+        "Backend assignment validation accepts the current frontend IDs without requiring frontend changes to assignment identifiers."
       ]
     }
   ],
   "constraints": [
-    "Do not modify files in frontend/src/components/ui (shadcn components must be composed, not edited).",
-    "Do not edit any frontend paths listed in SYSTEM_CONTEXT.frontend.immutablePaths.",
-    "Respect the single-actor backend architecture (all Motoko logic remains in backend/main.mo)."
+    "Backend must remain a single-actor Motoko architecture with all logic in backend/main.mo.",
+    "Do not edit any frontend files under frontend/src/components/ui or any path listed in frontend.immutablePaths."
   ],
   "nonGoals": [
-    "Do not change the invitation model from single-use invitation URLs (no new 'raw code only' sharing flow).",
-    "Do not add new authentication providers (Internet Identity only).",
-    "Do not redesign the in-challenge (Screen 6) recording experience as part of this request."
+    "Do not introduce new assignments or change assignment content beyond fixing ID compatibility.",
+    "Do not redesign the UI/UX; only adjust logic needed to resolve assignment/day mismatches for recordings."
   ],
   "imageRequirements": {
     "required": [],

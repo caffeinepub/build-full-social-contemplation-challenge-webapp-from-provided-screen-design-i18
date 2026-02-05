@@ -2,10 +2,12 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-implement-a-working-manage-challenge-screen-flow-where-a-challenge-is-only-created-saved-via-an-explicit-save-action-under-the-start-date-section-and-invitations-are-only-available-after-a-successful-save",
-      "featureTitle": "Implement a working Manage Challenge screen flow where a challenge is only created/saved via an explicit **Save** action under the start-date section, and invitations are only available after a successful save.",
+      "featureId": "feature-fix-the-day-index-mismatch-end-to-end-so-the-app-can-use-day-1-7-in-the-ui-while-the-backend-can-safely-store-validate-against-its-day-0-6-model-ensure-all-recording-related-operations-save-get-delete-getparticipantrecording-getassignmentrecordings-consistently-use-the-same-normalized-day-index",
+      "featureTitle": "Fix the day-index mismatch end-to-end so the app can use Day 1–7 in the UI while the backend can safely store/validate against its Day 0–6 model; ensure all recording-related operations (save/get/delete/getParticipantRecording/getAssignmentRecordings) consistently use the same normalized day index.",
       "files": [
-        "frontend/src/screens/Screen4Placeholder.tsx"
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/screens/Screen6InChallenge.tsx",
+        "frontend/src/utils/recordingDayIndex.ts"
       ],
       "components": [
         "authorization@4.0.0",
@@ -18,50 +20,7 @@
         "invite-links@3.0.0"
       ],
       "testIds": [
-        "REQ-5"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-fix-incorrect-managed-challenge-state-when-a-stale-persisted-challengeid-exists-but-no-real-challenge-exists-in-the-backend-so-the-ui-does-not-get-stuck-showing-participants-with-no-way-to-create-save",
-      "featureTitle": "Fix incorrect 'managed challenge' state when a stale/persisted challengeId exists but no real challenge exists in the backend, so the UI does not get stuck showing Participants with no way to create/save.",
-      "files": [
-        "frontend/src/screens/Screen4Placeholder.tsx",
-        "frontend/src/utils/sanitizeErrorMessage.ts"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0",
-        "blob-storage@4.0.0",
-        "invite-links@3.0.0"
-      ],
-      "testIds": [
-        "REQ-6"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-ensure-there-is-a-clear-working-create-challenge-entry-point-that-opens-manage-challenge-in-create-mode-no-challenge-created-until-save",
-      "featureTitle": "Ensure there is a clear, working 'Create challenge' entry point that opens Manage Challenge in create mode (no challenge created until Save).",
-      "files": [
-        "frontend/src/screens/Screen3Placeholder.tsx"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0",
-        "blob-storage@4.0.0",
-        "invite-links@3.0.0"
-      ],
-      "testIds": [
-        "REQ-7"
+        "REQ-2"
       ],
       "confidence": "high"
     }

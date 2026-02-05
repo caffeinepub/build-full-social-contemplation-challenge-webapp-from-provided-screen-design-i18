@@ -1,13 +1,8 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { translations, type LanguageCode, type TranslationKey, getLanguageDirection, isValidLanguageCode } from './translations';
-
-const STORAGE_KEY = 'app-language';
+import { createContext, useContext, useEffect, type ReactNode } from 'react';
+import { translations } from './translations';
 
 interface I18nContextType {
-  language: LanguageCode;
-  setLanguage: (lang: LanguageCode) => void;
   t: (key: string) => string;
-  direction: 'ltr' | 'rtl';
 }
 
 const I18nContext = createContext<I18nContextType | undefined>(undefined);
@@ -27,56 +22,19 @@ function getNestedValue(obj: any, path: string): string {
   return typeof result === 'string' ? result : path;
 }
 
-function getStoredLanguage(): LanguageCode {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored && isValidLanguageCode(stored)) {
-      return stored;
-    }
-  } catch {
-    // Ignore localStorage errors
-  }
-  return 'en';
-}
-
-function setStoredLanguage(lang: LanguageCode): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, lang);
-  } catch (error) {
-    console.error('Failed to store language preference:', error);
-  }
-}
-
-/**
- * Updates the document direction and language attributes.
- */
-function updateDocumentDirection(lang: LanguageCode): void {
-  const direction = getLanguageDirection(lang);
-  document.documentElement.dir = direction;
-  document.documentElement.lang = lang;
-}
-
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<LanguageCode>(getStoredLanguage());
-  const direction = getLanguageDirection(language);
-
-  // Set initial document direction on mount
+  // Set document to English/LTR on mount
   useEffect(() => {
-    updateDocumentDirection(language);
-  }, [language]);
-
-  const setLanguage = (lang: LanguageCode) => {
-    setLanguageState(lang);
-    setStoredLanguage(lang);
-    updateDocumentDirection(lang);
-  };
+    document.documentElement.lang = 'en';
+    document.documentElement.dir = 'ltr';
+  }, []);
 
   const t = (key: string): string => {
-    return getNestedValue(translations[language], key);
+    return getNestedValue(translations.en, key);
   };
 
   return (
-    <I18nContext.Provider value={{ language, setLanguage, t, direction }}>
+    <I18nContext.Provider value={{ t }}>
       {children}
     </I18nContext.Provider>
   );

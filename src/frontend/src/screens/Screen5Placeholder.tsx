@@ -8,13 +8,12 @@ interface Screen5PlaceholderProps {
 }
 
 export function Screen5Placeholder({ onNavigateToEdit }: Screen5PlaceholderProps) {
-  const { t, direction } = useTranslation();
-  const isRTL = direction === 'rtl';
+  const { t } = useTranslation();
 
   return (
     <div className="p-6 space-y-4">
       <div className="text-center space-y-2">
-        <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold flex-1">{t('screen5.title')}</h1>
           {onNavigateToEdit && (
             <Button
@@ -23,7 +22,7 @@ export function Screen5Placeholder({ onNavigateToEdit }: Screen5PlaceholderProps
               size="sm"
               className="flex-shrink-0"
             >
-              <Settings className={`w-4 h-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
+              <Settings className="w-4 h-4 mr-2" />
               {t('screen5.edit')}
             </Button>
           )}

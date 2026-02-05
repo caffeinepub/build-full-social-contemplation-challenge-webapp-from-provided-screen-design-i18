@@ -6,28 +6,31 @@ import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../components/ui/alert-dialog';
 import { ArrowLeft, Calendar, Plus, Check, Loader2, Users, RefreshCw, X, Link as LinkIcon, Trash2, UserX } from 'lucide-react';
+import { ThemeToggle } from '../components/ThemeToggle';
+import { AuthIconButton } from '../components/AuthIconButton';
 import { 
   useCreateChallenge, 
-  useResolvedActiveChallengeId,
+  useGetUnifiedChallengeId,
   useGenerateInvitationCode,
   useGetAvailableInvitationCodes,
   useGetChallengeParticipants,
-  useGetParticipantProfiles,
   useLeaveChallenge,
   useDeleteChallenge,
   useRemoveParticipant,
   useGetAllChallengeParticipantProfiles,
   useGetActiveChallengeIdForCreator,
   useGetChallengeStartTime,
-  useUpdateStartTime
+  useUpdateStartTime,
+  QUERY_KEYS
 } from '../hooks/useQueries';
 import { generateInvitationCode } from '../utils/invitationCodes';
 import { buildInvitationLink } from '../utils/invitationLinks';
 import { useAuthPrincipal } from '../hooks/useAuthPrincipal';
 import { Principal } from '@icp-sdk/core/principal';
 import { sanitizeErrorMessage, isChallengeNotFoundError } from '../utils/sanitizeErrorMessage';
-import { clearPersistedActiveChallengeId } from '../utils/challengeContext';
 import { useQueryClient } from '@tanstack/react-query';
+import { resetChallengeState } from '../utils/challengeRecovery';
+import { setChallengeDeletedNotice } from '../utils/challengeDeletedNotice';
 
 interface Screen4PlaceholderProps {
   onNavigateBack?: () => void;
@@ -36,8 +39,7 @@ interface Screen4PlaceholderProps {
 }
 
 export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuccess }: Screen4PlaceholderProps) {
-  const { t, direction } = useTranslation();
-  const isRTL = direction === 'rtl';
+  const { t } = useTranslation();
   const { identity } = useAuthPrincipal();
   const queryClient = useQueryClient();
 
@@ -49,7 +51,7 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
   // Queries and mutations
   const createChallengeMutation = useCreateChallenge();
   const creatorChallengeQuery = useGetActiveChallengeIdForCreator();
-  const managedChallengeId = useResolvedActiveChallengeId();
+  const { challengeId: managedChallengeId } = useGetUnifiedChallengeId();
   const generateCodeMutation = useGenerateInvitationCode();
   const leaveMutation = useLeaveChallenge();
   const deleteMutation = useDeleteChallenge();
@@ -58,7 +60,6 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
 
   const invitationCodesQuery = useGetAvailableInvitationCodes(confirmedChallengeId);
   const participantsQuery = useGetChallengeParticipants(confirmedChallengeId);
-  const participantProfilesQuery = useGetParticipantProfiles(participantsQuery.data);
   const allParticipantProfilesQuery = useGetAllChallengeParticipantProfiles(confirmedChallengeId);
   const startTimeQuery = useGetChallengeStartTime(confirmedChallengeId);
 
@@ -94,7 +95,7 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
     }
   }, [isChallengeManaged, managedChallengeId, confirmedChallengeId]);
 
-  // Detect "Challenge not found" errors and clear stale state
+  // Detect "Challenge not found" errors and trigger recovery
   useEffect(() => {
     const errors = [
       invitationCodesQuery.error,
@@ -105,12 +106,13 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
 
     for (const error of errors) {
       if (error && isChallengeNotFoundError(error)) {
-        console.warn('Challenge not found - clearing stale context');
-        clearPersistedActiveChallengeId();
+        console.warn('Challenge not found - triggering recovery');
+        resetChallengeState(queryClient);
+        setChallengeDeletedNotice();
         setConfirmedChallengeId(null);
-        queryClient.invalidateQueries({ queryKey: ['activeChallengeIdCreator'] });
-        queryClient.invalidateQueries({ queryKey: ['activeChallengeIdParticipant'] });
-        queryClient.invalidateQueries({ queryKey: ['userChallengeStatus'] });
+        if (onNavigateBack) {
+          onNavigateBack();
+        }
         break;
       }
     }
@@ -120,6 +122,7 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
     allParticipantProfilesQuery.error,
     startTimeQuery.error,
     queryClient,
+    onNavigateBack,
   ]);
 
   const handleSave = async () => {
@@ -144,11 +147,12 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
     } catch (error: any) {
       console.error('Failed to save challenge:', error);
       if (isChallengeNotFoundError(error)) {
-        clearPersistedActiveChallengeId();
+        resetChallengeState(queryClient);
+        setChallengeDeletedNotice();
         setConfirmedChallengeId(null);
-        queryClient.invalidateQueries({ queryKey: ['activeChallengeIdCreator'] });
-        queryClient.invalidateQueries({ queryKey: ['activeChallengeIdParticipant'] });
-        queryClient.invalidateQueries({ queryKey: ['userChallengeStatus'] });
+        if (onNavigateBack) {
+          onNavigateBack();
+        }
       }
     }
   };
@@ -162,11 +166,12 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
     } catch (error: any) {
       console.error('Failed to generate invitation code:', error);
       if (isChallengeNotFoundError(error)) {
-        clearPersistedActiveChallengeId();
+        resetChallengeState(queryClient);
+        setChallengeDeletedNotice();
         setConfirmedChallengeId(null);
-        queryClient.invalidateQueries({ queryKey: ['activeChallengeIdCreator'] });
-        queryClient.invalidateQueries({ queryKey: ['activeChallengeIdParticipant'] });
-        queryClient.invalidateQueries({ queryKey: ['userChallengeStatus'] });
+        if (onNavigateBack) {
+          onNavigateBack();
+        }
       }
     }
   };
@@ -189,6 +194,7 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
 
     try {
       await leaveMutation.mutateAsync(confirmedChallengeId);
+      resetChallengeState(queryClient);
       setConfirmedChallengeId(null);
       if (onLeaveSuccess) {
         onLeaveSuccess();
@@ -196,11 +202,12 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
     } catch (error: any) {
       console.error('Failed to leave challenge:', error);
       if (isChallengeNotFoundError(error)) {
-        clearPersistedActiveChallengeId();
+        resetChallengeState(queryClient);
+        setChallengeDeletedNotice();
         setConfirmedChallengeId(null);
-        queryClient.invalidateQueries({ queryKey: ['activeChallengeIdCreator'] });
-        queryClient.invalidateQueries({ queryKey: ['activeChallengeIdParticipant'] });
-        queryClient.invalidateQueries({ queryKey: ['userChallengeStatus'] });
+        if (onNavigateBack) {
+          onNavigateBack();
+        }
       }
     }
   };
@@ -210,19 +217,17 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
 
     try {
       await deleteMutation.mutateAsync(confirmedChallengeId);
+      // Use comprehensive reset utility
+      resetChallengeState(queryClient);
       setConfirmedChallengeId(null);
+      // Navigate back to menu
       if (onDeleteSuccess) {
         onDeleteSuccess();
       }
     } catch (error: any) {
       console.error('Failed to delete challenge:', error);
-      if (isChallengeNotFoundError(error)) {
-        clearPersistedActiveChallengeId();
-        setConfirmedChallengeId(null);
-        queryClient.invalidateQueries({ queryKey: ['activeChallengeIdCreator'] });
-        queryClient.invalidateQueries({ queryKey: ['activeChallengeIdParticipant'] });
-        queryClient.invalidateQueries({ queryKey: ['userChallengeStatus'] });
-      }
+      // On error, stay on the screen and show the error
+      // The error will be displayed in the UI via deleteMutation.isError
     }
   };
 
@@ -235,23 +240,22 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
     } catch (error: any) {
       console.error('Failed to remove participant:', error);
       if (isChallengeNotFoundError(error)) {
-        clearPersistedActiveChallengeId();
+        resetChallengeState(queryClient);
+        setChallengeDeletedNotice();
         setConfirmedChallengeId(null);
-        queryClient.invalidateQueries({ queryKey: ['activeChallengeIdCreator'] });
-        queryClient.invalidateQueries({ queryKey: ['activeChallengeIdParticipant'] });
-        queryClient.invalidateQueries({ queryKey: ['userChallengeStatus'] });
+        if (onNavigateBack) {
+          onNavigateBack();
+        }
       }
     }
   };
 
   const handleRefreshParticipants = () => {
     participantsQuery.refetch();
-    participantProfilesQuery.refetch();
     allParticipantProfilesQuery.refetch();
   };
 
   const invitationCodes = invitationCodesQuery.data || [];
-  const participantProfiles = participantProfilesQuery.data || [];
   const allParticipantProfiles = allParticipantProfilesQuery.data || [];
   const isSaving = createChallengeMutation.isPending || updateStartTimeMutation.isPending;
   const isGenerating = generateCodeMutation.isPending;
@@ -260,8 +264,8 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
 
   // Determine if queries are actually loading (not just disabled)
   const isCodesLoading = invitationCodesQuery.isLoading && invitationCodesQuery.fetchStatus === 'fetching';
-  const isParticipantsLoading = (participantsQuery.isLoading || participantProfilesQuery.isLoading) && 
-                                 (participantsQuery.fetchStatus === 'fetching' || participantProfilesQuery.fetchStatus === 'fetching');
+  const isParticipantsLoading = (participantsQuery.isLoading || allParticipantProfilesQuery.isLoading) && 
+                                 (participantsQuery.fetchStatus === 'fetching' || allParticipantProfilesQuery.fetchStatus === 'fetching');
 
   // Show Invitations and Participants only after Save succeeds and we have a confirmed challenge ID
   const showInvitationsAndParticipants = confirmedChallengeId !== null;
@@ -270,7 +274,7 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
     <div className="flex flex-col min-h-[600px]">
       {/* Header Section */}
       <div className="bg-gradient-to-b from-primary/5 to-transparent px-6 pt-12 pb-8">
-        <div className={`flex items-center gap-3 mb-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className="flex items-center gap-3 mb-4">
           {onNavigateBack && (
             <Button
               variant="ghost"
@@ -281,15 +285,17 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
               {showInvitationsAndParticipants ? (
                 <X className="w-5 h-5" />
               ) : (
-                <ArrowLeft className={`w-5 h-5 ${isRTL ? 'rotate-180' : ''}`} />
+                <ArrowLeft className="w-5 h-5" />
               )}
             </Button>
           )}
-          <h1 className={`text-2xl font-bold tracking-tight ${isRTL ? 'text-right' : 'text-left'} flex-1`}>
+          <h1 className="text-2xl font-bold tracking-tight flex-1">
             {showInvitationsAndParticipants ? t('screen4.management.title') : t('screen4.title')}
           </h1>
+          <ThemeToggle />
+          <AuthIconButton />
         </div>
-        <p className={`text-sm text-muted-foreground ${isRTL ? 'text-right' : 'text-center'}`}>
+        <p className="text-sm text-muted-foreground text-center">
           {showInvitationsAndParticipants ? t('screen4.management.subtitle') : t('screen4.subtitle')}
         </p>
       </div>
@@ -300,15 +306,15 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
           {/* Start Date Section - Always visible */}
           <Card>
             <CardHeader>
-              <CardTitle className={isRTL ? 'text-right' : ''}>{t('screen4.form.title')}</CardTitle>
-              <CardDescription className={isRTL ? 'text-right' : ''}>
+              <CardTitle>{t('screen4.form.title')}</CardTitle>
+              <CardDescription>
                 {showInvitationsAndParticipants ? 'Update the challenge start date' : t('screen4.form.description')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Date Input */}
               <div className="space-y-2">
-                <Label htmlFor="start-date" className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse justify-end' : ''}`}>
+                <Label htmlFor="start-date" className="flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
                   {t('screen4.form.startDate')}
                 </Label>
@@ -317,19 +323,18 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className={isRTL ? 'text-right' : ''}
                   disabled={showInvitationsAndParticipants && !isCreator}
                 />
               </div>
 
               {/* Help Text */}
-              <p className={`text-xs text-muted-foreground ${isRTL ? 'text-right' : ''}`}>
+              <p className="text-xs text-muted-foreground">
                 {t('screen4.form.helpText')}
               </p>
 
               {/* Error Message */}
               {(createChallengeMutation.isError || updateStartTimeMutation.isError) && (
-                <div className={`p-3 rounded-md bg-destructive/10 text-destructive text-sm ${isRTL ? 'text-right' : ''}`}>
+                <div className="p-3 rounded-md bg-destructive/10 text-destructive text-sm">
                   {sanitizeErrorMessage(createChallengeMutation.error || updateStartTimeMutation.error)}
                 </div>
               )}
@@ -343,7 +348,7 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
                 >
                   {isSaving ? (
                     <>
-                      <Loader2 className={`w-4 h-4 animate-spin ${isRTL ? 'ml-2' : 'mr-2'}`} />
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
                       {showInvitationsAndParticipants ? 'Updating...' : 'Saving...'}
                     </>
                   ) : (
@@ -358,10 +363,10 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
           {showInvitationsAndParticipants && isCreator && (
             <Card>
               <CardHeader>
-                <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className={isRTL ? 'text-right' : ''}>{t('screen4.codes.title')}</CardTitle>
-                    <CardDescription className={isRTL ? 'text-right' : ''}>
+                    <CardTitle>{t('screen4.codes.title')}</CardTitle>
+                    <CardDescription>
                       Share these links to invite participants
                     </CardDescription>
                   </div>
@@ -375,7 +380,7 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
                       <>
-                        <Plus className={`w-4 h-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
+                        <Plus className="w-4 h-4 mr-2" />
                         {t('screen4.codes.generate')}
                       </>
                     )}
@@ -385,7 +390,7 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
               <CardContent>
                 {/* Error Message */}
                 {generateCodeMutation.isError && (
-                  <div className={`mb-4 p-3 rounded-md bg-destructive/10 text-destructive text-sm ${isRTL ? 'text-right' : ''}`}>
+                  <div className="mb-4 p-3 rounded-md bg-destructive/10 text-destructive text-sm">
                     {sanitizeErrorMessage(generateCodeMutation.error)}
                   </div>
                 )}
@@ -396,7 +401,7 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
                     <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                   </div>
                 ) : invitationCodes.length === 0 ? (
-                  <p className={`text-sm text-muted-foreground text-center py-8 ${isRTL ? 'text-right' : ''}`}>
+                  <p className="text-sm text-muted-foreground text-center py-8">
                     {t('screen4.codes.empty')}
                   </p>
                 ) : (
@@ -406,7 +411,7 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
                       return (
                         <div
                           key={code}
-                          className={`flex items-center justify-between gap-2 p-3 rounded-md bg-muted/50 ${isRTL ? 'flex-row-reverse' : ''}`}
+                          className="flex items-center justify-between gap-2 p-3 rounded-md bg-muted/50"
                         >
                           <div className="flex-1 min-w-0">
                             <p className="text-xs text-muted-foreground truncate font-mono">
@@ -421,12 +426,12 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
                           >
                             {copiedItem === `link-${code}` ? (
                               <>
-                                <Check className={`w-4 h-4 text-primary ${isRTL ? 'ml-2' : 'mr-2'}`} />
+                                <Check className="w-4 h-4 text-primary mr-2" />
                                 {t('screen4.codes.linkCopied')}
                               </>
                             ) : (
                               <>
-                                <LinkIcon className={`w-4 h-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
+                                <LinkIcon className="w-4 h-4 mr-2" />
                                 {t('screen4.codes.copyLink')}
                               </>
                             )}
@@ -444,13 +449,13 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
           {showInvitationsAndParticipants && (
             <Card>
               <CardHeader>
-                <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                    <CardTitle className="flex items-center gap-2">
                       <Users className="w-5 h-5" />
                       {t('screen4.participants.title')}
                     </CardTitle>
-                    <CardDescription className={isRTL ? 'text-right' : ''}>
+                    <CardDescription>
                       {t('screen4.participants.description')}
                     </CardDescription>
                   </div>
@@ -470,148 +475,92 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                   </div>
-                ) : (isCreator ? allParticipantProfiles : participantProfiles).length === 0 ? (
-                  <p className={`text-sm text-muted-foreground text-center py-8 ${isRTL ? 'text-right' : ''}`}>
+                ) : allParticipantProfiles.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">
                     {t('screen4.participants.empty')}
                   </p>
                 ) : (
                   <div className="space-y-2">
-                    {isCreator ? (
-                      // Creator view: show all profiles with remove option
-                      allParticipantProfiles.map(([principal, profile]) => {
-                        const isCurrentUser = identity?.getPrincipal().toString() === principal.toString();
-                        return (
-                          <div
-                            key={principal.toString()}
-                            className={`flex items-center justify-between p-3 rounded-md bg-muted/30 ${isRTL ? 'flex-row-reverse' : ''}`}
-                          >
-                            <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                                <span className="text-sm font-semibold text-primary">
-                                  {profile?.name?.charAt(0).toUpperCase() || '?'}
-                                </span>
-                              </div>
-                              <span className="text-sm font-medium">
-                                {profile?.name || t('screen4.participants.unknownUser')}
-                                {isCurrentUser && ` (${t('screen4.participants.you')})`}
+                    {allParticipantProfiles.map(([principal, profile]) => {
+                      const isCurrentUser = identity?.getPrincipal().toString() === principal.toString();
+                      return (
+                        <div
+                          key={principal.toString()}
+                          className="flex items-center justify-between p-3 rounded-md bg-muted/30"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                              <span className="text-sm font-semibold text-primary">
+                                {profile?.name?.trim() ? profile.name.charAt(0).toUpperCase() : '?'}
                               </span>
                             </div>
-                            {isCurrentUser ? (
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-destructive hover:text-destructive"
-                                  >
-                                    <UserX className="w-4 h-4" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>{t('screen4.leave.title')}</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      {t('screen4.leave.description')}
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>{t('screen4.leave.cancel')}</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={handleLeaveChallenge}
-                                      className="bg-destructive hover:bg-destructive/90"
-                                    >
-                                      {t('screen4.leave.confirm')}
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            ) : (
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-destructive hover:text-destructive"
-                                  >
-                                    <UserX className="w-4 h-4" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>{t('screen4.remove.title')}</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      {t('screen4.remove.description')}
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>{t('screen4.remove.cancel')}</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() => handleRemoveParticipant(principal.toString())}
-                                      className="bg-destructive hover:bg-destructive/90"
-                                    >
-                                      {t('screen4.remove.confirm')}
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            )}
+                            <span className="text-sm font-medium">
+                              {profile?.name?.trim() || 'Unknown User'}
+                              {isCurrentUser && ` (${t('screen4.participants.you')})`}
+                            </span>
                           </div>
-                        );
-                      })
-                    ) : (
-                      // Non-creator view: show basic participant list with leave option for current user
-                      participantProfiles.map((profile) => {
-                        const isCurrentUser = identity?.getPrincipal().toString() === profile.principal;
-                        return (
-                          <div
-                            key={profile.principal}
-                            className={`flex items-center justify-between p-3 rounded-md bg-muted/30 ${isRTL ? 'flex-row-reverse' : ''}`}
-                          >
-                            <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                                <span className="text-sm font-semibold text-primary">
-                                  {profile.name.charAt(0).toUpperCase()}
-                                </span>
-                              </div>
-                              <span className="text-sm font-medium">
-                                {profile.name}
-                                {isCurrentUser && ` (${t('screen4.participants.you')})`}
-                              </span>
-                            </div>
-                            {isCurrentUser && (
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-destructive hover:text-destructive"
+                          {isCurrentUser ? (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-destructive hover:text-destructive"
+                                >
+                                  <UserX className="w-4 h-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>{t('screen4.leave.title')}</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    {t('screen4.leave.description')}
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>{t('screen4.leave.cancel')}</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={handleLeaveChallenge}
+                                    className="bg-destructive hover:bg-destructive/90"
                                   >
-                                    <UserX className="w-4 h-4" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>{t('screen4.leave.title')}</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      {t('screen4.leave.description')}
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>{t('screen4.leave.cancel')}</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={handleLeaveChallenge}
-                                      className="bg-destructive hover:bg-destructive/90"
-                                    >
-                                      {t('screen4.leave.confirm')}
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            )}
-                          </div>
-                        );
-                      })
-                    )}
+                                    {t('screen4.leave.confirm')}
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          ) : isCreator ? (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-destructive hover:text-destructive"
+                                >
+                                  <UserX className="w-4 h-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>{t('screen4.remove.title')}</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    {t('screen4.remove.description')}
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>{t('screen4.remove.cancel')}</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleRemoveParticipant(principal.toString())}
+                                    className="bg-destructive hover:bg-destructive/90"
+                                  >
+                                    {t('screen4.remove.confirm')}
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          ) : null}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
@@ -622,16 +571,16 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
           {showInvitationsAndParticipants && isCreator && (
             <Card className="border-destructive/20">
               <CardHeader>
-                <CardTitle className={`text-destructive ${isRTL ? 'text-right' : ''}`}>
+                <CardTitle className="text-destructive">
                   {t('screen4.delete.title')}
                 </CardTitle>
-                <CardDescription className={isRTL ? 'text-right' : ''}>
+                <CardDescription>
                   {t('screen4.delete.description')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {deleteMutation.isError && (
-                  <div className={`mb-4 p-3 rounded-md bg-destructive/10 text-destructive text-sm ${isRTL ? 'text-right' : ''}`}>
+                  <div className="mb-4 p-3 rounded-md bg-destructive/10 text-destructive text-sm">
                     {sanitizeErrorMessage(deleteMutation.error)}
                   </div>
                 )}
@@ -644,12 +593,12 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
                     >
                       {isDeleting ? (
                         <>
-                          <Loader2 className={`w-4 h-4 animate-spin ${isRTL ? 'ml-2' : 'mr-2'}`} />
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
                           {t('screen4.delete.deleting')}
                         </>
                       ) : (
                         <>
-                          <Trash2 className={`w-4 h-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
+                          <Trash2 className="w-4 h-4 mr-2" />
                           {t('screen4.delete.button')}
                         </>
                       )}
@@ -680,7 +629,7 @@ export function Screen4Placeholder({ onNavigateBack, onLeaveSuccess, onDeleteSuc
       </div>
 
       {/* Footer */}
-      <div className={`px-6 pb-6 text-center ${isRTL ? 'text-right' : ''}`}>
+      <div className="px-6 pb-6 text-center">
         <p className="text-xs text-muted-foreground">
           {t('screen1.footer').split('caffeine.ai')[0]}
           <a 

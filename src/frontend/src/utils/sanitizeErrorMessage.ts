@@ -11,101 +11,90 @@ const GENERIC_ERROR_MESSAGE = 'An error occurred. Please try again.';
  * Returns a user-friendly error message.
  */
 export function sanitizeErrorMessage(error: unknown): string {
+  const message = extractErrorMessage(error);
+  
+  if (!message) {
+    return 'An unexpected error occurred';
+  }
+  
+  // Block migration message
+  if (message.includes(BLOCKED_ERROR_MESSAGE) || message === BLOCKED_ERROR_MESSAGE) {
+    return GENERIC_ERROR_MESSAGE;
+  }
+  
+  // Map common backend errors to user-friendly messages
+  if (message.includes('Recording already exists')) {
+    return 'You already have a recording for this assignment. Delete it first to upload another.';
+  }
+  
+  if (message.includes('cannot overwrite')) {
+    return 'Cannot overwrite existing recording. Delete it first to upload another.';
+  }
+  
+  if (message.includes('Challenge not found')) {
+    return 'Challenge not found. It may have been deleted.';
+  }
+  
+  if (message.includes('not found') || message.includes('No recordings')) {
+    return 'Recording not found.';
+  }
+  
+  // Chat-related errors
+  if (message.includes('Message cannot be empty') || message.includes('whitespace only')) {
+    return 'Message cannot be empty or contain only spaces.';
+  }
+  
+  if (message.includes('Only participants can post messages') || message.includes('Only participants can fetch messages')) {
+    return 'Only challenge participants can use the chat.';
+  }
+
+  if (message.includes('Only the author can edit this message') || message.includes('Unauthorized: Only the author')) {
+    return 'You can only edit your own messages.';
+  }
+
+  if (message.includes('Message not found')) {
+    return 'Message not found. It may have been deleted.';
+  }
+
+  // Profile-related errors
+  if (message.includes('Profile name cannot be empty') || message.includes('Profile required')) {
+    return message; // Keep original message for profile errors
+  }
+
+  // Invitation-related errors
+  if (message.includes('Invalid invitation code') || message.includes('already been used')) {
+    return message; // Keep original message for invitation errors
+  }
+  
+  return message;
+}
+
+/**
+ * Extract error message from various error types
+ */
+function extractErrorMessage(error: unknown): string | null {
   if (error instanceof Error) {
-    const message = error.message;
-    
-    // Block migration message
-    if (message.includes(BLOCKED_ERROR_MESSAGE) || message === BLOCKED_ERROR_MESSAGE) {
-      return GENERIC_ERROR_MESSAGE;
-    }
-    
-    // Map common backend errors to user-friendly messages
-    if (message.includes('Recording already exists')) {
-      return 'You already have a recording for this assignment. Delete it first to record again.';
-    }
-    
-    if (message.includes('cannot overwrite')) {
-      return 'Cannot overwrite existing recording. Delete it first.';
-    }
-    
-    if (message.includes('Challenge not found')) {
-      return 'Challenge not found. It may have been deleted.';
-    }
-    
-    if (message.includes('not found') || message.includes('No recordings')) {
-      return 'Recording not found.';
-    }
-    
-    return message;
+    return error.message;
   }
   
   if (typeof error === 'string') {
-    if (error.includes(BLOCKED_ERROR_MESSAGE) || error === BLOCKED_ERROR_MESSAGE) {
-      return GENERIC_ERROR_MESSAGE;
-    }
-    
-    // Map common backend errors
-    if (error.includes('Recording already exists')) {
-      return 'You already have a recording for this assignment. Delete it first to record again.';
-    }
-    
-    if (error.includes('cannot overwrite')) {
-      return 'Cannot overwrite existing recording. Delete it first.';
-    }
-    
-    if (error.includes('Challenge not found')) {
-      return 'Challenge not found. It may have been deleted.';
-    }
-    
     return error;
   }
   
-  // Handle nested error objects
   if (error && typeof error === 'object') {
     const errorObj = error as any;
     if (errorObj.message && typeof errorObj.message === 'string') {
-      if (errorObj.message.includes(BLOCKED_ERROR_MESSAGE) || errorObj.message === BLOCKED_ERROR_MESSAGE) {
-        return GENERIC_ERROR_MESSAGE;
-      }
-      
-      // Map common backend errors
-      if (errorObj.message.includes('Recording already exists')) {
-        return 'You already have a recording for this assignment. Delete it first to record again.';
-      }
-      
-      if (errorObj.message.includes('cannot overwrite')) {
-        return 'Cannot overwrite existing recording. Delete it first.';
-      }
-      
-      if (errorObj.message.includes('Challenge not found')) {
-        return 'Challenge not found. It may have been deleted.';
-      }
-      
       return errorObj.message;
     }
   }
   
-  return 'An unexpected error occurred';
+  return null;
 }
 
 /**
  * Check if an error is a "Challenge not found" error.
  */
 export function isChallengeNotFoundError(error: unknown): boolean {
-  if (error instanceof Error) {
-    return error.message.includes('Challenge not found');
-  }
-  
-  if (typeof error === 'string') {
-    return error.includes('Challenge not found');
-  }
-  
-  if (error && typeof error === 'object') {
-    const errorObj = error as any;
-    if (errorObj.message && typeof errorObj.message === 'string') {
-      return errorObj.message.includes('Challenge not found');
-    }
-  }
-  
-  return false;
+  const message = extractErrorMessage(error);
+  return message ? message.includes('Challenge not found') : false;
 }
