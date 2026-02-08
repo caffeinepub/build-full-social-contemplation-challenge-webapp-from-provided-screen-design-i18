@@ -41,25 +41,6 @@ export function normalizeRecordingDay(uiDay: number): number {
 }
 
 /**
- * Normalize any assignment ID variant to the canonical hyphenated form.
- * This is used for React Query cache key normalization to prevent duplicate entries.
- */
-export function normalizeToCanonical(assignment: string): string {
-  const normalized = assignment.trim().toLowerCase();
-  
-  // Map underscore variants to canonical hyphenated IDs
-  const underscoreToHyphen: Record<string, CanonicalAssignmentId> = {
-    'daily_check_in': 'daily-check-in',
-    'morning_reflection': 'morning-reflection',
-    'evening_reflection': 'evening-reflection',
-    'mindfulness_practice': 'mindfulness-practice',
-    'gratitude_journal': 'gratitude-journal',
-  };
-  
-  return underscoreToHyphen[normalized] || normalized;
-}
-
-/**
  * Validate that a value is a canonical assignment ID.
  * Use this to ensure only valid IDs are passed to recording operations.
  * 

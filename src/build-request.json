@@ -1,73 +1,129 @@
 {
   "kind": "build_request",
-  "title": "Fix audio recording Save → Share with team flow failing with “disallowed origin” in draft",
+  "title": "Rebuild the full challenge audio flow (record → confirm share → upload/save → Team view) while keeping auth/navigation/account unchanged",
   "priority": "normal",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Fix the audio recording upload + share flow so that clicking “Save” then confirming “Share with team? → Yes” successfully (1) uploads/saves the recording and (2) sets it as shared, making it visible on the Team tab for other participants, including when the app is opened from a Caffeine draft domain.",
+      "text": "Implement a reliable end-to-end audio flow for a challenge day and assignment: select assignment → record → review → confirm whether to share → upload/save → (optional) share toggle → display in Team tab, replacing the old flow.",
       "target": "both",
       "source": {
         "messageIds": [
-          "recent-messages"
+          "msg-1"
         ],
         "quotes": [
-          "als ik nu op save druk, en dan op share with group, yes, dan slaat hij niet op en dan deelt hij ook niet met de groep.",
-          "ik zou op save drukken, dan komt pop up menu met de info van share with group en dan yes, en dan wordt de opname opgeslagene en gedeeld."
+          "dit is goed, bouw het"
         ]
       },
       "acceptanceCriteria": [
-        "From the in-challenge “My” tab, after recording audio, clicking “Save” opens the share confirmation dialog and clicking “Yes” completes without silently failing.",
-        "After confirmation, the recording exists for the current assignment/day (My tab shows the saved/recorded state and playback works).",
-        "After confirmation with “Yes”, the recording is visible to other participants via the Team tab (i.e., other participants can see a shared badge/indicator and can play it).",
-        "The behavior works in the draft environment where the user currently sees “error disallowed origin” in the browser console."
+        "From the in-challenge screen, a user can record audio for a selected day and assignment, confirm share choice, and complete an upload without silent failures.",
+        "After a successful save, the recording is retrievable and playable in the UI.",
+        "If the user chooses to share, the recording becomes visible to other challenge participants in the Team tab; if not shared, it remains private.",
+        "Upload failures show a user-visible error message and do not result in a stuck UI state."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Update backend storage/upload origin validation (the cause of “error disallowed origin”) to allow the frontend origins used by Caffeine deployments so recording uploads are accepted from both draft and live app domains.",
+      "text": "Backend: refactor/clean up the challenge recordings API and storage logic in the single Motoko actor to ensure consistent validation and canonicalization for assignments and days, while preserving the existing authentication/authorization model and challenge membership checks.",
       "target": "backend",
       "source": {
         "messageIds": [
-          "recent-messages"
+          "msg-1"
         ],
         "quotes": [
-          "(screenshots show 'error disallowed origin')"
+          "You may clean up the back-end structure completely; authentication, navigation structure, and account management must stay exactly the same."
         ]
       },
       "acceptanceCriteria": [
-        "Recording uploads initiated from a Caffeine draft domain (e.g., https://*.caffeine.xyz) no longer fail due to origin checks.",
-        "Recording uploads initiated from the live domain also continue to work.",
-        "Origin-allowlisting remains explicit (do not disable origin validation globally)."
+        "All recording write operations validate: (1) authenticated caller, (2) caller is a participant of the specified challenge, (3) day is within the supported range, (4) assignment is canonicalized and validated against the allowed set.",
+        "Assignment inputs are normalized so minor formatting differences cannot cause an 'invalid assignment' failure when the frontend sends canonical IDs.",
+        "The backend exposes a consistent way for the frontend to: save a recording blob, set/update share status, delete a recording, and fetch recordings needed for My/Team views."
       ]
     },
     {
       "id": "REQ-3",
-      "text": "Improve client-side error handling for recording save/share so users always get a clear English error message when an upload/share fails (including disallowed-origin failures), and the UI state resets appropriately (no stuck “Saving…” state).",
+      "text": "Frontend: rebuild the in-challenge 'My' recording cards and upload handler so that day indexing and assignment identifiers are always canonical and consistent with backend expectations, using the existing canonical assignment IDs and day conversion utilities.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "recent-messages"
+          "msg-1"
         ],
         "quotes": [
-          "er gebeurt helemaal niets."
+          "Rebuild the full audio path so that save + share with team works reliably."
         ]
       },
       "acceptanceCriteria": [
-        "If saving or sharing fails, the UI shows a user-facing English error message (not only a console error).",
-        "If the failure reason contains “disallowed origin”, the displayed message explicitly indicates the app is running on an unauthorized domain/origin and that the user should use the official link or the deployment must be reconfigured.",
-        "After a failure, the share dialog closes and the user can retry saving without refreshing the page."
+        "All frontend calls that save/share/delete/fetch recordings use only canonical assignment IDs from frontend/src/utils/recordingIds.ts (hyphenated IDs only).",
+        "Day values sent to the backend are consistently converted using frontend/src/utils/recordingDayIndex.ts (UI 1–7 mapped to backend 0–6 if required by the backend).",
+        "The upload progress indicator updates during blob upload and clears on success; errors are surfaced via existing error UI (e.g., sanitizeErrorMessage)."
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "text": "Frontend: ensure the share confirmation step always triggers exactly one upload attempt and cannot be bypassed by UI state glitches; prevent duplicate saves/shares while an upload is in progress.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-1"
+        ],
+        "quotes": [
+          "…record → confirm → upload → save → show in TeamView…"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Choosing 'Yes' or 'No' in the share dialog always results in a single upload attempt with the corresponding share choice.",
+        "While uploading, record/save/share actions are disabled to prevent duplicate submissions.",
+        "If the dialog is closed without a choice, no upload is triggered and the recording remains in review state."
+      ]
+    },
+    {
+      "id": "REQ-5",
+      "text": "Frontend: rebuild/verify the Team tab view so it reliably shows only shared recordings for challenge participants, with clear empty states when no shared recordings exist.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-1"
+        ],
+        "quotes": [
+          "…showing in TeamView… so the right people find the right information."
+        ]
+      },
+      "acceptanceCriteria": [
+        "The Team tab never shows private (not shared) recordings from other participants.",
+        "When there are no shared recordings for a selected participant/day/assignment, the UI displays a clear 'no recordings yet' style state (English text).",
+        "Playback of team recordings works reliably (start/stop/ended behavior does not leak audio objects)."
+      ]
+    },
+    {
+      "id": "REQ-6",
+      "text": "Preserve existing authentication (Internet Identity), navigation structure, and account management behavior exactly; integrate the rebuilt audio flow without altering those systems or their user-facing behavior.",
+      "target": "both",
+      "source": {
+        "messageIds": [
+          "msg-1"
+        ],
+        "quotes": [
+          "The authentication, navigation structure and account management must stay exactly the same."
+        ]
+      },
+      "acceptanceCriteria": [
+        "No changes are made to Internet Identity integration hooks/components (immutable auth hook paths remain untouched).",
+        "No changes are made to the app's top-level routing/navigation patterns; the rebuilt audio flow appears in the same screens/places as before.",
+        "User profile/account flows remain functional and unchanged from a user perspective."
       ]
     }
   ],
   "constraints": [
-    "Backend must remain a single Motoko actor in backend/main.mo; add backend/migration.mo only if state schema changes are required.",
-    "Do not edit any files under frontend/src/components/ui or other immutable paths listed in SYSTEM_CONTEXT."
+    "Backend must remain a single Motoko actor (all logic in backend/main.mo).",
+    "Do not modify immutable frontend paths: frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, frontend/src/components/ui/*.",
+    "Authentication, navigation structure, and account management must not change.",
+    "Use English for any new/edited user-facing text."
   ],
   "nonGoals": [
-    "Adding new authentication providers beyond Internet Identity.",
-    "Adding new recording features (e.g., editing, trimming, waveform rendering) beyond fixing save/share reliability and error messaging.",
-    "Changing the challenge/assignment model unrelated to recording upload/sharing."
+    "Adding third-party authentication providers (only Internet Identity is allowed).",
+    "Introducing external databases or non-Motoko backend services.",
+    "Adding real-time features (WebSockets/push).",
+    "Redesigning unrelated challenge features such as chat, invitations, or challenge creation beyond what is necessary to make the audio flow reliable."
   ],
   "imageRequirements": {
     "required": [],

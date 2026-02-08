@@ -82,10 +82,8 @@ actor {
 
   let userProfiles = Map.empty<Principal, UserProfile>();
 
-  // Mapping from variant canonicalAssignment to human-readable title
   let assignmentTitles = Map.fromIter(
     [
-      // Official canonical titles as first entry for each assignment
       ("daily-check-in", "Daily Check-in"),
       ("daily_check_in", "Daily Check-in"),
       ("morning-reflection", "Morning Reflection"),
@@ -99,10 +97,8 @@ actor {
     ].values()
   );
 
-  // Mapping from legacy assignment names to new canonical assignment names
   let assignmentMap = Map.fromIter(
     [
-      // New assignments - self-mapping
       ("daily-check-in", "daily-check-in"),
       ("daily_check_in", "daily-check-in"),
       ("morning-reflection", "morning-reflection"),
@@ -116,7 +112,6 @@ actor {
     ].values()
   );
 
-  // Set of allowed assignment names including legacy names for safe rollout
   let validAssignments = Set.fromIter(
     [
       "daily-check-in", "daily_check_in",
@@ -157,7 +152,6 @@ actor {
       return userProfiles.get(user);
     };
 
-    // Check if caller is creator of an active challenge that includes the user
     let callerIsCreatorOfUserActiveChallenge = challenges.values().any(
       func(challenge) {
         challenge.isActive and

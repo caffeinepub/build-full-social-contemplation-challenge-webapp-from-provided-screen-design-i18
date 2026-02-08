@@ -11,6 +11,7 @@ import { ThemeToggle } from '../components/ThemeToggle';
 import { AuthIconButton } from '../components/AuthIconButton';
 import { AssignmentDetailText } from '../components/AssignmentDetailText';
 import { AudioRecorder } from '../components/AudioRecorder';
+import { RecordingPlayer } from '../components/RecordingPlayer';
 import { 
   useGetUnifiedChallengeId,
   useGetAllChallengeParticipantProfiles,
@@ -62,6 +63,9 @@ export function Screen6InChallenge({ onNavigateToManage, onNavigateBack }: Scree
   
   // Track upload state per assignment (keyed by canonical ID)
   const [uploadStates, setUploadStates] = useState<Partial<Record<CanonicalAssignmentId, UploadState>>>({});
+  
+  // Track active uploads to prevent duplicates
+  const activeUploadsRef = useRef<Set<string>>(new Set());
   
   // Track which assignment audio is currently playing
   const [playingAssignment, setPlayingAssignment] = useState<string | null>(null);
@@ -189,6 +193,15 @@ export function Screen6InChallenge({ onNavigateToManage, onNavigateBack }: Scree
   const handleRecordingUpload = async (assignmentId: CanonicalAssignmentId, blob: Blob, shareWithTeam: boolean) => {
     if (!challengeId) return;
 
+    // Create unique key for this upload
+    const uploadKey = `${challengeId}-${selectedDay}-${assignmentId}`;
+    
+    // Defensive guard: prevent duplicate uploads
+    if (activeUploadsRef.current.has(uploadKey)) {
+      console.warn('Upload already in progress for', uploadKey);
+      return;
+    }
+
     // Development-time assertion: ensure assignment is canonical before upload
     try {
       assertCanonicalAssignmentId(assignmentId, 'handleRecordingUpload');
@@ -204,6 +217,9 @@ export function Screen6InChallenge({ onNavigateToManage, onNavigateBack }: Scree
       }));
       return;
     }
+
+    // Mark upload as active
+    activeUploadsRef.current.add(uploadKey);
 
     // Initialize upload state
     setUploadStates(prev => ({
@@ -253,8 +269,14 @@ export function Screen6InChallenge({ onNavigateToManage, onNavigateBack }: Scree
         delete newState[assignmentId];
         return newState;
       });
+      
+      // Remove from active uploads
+      activeUploadsRef.current.delete(uploadKey);
     } catch (error) {
-      console.error('Failed to save/share recording:', error);
+      console.error('Failed to upload recording:', error);
+      
+      // Remove from active uploads
+      activeUploadsRef.current.delete(uploadKey);
       
       // Check if challenge was deleted
       if (isChallengeNotFoundError(error)) {
@@ -266,7 +288,6 @@ export function Screen6InChallenge({ onNavigateToManage, onNavigateBack }: Scree
         return;
       }
       
-      // Always reset upload state on error so user can retry
       setUploadStates(prev => ({
         ...prev,
         [assignmentId]: {
@@ -535,9 +556,12 @@ export function Screen6InChallenge({ onNavigateToManage, onNavigateBack }: Scree
                             </span>
                           </div>
                           <span className="text-sm font-medium">
-                            {profile?.name?.trim() || 'Unknown User'}
+                            {profile?.name?.trim() || 'Unknown'}
                           </span>
                         </div>
+                        {selectedParticipant?.toString() === principal.toString() && (
+                          <CheckCircle2 className="w-5 h-5 text-primary" />
+                        )}
                       </div>
                     ))}
                   </div>
@@ -545,57 +569,49 @@ export function Screen6InChallenge({ onNavigateToManage, onNavigateBack }: Scree
               </CardContent>
             </Card>
 
-            {/* Selected Participant Recordings */}
+            {/* Selected Participant's Recordings */}
             {selectedParticipant && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base sm:text-lg">{t('screen6.team.recordings')}</CardTitle>
-                  <CardDescription className="text-xs sm:text-sm">{t('screen6.team.recordingsDescription')}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Day Header with weekday and date */}
-                  <div className="text-center">
-                    <h3 className="text-sm sm:text-base font-semibold">{participantDayHeader}</h3>
-                  </div>
+              <>
+                {/* Day Header */}
+                <div className="text-center">
+                  <h2 className="text-base sm:text-lg font-semibold">{participantDayHeader}</h2>
+                </div>
 
-                  {/* Day Selector for Team */}
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">
-                      Day
-                    </p>
-                    <div className="grid grid-cols-7 gap-1 sm:gap-2">
-                      {Array.from({ length: MAX_DAYS }, (_, i) => i + 1).map((day) => (
-                        <Button
-                          key={day}
-                          variant={selectedParticipantDay === day ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => handleParticipantDaySelection(day)}
-                          className="w-full text-xs sm:text-sm"
-                        >
-                          {day}
-                        </Button>
-                      ))}
-                    </div>
+                {/* Day Selector */}
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">
+                    Day
+                  </p>
+                  <div className="grid grid-cols-7 gap-1 sm:gap-2">
+                    {Array.from({ length: MAX_DAYS }, (_, i) => i + 1).map((day) => (
+                      <Button
+                        key={day}
+                        variant={selectedParticipantDay === day ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => handleParticipantDaySelection(day)}
+                        className="w-full text-xs sm:text-sm"
+                      >
+                        {day}
+                      </Button>
+                    ))}
                   </div>
+                </div>
 
-                  {/* Assignments for Selected Participant and Day */}
-                  <ScrollArea className="h-[300px] sm:h-[400px]">
-                    <div className="space-y-2 pr-4">
-                      {FIXED_ASSIGNMENTS.map((assignment) => (
-                        <ParticipantAssignmentCard
-                          key={assignment.id}
-                          assignment={assignment}
-                          challengeId={challengeId}
-                          participant={selectedParticipant}
-                          day={selectedParticipantDay}
-                          playingAssignment={playingAssignment}
-                          onPlayRecording={handlePlayRecording}
-                        />
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </CardContent>
-              </Card>
+                {/* Participant's Assignments */}
+                <div className="space-y-3">
+                  {FIXED_ASSIGNMENTS.map((assignment) => (
+                    <ParticipantAssignmentCard
+                      key={assignment.id}
+                      assignment={assignment}
+                      challengeId={challengeId}
+                      participant={selectedParticipant}
+                      day={selectedParticipantDay}
+                      playingAssignment={playingAssignment}
+                      onPlayRecording={handlePlayRecording}
+                    />
+                  ))}
+                </div>
+              </>
             )}
           </TabsContent>
 
@@ -605,28 +621,13 @@ export function Screen6InChallenge({ onNavigateToManage, onNavigateBack }: Scree
           </TabsContent>
         </Tabs>
       </div>
-
-      {/* Footer */}
-      <div className="px-4 sm:px-6 pb-6 text-center">
-        <p className="text-xs text-muted-foreground">
-          © 2026. Built with ❤️ using{' '}
-          <a 
-            href="https://caffeine.ai" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="underline hover:text-foreground transition-colors"
-          >
-            caffeine.ai
-          </a>
-        </p>
-      </div>
     </div>
   );
 }
 
 // Assignment Card Component for My Tab
 interface AssignmentCardProps {
-  assignment: { id: CanonicalAssignmentId; title: string; content: string };
+  assignment: typeof FIXED_ASSIGNMENTS[number];
   challengeId: bigint | null;
   day: number;
   playingAssignment: string | null;
@@ -634,7 +635,7 @@ interface AssignmentCardProps {
   onRecordingUpload: (assignmentId: CanonicalAssignmentId, blob: Blob, shareWithTeam: boolean) => void;
   onPlayRecording: (blob: ExternalBlob, assignmentId: string) => void;
   onDeleteRecording: (assignmentId: CanonicalAssignmentId) => void;
-  deleteRecordingMutation: any;
+  deleteRecordingMutation: ReturnType<typeof useDeleteRecording>;
 }
 
 function AssignmentCard({
@@ -648,76 +649,68 @@ function AssignmentCard({
   onDeleteRecording,
   deleteRecordingMutation,
 }: AssignmentCardProps) {
-  const { t } = useTranslation();
+  const [showDetails, setShowDetails] = useState(false);
   
-  // Fetch the recording for this assignment
+  // Fetch recording for this assignment
   const recordingQuery = useGetRecording(challengeId, day, assignment.id);
-  const hasRecording = !!recordingQuery.data;
   
-  const isThisAssignmentPlaying = playingAssignment === assignment.id;
-  const isDeleting = deleteRecordingMutation.isPending;
-  const isUploading = uploadState?.isUploading || false;
+  const hasRecording = !!recordingQuery.data;
+  const isPlaying = playingAssignment === assignment.id;
 
   return (
     <Card>
-      <CardContent className="p-6">
-        <div className="flex flex-col gap-6">
-          {/* Top section: Recorded badge */}
-          <div className="min-h-[28px] flex items-start">
-            {hasRecording && (
-              <Badge variant="default" className="flex items-center gap-1 flex-shrink-0">
-                <CheckCircle2 className="w-3 h-3" />
-                <span className="text-xs hidden sm:inline">Recorded</span>
-              </Badge>
-            )}
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1">
+            <CardTitle className="text-sm sm:text-base">{assignment.title}</CardTitle>
           </div>
-
-          {/* Middle section: Assignment details button */}
-          <div>
-            <SharedPopup
-              trigger={
-                <Button variant="outline" size="default" className="w-full">
-                  {assignment.title} assignment
-                </Button>
-              }
-              title={assignment.title}
-              description={t('screen6.my.assignmentDescription')}
-            >
-              <AssignmentDetailText content={assignment.content} />
-            </SharedPopup>
-          </div>
-
-          {/* Bottom section: Audio recorder */}
-          <AudioRecorder
-            assignmentId={assignment.id}
-            day={day}
-            hasExistingRecording={hasRecording}
-            isUploading={isUploading}
-            uploadProgress={uploadState?.progress || 0}
-            uploadError={uploadState?.error || null}
-            onUpload={(blob, shareWithTeam) => onRecordingUpload(assignment.id, blob, shareWithTeam)}
-            onDelete={() => onDeleteRecording(assignment.id)}
-            isDeleting={isDeleting}
-          />
-
-          {/* Play button for existing recording */}
-          {hasRecording && !isUploading && (
-            <Button
-              onClick={() => recordingQuery.data && onPlayRecording(recordingQuery.data, assignment.id)}
-              size="default"
-              variant="outline"
-              disabled={isDeleting}
-              className="w-full"
-            >
-              {isThisAssignmentPlaying ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Play className="w-4 h-4 mr-2" />
-              )}
-              Play Recording
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowDetails(!showDetails)}
+            className="flex-shrink-0"
+          >
+            {showDetails ? 'Hide' : 'Details'}
+          </Button>
         </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {showDetails && (
+          <div className="p-3 bg-muted/30 rounded-md">
+            <AssignmentDetailText content={assignment.content} />
+          </div>
+        )}
+
+        {/* Recording Controls */}
+        {hasRecording && recordingQuery.data ? (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onPlayRecording(recordingQuery.data, assignment.id)}
+                className="flex-1"
+              >
+                <Play className="w-4 h-4 mr-2" />
+                {isPlaying ? 'Playing...' : 'Play Recording'}
+              </Button>
+            </div>
+            <RecordingPlayer audioUrl={recordingQuery.data.getDirectURL()} />
+          </div>
+        ) : null}
+
+        {/* Audio Recorder */}
+        <AudioRecorder
+          assignmentId={assignment.id}
+          day={day}
+          hasExistingRecording={hasRecording}
+          isUploading={uploadState?.isUploading || false}
+          uploadProgress={uploadState?.progress || 0}
+          uploadError={uploadState?.error || null}
+          onUpload={(blob, shareWithTeam) => onRecordingUpload(assignment.id, blob, shareWithTeam)}
+          onDelete={() => onDeleteRecording(assignment.id)}
+          isDeleting={deleteRecordingMutation.isPending}
+        />
       </CardContent>
     </Card>
   );
@@ -725,7 +718,7 @@ function AssignmentCard({
 
 // Participant Assignment Card Component for Team Tab
 interface ParticipantAssignmentCardProps {
-  assignment: { id: CanonicalAssignmentId; title: string; content: string };
+  assignment: typeof FIXED_ASSIGNMENTS[number];
   challengeId: bigint | null;
   participant: Principal;
   day: number;
@@ -741,49 +734,66 @@ function ParticipantAssignmentCard({
   playingAssignment,
   onPlayRecording,
 }: ParticipantAssignmentCardProps) {
-  const { t } = useTranslation();
+  const [showDetails, setShowDetails] = useState(false);
   
-  // Fetch assignment recordings to check if this participant has a shared recording
-  const assignmentRecordingsQuery = useGetAssignmentRecordings(challengeId, day, assignment.id);
+  // Fetch all recordings for this assignment/day
+  const recordingsQuery = useGetAssignmentRecordings(challengeId, day, assignment.id);
   
-  // Find this participant's recording in the list
-  const participantRecording = assignmentRecordingsQuery.data?.find(
+  // Find this participant's recording
+  const participantRecording = recordingsQuery.data?.find(
     ([p]) => p.toString() === participant.toString()
   )?.[1];
   
-  const hasSharedRecording = participantRecording !== null && participantRecording !== undefined && participantRecording.isShared;
-  const isThisAssignmentPlaying = playingAssignment === `${participant.toString()}-${assignment.id}`;
+  // Only show if recording exists and is shared
+  const hasSharedRecording = participantRecording && participantRecording.isShared;
+  const isPlaying = playingAssignment === `${participant.toString()}-${assignment.id}`;
 
   return (
-    <div className="flex items-center justify-between p-3 rounded-md bg-muted/30">
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-medium">{assignment.title}</span>
-        {hasSharedRecording && (
-          <Badge variant="outline" className="flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3" />
-          </Badge>
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1">
+            <CardTitle className="text-sm sm:text-base">{assignment.title}</CardTitle>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowDetails(!showDetails)}
+            className="flex-shrink-0"
+          >
+            {showDetails ? 'Hide' : 'Details'}
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {showDetails && (
+          <div className="p-3 bg-muted/30 rounded-md">
+            <AssignmentDetailText content={assignment.content} />
+          </div>
         )}
-      </div>
-      <Button
-        onClick={() => {
-          if (participantRecording && hasSharedRecording) {
-            onPlayRecording(participantRecording.value, `${participant.toString()}-${assignment.id}`);
-          }
-        }}
-        size="sm"
-        variant="ghost"
-        disabled={!hasSharedRecording || assignmentRecordingsQuery.isLoading}
-      >
-        {assignmentRecordingsQuery.isLoading ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
-        ) : isThisAssignmentPlaying ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
-        ) : hasSharedRecording ? (
-          <Play className="w-4 h-4" />
+
+        {/* Recording Controls */}
+        {hasSharedRecording ? (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onPlayRecording(participantRecording.value, `${participant.toString()}-${assignment.id}`)}
+                className="flex-1"
+              >
+                <Play className="w-4 h-4 mr-2" />
+                {isPlaying ? 'Playing...' : 'Play Recording'}
+              </Button>
+            </div>
+            <RecordingPlayer audioUrl={participantRecording.value.getDirectURL()} />
+          </div>
         ) : (
-          <span className="text-xs text-muted-foreground">{t('screen6.my.noRecording')}</span>
+          <p className="text-xs text-muted-foreground text-center py-4">
+            No shared recording yet
+          </p>
         )}
-      </Button>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

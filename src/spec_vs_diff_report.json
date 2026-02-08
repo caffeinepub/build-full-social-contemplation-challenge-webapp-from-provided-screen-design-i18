@@ -1,50 +1,51 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-05T23:26:59.796Z",
-  "summary": "Frontend changes add/adjust error sanitization (including explicit disallowed-origin messaging) and tweak AudioRecorder dialog behavior around upload failures, but no backend changes are shown. The backend origin allowlist fix (core cause) appears missing, and end-to-end save+share visibility for other participants cannot be confirmed from the truncated diffs.",
+  "generatedAt": "2026-02-08T20:31:54.301Z",
+  "summary": "Diff shows partial implementation of the rebuilt audio flow: a new/updated AudioRecorder with a share-confirmation dialog that guards against duplicate uploads, and significant changes in the in-challenge screen (Screen6InChallenge) including upload state tracking. Backend/main.mo shows new/expanded assignment canonicalization maps/sets, but the diff is truncated and does not provide enough evidence that the full recordings API (save/share/delete/fetch with validation) and Team tab requirements are fully implemented.",
   "missing_requirements": [
     {
-      "id": "REQ-2",
-      "requirement": "Update backend storage/upload origin validation to explicitly allow the frontend origins used by Caffeine deployments (including draft domains like https://*.caffeine.xyz) while keeping allowlisting explicit.",
-      "reason": "The diff shows only frontend file modifications; there are no changes to backend/main.mo (or any backend files) implementing origin allowlisting updates, so uploads from draft origins would still fail if backend validation remains unchanged.",
-      "evidence": [
-        "File diff summary: Added 0 backend files; Modified files are all under frontend/ (no backend/main.mo shown)"
-      ]
-    },
-    {
       "id": "REQ-1",
-      "requirement": "Fix the audio recording upload + share flow so Save → Share with team? → Yes successfully uploads/saves and sets shared so it appears on Team tab for other participants, including in draft domain.",
-      "reason": "While the frontend dialog and error-handling code is adjusted, the diff does not provide evidence that the underlying save+share operation now succeeds in draft domains (likely requiring REQ-2), nor does it show definitive changes ensuring the shared state is persisted and reflected on the Team tab for other participants.",
+      "requirement": "Reliable end-to-end flow including upload/save, retrieval/playback in UI, optional share toggle, and Team tab visibility with user-visible upload errors and no stuck UI.",
+      "reason": "AudioRecorder shows share confirmation and duplicate-upload prevention, but the diff is truncated and does not provide evidence that the complete flow (successful persistence + subsequent retrieval/playback + share toggle + Team tab display) is implemented end-to-end.",
       "evidence": [
         "frontend/src/components/AudioRecorder.tsx (truncated)",
-        "frontend/src/screens/Screen6InChallenge.tsx (truncated)",
-        "No backend changes shown in diff summary (likely needed for draft-origin success)"
-      ]
-    }
-  ],
-  "hallucinated_features": [
-    {
-      "description": "Added broader frontend error classification and messaging unrelated to recording save/share (e.g., stale build/interface mismatch detection and invalid assignment heuristics).",
-      "reason": "REQ-3 only asks for clearer error messaging and UI reset for recording save/share failures (especially disallowed-origin). The diff introduces additional generalized error-detection helpers that go beyond the stated scope.",
-      "evidence": [
-        "frontend/src/utils/sanitizeErrorMessage.ts (truncated): adds isStaleBuildError, isInvalidAssignmentError, isRecordingParameterError"
+        "frontend/src/screens/Screen6InChallenge.tsx (truncated)"
       ]
     },
     {
-      "description": "Challenge recovery/reset behaviors triggered by 'challenge not found' errors in Screen6.",
-      "reason": "The BuildRequest is specifically about fixing recording Save→Share reliability and origin validation; adding challenge recovery logic is not requested and may be unrelated.",
+      "id": "REQ-2",
+      "requirement": "Backend refactor/cleanup of recordings API with consistent validation (auth, membership, day range, canonical assignment), normalization, and consistent endpoints for save/share/delete/fetch for My/Team views.",
+      "reason": "backend/main.mo shows assignmentTitles/assignmentMap/validAssignments indicating normalization work, but the diff does not include (or is truncated before) the actual recordings API endpoints and the required validation and fetch/share/delete logic.",
       "evidence": [
-        "frontend/src/screens/Screen6InChallenge.tsx (truncated): 'Detect \"Challenge not found\" errors and trigger recovery' and references to resetChallengeState/setChallengeDeletedNotice"
+        "backend/main.mo (truncated)"
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "requirement": "Frontend must use only canonical assignment IDs from recordingIds.ts and must convert day values using recordingDayIndex.ts for all save/share/delete/fetch calls; show upload progress and surface errors via existing error UI.",
+      "reason": "AudioRecorder uses CanonicalAssignmentId typing, but the diff does not show evidence that day indexing is converted via frontend/src/utils/recordingDayIndex.ts for backend calls, nor does it show the actual upload handler implementation that performs those conversions. Progress props exist, but the actual progress update mechanism is not visible in the provided truncated diff.",
+      "evidence": [
+        "frontend/src/components/AudioRecorder.tsx (truncated)",
+        "frontend/src/screens/Screen6InChallenge.tsx (truncated)"
+      ]
+    },
+    {
+      "id": "REQ-5",
+      "requirement": "Team tab reliably shows only shared recordings, provides clear empty states in English, and playback does not leak audio objects.",
+      "reason": "Screen6InChallenge includes Team-related state (selectedParticipant, etc.) and an audioRef, but the diff is truncated and does not show the Team tab rendering/filtering logic, empty-state strings, or the audio lifecycle cleanup needed to ensure no leaks.",
+      "evidence": [
+        "frontend/src/screens/Screen6InChallenge.tsx (truncated)"
       ]
     }
   ],
-  "confidence": 0.64,
+  "hallucinated_features": [],
+  "confidence": 0.38,
   "changed_files": [
+    "backend/main.mo",
     "frontend-file-summaries.txt",
     "frontend/src/components/AudioRecorder.tsx",
     "frontend/src/screens/Screen6InChallenge.tsx",
-    "frontend/src/utils/sanitizeErrorMessage.ts",
     "project_state.json"
   ]
 }

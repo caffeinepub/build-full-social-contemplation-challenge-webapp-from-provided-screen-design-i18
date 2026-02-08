@@ -55,17 +55,22 @@ export function AudioRecorder({
 
   const [localError, setLocalError] = useState<string | null>(null);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const [uploadTriggered, setUploadTriggered] = useState(false);
 
-  // Close share dialog when upload completes or fails
+  // Reset upload trigger when upload completes or fails
   useEffect(() => {
     if (showShareDialog && !isUploading) {
-      // If there's an upload error, close the dialog so user can see the error
       if (uploadError) {
+        // Upload failed, allow retry
+        setUploadTriggered(false);
         setShowShareDialog(false);
+      } else if (uploadTriggered) {
+        // Upload succeeded, close dialog
+        setShowShareDialog(false);
+        setUploadTriggered(false);
       }
-      // If upload succeeded (no error and not uploading), dialog was already closed by handleShareDecision
     }
-  }, [isUploading, uploadError, showShareDialog]);
+  }, [isUploading, uploadError, showShareDialog, uploadTriggered]);
 
   const handleStartRecording = async () => {
     setLocalError(null);
@@ -79,18 +84,31 @@ export function AudioRecorder({
   const handleSaveClick = () => {
     if (!recordedBlob) return;
     setLocalError(null);
+    setUploadTriggered(false);
     setShowShareDialog(true);
   };
 
   const handleShareDecision = (shareWithTeam: boolean) => {
-    if (!recordedBlob) return;
-    setShowShareDialog(false);
+    if (!recordedBlob || uploadTriggered) return;
+    
+    // Set flag to prevent duplicate submissions
+    setUploadTriggered(true);
+    
+    // Trigger upload
     onUpload(recordedBlob, shareWithTeam);
+  };
+
+  const handleDialogOpenChange = (open: boolean) => {
+    // Only allow closing if not uploading and no upload was triggered
+    if (!open && !isUploading && !uploadTriggered) {
+      setShowShareDialog(false);
+    }
   };
 
   const handleClearRecording = () => {
     clearRecording();
     setLocalError(null);
+    setUploadTriggered(false);
   };
 
   const formatTime = (seconds: number) => {
@@ -237,8 +255,8 @@ export function AudioRecorder({
         )}
       </div>
 
-      {/* Share Confirmation Dialog - Now with ScrollArea */}
-      <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+      {/* Share Confirmation Dialog */}
+      <Dialog open={showShareDialog} onOpenChange={handleDialogOpenChange}>
         <DialogContent className="max-w-[90vw] w-full sm:max-w-md max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Share with team?</DialogTitle>
@@ -259,7 +277,7 @@ export function AudioRecorder({
               variant="outline"
               onClick={() => handleShareDecision(false)}
               className="w-full sm:w-auto"
-              disabled={isUploading}
+              disabled={isUploading || uploadTriggered}
             >
               No
             </Button>
@@ -267,9 +285,16 @@ export function AudioRecorder({
               variant="default"
               onClick={() => handleShareDecision(true)}
               className="w-full sm:w-auto"
-              disabled={isUploading}
+              disabled={isUploading || uploadTriggered}
             >
-              Yes
+              {uploadTriggered ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Yes'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
