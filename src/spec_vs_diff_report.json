@@ -1,35 +1,43 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-08T23:33:41.023Z",
-  "summary": "Implemented a build-version generation script and runtime logic to stamp a generated BUILD_VERSION into the `meta[name=\"app-version\"]` tag, but the diff does not show any change ensuring the HTML meta tag is updated at build time as required.",
+  "generatedAt": "2026-02-08T23:47:07.768Z",
+  "summary": "Implemented runtime stamping/fallback for the app-version meta tag and added developer diagnostics, plus a build-time script and generated module for BUILD_VERSION. However, the diff does not clearly show that a concrete build version is reliably injected into production builds (as opposed to being generated at runtime), nor that the HTML meta tag is populated at build time.",
   "missing_requirements": [
     {
       "id": "REQ-1",
-      "requirement": "The generated build has a different app version identifier than the previous build (the HTML meta tag `app-version` is updated at build time).",
-      "reason": "While a build-time script generates a version and writes it to `.env.local` and a generated TS module, the diff does not include any change to the HTML template (e.g., `index.html`) to set/update the `meta[name=\"app-version\"]` content at build time. The only shown mechanism is runtime stamping via `stampBuildVersion` on app startup.",
+      "requirement": "Ensure each production (live) build produces a concrete, unique frontend build version and that the deployed app’s meta[name=\"app-version\"] and frontend/src/generated/appVersion.ts contain that concrete value (not placeholders) so the update guard can reliably detect stale assets.",
+      "reason": "The meta tag in frontend/index.html is left with an empty content attribute, and the generated appVersion.ts falls back to generating a runtime version inside the module. The diff does not show any build pipeline wiring (e.g., package.json/Vite config) that guarantees VITE_BUILD_TIMESTAMP is set for production builds and that the built HTML is injected with a concrete value at build time.",
       "evidence": [
-        "frontend/src/utils/appVersion.ts",
-        "frontend/src/App.tsx",
-        "frontend/scripts/generateAppVersion.mjs",
-        "frontend/src/generated/appVersion.ts"
+        "frontend/index.html",
+        "frontend/src/generated/appVersion.ts",
+        "frontend/scripts/generateAppVersion.mjs"
       ]
     }
   ],
   "hallucinated_features": [
     {
-      "description": "Added project tracking metadata (`project_state.json`) describing feature requests/status.",
-      "reason": "The BuildRequest only asks for a rebuild/cache-busting mechanism; it does not request adding or updating a project state tracking file.",
+      "description": "Added HTML cache-control meta directives for iOS Safari (Cache-Control/Pragma/Expires).",
+      "reason": "Not requested in any REQ; the build request explicitly focused on version generation/injection for cache busting, not cache-control headers/meta tags.",
       "evidence": [
-        "project_state.json"
+        "frontend/index.html"
+      ]
+    },
+    {
+      "description": "Developer panel includes backend build identifier and copy-to-clipboard UI controls.",
+      "reason": "REQ-3 only asked to show runningVersion (meta) and BUILD_VERSION; backend build identifier and clipboard helpers are extra functionality beyond the minimal diagnostics requested.",
+      "evidence": [
+        "frontend/src/components/DevPanel.tsx"
       ]
     }
   ],
-  "confidence": 0.62,
+  "confidence": 0.63,
   "changed_files": [
     "frontend-file-summaries.txt",
+    "frontend/index.html",
     "frontend/scripts/generateAppVersion.mjs",
     "frontend/src/App.tsx",
+    "frontend/src/components/DevPanel.tsx",
     "frontend/src/generated/appVersion.ts",
     "frontend/src/utils/appVersion.ts",
     "project_state.json"

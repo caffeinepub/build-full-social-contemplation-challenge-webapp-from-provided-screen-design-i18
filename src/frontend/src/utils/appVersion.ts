@@ -73,10 +73,11 @@ export function extractVersionFromHTML(html: string): string | null {
 }
 
 /**
- * Stamps the build version into the document meta tag if it's missing or a placeholder.
+ * Stamps the build version into the document meta tag with runtime fallback.
+ * If the build version is also a placeholder, generates a unique runtime version.
  * This ensures the running version is always concrete for update checks.
  */
-export function stampBuildVersion(buildVersion: string): void {
+export function stampBuildVersionWithFallback(buildVersion: string): void {
   const metaTag = document.querySelector('meta[name="app-version"]');
   
   if (!metaTag) {
@@ -88,7 +89,25 @@ export function stampBuildVersion(buildVersion: string): void {
   
   // Only stamp if current content is placeholder or invalid
   if (isPlaceholderVersion(currentContent)) {
-    metaTag.setAttribute('content', buildVersion);
-    console.log('[AppVersion] Stamped build version into meta tag:', buildVersion);
+    // Check if build version is also a placeholder
+    let versionToStamp = buildVersion;
+    
+    if (isPlaceholderVersion(buildVersion)) {
+      // Generate runtime fallback version
+      const timestamp = Date.now();
+      const random = Math.random().toString(36).substring(2, 9);
+      versionToStamp = `${timestamp}-${random}-fallback`;
+      console.warn('[AppVersion] Build version is placeholder, using runtime fallback:', versionToStamp);
+    }
+    
+    metaTag.setAttribute('content', versionToStamp);
+    console.log('[AppVersion] Stamped version into meta tag:', versionToStamp);
   }
+}
+
+/**
+ * Legacy function kept for compatibility - now uses fallback-aware version
+ */
+export function stampBuildVersion(buildVersion: string): void {
+  stampBuildVersionWithFallback(buildVersion);
 }

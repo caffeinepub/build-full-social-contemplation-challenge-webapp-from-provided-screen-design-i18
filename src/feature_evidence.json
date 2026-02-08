@@ -2,13 +2,13 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-produce-a-new-rebuild-so-the-frontend-build-version-changes-cache-busting-and-the-resulting-build-can-be-published-to-the-live-environment",
-      "featureTitle": "Produce a new rebuild so the frontend build version changes (cache-busting) and the resulting build can be published to the live environment.",
+      "featureId": "feature-ensure-each-production-live-build-produces-a-concrete-unique-frontend-build-version-not-a-placeholder-and-that-the-deployed-app-s-meta-name-app-version-and-frontend-src-generated-appversion-ts-contain-that-concrete-value-so-the-app-update-guard-can-reliably-detect-stale-assets",
+      "featureTitle": "Ensure each production (live) build produces a concrete, unique frontend build version (not a placeholder) and that the deployed app’s `meta[name=\"app-version\"]` and `frontend/src/generated/appVersion.ts` contain that concrete value so the app update guard can reliably detect stale assets.",
       "files": [
+        "frontend/index.html",
         "frontend/scripts/generateAppVersion.mjs",
         "frontend/src/App.tsx",
-        "frontend/src/generated/appVersion.ts",
-        "frontend/src/utils/appVersion.ts"
+        "frontend/src/generated/appVersion.ts"
       ],
       "components": [
         "authorization@4.0.0",
@@ -22,6 +22,50 @@
       ],
       "testIds": [
         "REQ-1"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-add-a-safe-runtime-fallback-so-that-if-the-generated-build-version-is-still-a-placeholder-at-runtime-the-app-stamps-meta-name-app-version-with-a-newly-generated-unique-value-e-g-timestamp-random-suffix-to-enable-cache-busting-refresh-behavior-instead-of-leaving-runningversion-null",
+      "featureTitle": "Add a safe runtime fallback so that if the generated build version is still a placeholder at runtime, the app stamps `meta[name=\"app-version\"]` with a newly generated unique value (e.g., timestamp + random suffix) to enable cache-busting refresh behavior instead of leaving `runningVersion` null.",
+      "files": [
+        "frontend/src/App.tsx",
+        "frontend/src/utils/appVersion.ts"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0",
+        "invite-links@3.0.0"
+      ],
+      "testIds": [
+        "REQ-2"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-expose-minimal-diagnostics-english-ui-text-in-an-existing-developer-only-area-to-confirm-which-version-is-running-on-live-show-the-current-runningversion-from-the-meta-tag-and-the-build-version-value-so-cache-issues-can-be-verified-without-browser-console-access",
+      "featureTitle": "Expose minimal diagnostics (English UI text) in an existing developer-only area to confirm which version is running on live: show the current `runningVersion` (from the meta tag) and the `BUILD_VERSION` value so cache issues can be verified without browser console access.",
+      "files": [
+        "frontend/src/App.tsx",
+        "frontend/src/components/DevPanel.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "blob-storage@4.0.0",
+        "invite-links@3.0.0"
+      ],
+      "testIds": [
+        "REQ-3"
       ],
       "confidence": "high"
     }

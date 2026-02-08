@@ -8,6 +8,7 @@ import { ProfileCompletionGate } from './components/ProfileCompletionGate';
 import { AutoInvitationRedeemGate } from './components/AutoInvitationRedeemGate';
 import { ChallengeDeletedNotice } from './components/ChallengeDeletedNotice';
 import { AppUpdatingNotice } from './components/AppUpdatingNotice';
+import { DevPanel } from './components/DevPanel';
 import { UnifiedEntryMenu } from './screens/UnifiedEntryMenu';
 import { Screen3Placeholder } from './screens/Screen3Placeholder';
 import { Screen4Placeholder } from './screens/Screen4Placeholder';
@@ -17,7 +18,7 @@ import { readAppUrlState, writeAppUrlState } from './utils/appUrlState';
 import { parseInvitationFromURL, persistInvitationParams } from './utils/invitationLinks';
 import { hasChallengeDeletedNotice, clearChallengeDeletedNotice } from './utils/challengeDeletedNotice';
 import { useAppUpdateGuard } from './hooks/useAppUpdateGuard';
-import { stampBuildVersion } from './utils/appVersion';
+import { stampBuildVersionWithFallback } from './utils/appVersion';
 import { BUILD_VERSION } from './generated/appVersion';
 
 type AppScreen = 'menu' | 'screen3' | 'screen4' | 'screen6';
@@ -29,13 +30,26 @@ function AppContent() {
   const [currentScreen, setCurrentScreen] = useState<AppScreen>('menu');
   const [isInitialized, setIsInitialized] = useState(false);
   const [showDeletedNotice, setShowDeletedNotice] = useState(false);
+  const [showDevPanel, setShowDevPanel] = useState(false);
   
   // Check for app updates and force refresh if needed
   const { isUpdating } = useAppUpdateGuard();
 
-  // Stamp build version into meta tag on startup (once)
+  // Stamp build version into meta tag on startup with runtime fallback (once)
   useEffect(() => {
-    stampBuildVersion(BUILD_VERSION);
+    stampBuildVersionWithFallback(BUILD_VERSION);
+  }, []);
+
+  // Check for dev panel flag in URL or localStorage
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const devMode = urlParams.get('dev') === 'true' || localStorage.getItem('devMode') === 'true';
+    setShowDevPanel(devMode);
+    
+    // Persist dev mode to localStorage if set via URL
+    if (urlParams.get('dev') === 'true') {
+      localStorage.setItem('devMode', 'true');
+    }
   }, []);
 
   // Persist invitation params before authentication if present
@@ -97,6 +111,7 @@ function AppContent() {
   if (!isAuthenticated) {
     return (
       <AppShell>
+        {showDevPanel && <DevPanel />}
         <UnifiedEntryMenu />
       </AppShell>
     );
@@ -105,6 +120,7 @@ function AppContent() {
   // User is authenticated - wrap with ProfileCompletionGate and AutoInvitationRedeemGate
   return (
     <AppShell>
+      {showDevPanel && <DevPanel />}
       <ChallengeDeletedNotice 
         open={showDeletedNotice} 
         onDismiss={handleDismissDeletedNotice}
