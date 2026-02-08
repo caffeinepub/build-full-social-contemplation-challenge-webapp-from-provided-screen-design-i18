@@ -1,76 +1,27 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 5,
-  "summary": "Volledige herbouw van het audiopad (opdracht kiezen → opnemen → bevestigen → upload → opslag → tonen in TeamView) zodat ‘save + share with team’ betrouwbaar werkt; backend mag opgeschoond/hernieuwd worden. UI mag opnieuw gebouwd worden maar moet er voor gebruiker hetzelfde uitzien. Authenticatie, navigatie en accountbeheer mogen niet veranderen.",
+  "projectStateVersion": 3,
+  "summary": "New project",
   "architectural_notes": [
-    "Authenticatie, navigatiestructuur en accountbeheer mogen absoluut niet wijzigen; nieuwe audio-module moet hierop aansluiten zonder wijzigingen.",
-    "Audio flow volledig herbouwen als aparte, end-to-end module: assignment select → record → confirm share → upload → persist → fetch → TeamView.",
-    "Backend-structuur voor recordings mag volledig opgeschoond/hernieuwd worden; gebruik eenduidige assignment-mapping met de vijf categorieën.",
-    "Zorg voor expliciete end-to-end testpunten (upload endpoint, retrieval per user/team, integratietest in draft) vóór vervanging van oude flow."
+    "Deployment constraints: Caffeine chat supports rebuild + 'Publish to live' but does not support asset flush / forced redeploy actions via chat.",
+    "Live vs draft behavior may differ due to caching layers (asset-canister, boundary nodes, browser cache)."
   ],
   "known_issues": [
-    "Opslaan en delen van audio-opnames binnen challenge werkt niet (geen betrouwbare upload/opslag zichtbaar voor team)."
+    "Draft works but live serves stale/incorrect frontend due to caching; user wants a clean-slate deploy (asset flush/force redeploy) but that action isn't available via chat; workaround is rebuild + publish (possibly repeated)."
   ],
   "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-implement-a-reliable-end-to-end-audio-flow-for-a-challenge-day-and-assignment-select-assignment-record-review-confirm-whether-to-share-upload-save-optional-share-toggle-display-in-team-tab-replacing-the-old-flow",
-      "title": "Implement a reliable end-to-end audio flow for a challenge day and assignment: select assignment → record → review → confirm whether to share → upload/save → (optional) share toggle → display in Team tab, replacing the old flow.",
+      "id": "feature-produce-a-new-rebuild-so-the-frontend-build-version-changes-cache-busting-and-the-resulting-build-can-be-published-to-the-live-environment",
+      "title": "Produce a new rebuild so the frontend build version changes (cache-busting) and the resulting build can be published to the live environment.",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
-    },
-    {
-      "id": "feature-frontend-rebuild-the-in-challenge-my-recording-cards-and-upload-handler-so-that-day-indexing-and-assignment-identifiers-are-always-canonical-and-consistent-with-backend-expectations-using-the-existing-canonical-assignment-ids-and-day-conversion-utilities",
-      "title": "Frontend: rebuild the in-challenge 'My' recording cards and upload handler so that day indexing and assignment identifiers are always canonical and consistent with backend expectations, using the existing canonical assignment IDs and day conversion utilities.",
-      "reqIds": [
-        "REQ-3"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-frontend-ensure-the-share-confirmation-step-always-triggers-exactly-one-upload-attempt-and-cannot-be-bypassed-by-ui-state-glitches-prevent-duplicate-saves-shares-while-an-upload-is-in-progress",
-      "title": "Frontend: ensure the share confirmation step always triggers exactly one upload attempt and cannot be bypassed by UI state glitches; prevent duplicate saves/shares while an upload is in progress.",
-      "reqIds": [
-        "REQ-4"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-frontend-rebuild-verify-the-team-tab-view-so-it-reliably-shows-only-shared-recordings-for-challenge-participants-with-clear-empty-states-when-no-shared-recordings-exist",
-      "title": "Frontend: rebuild/verify the Team tab view so it reliably shows only shared recordings for challenge participants, with clear empty states when no shared recordings exist.",
-      "reqIds": [
-        "REQ-5"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-preserve-existing-authentication-internet-identity-navigation-structure-and-account-management-behavior-exactly-integrate-the-rebuilt-audio-flow-without-altering-those-systems-or-their-user-facing-behavior",
-      "title": "Preserve existing authentication (Internet Identity), navigation structure, and account management behavior exactly; integrate the rebuilt audio flow without altering those systems or their user-facing behavior.",
-      "reqIds": [
-        "REQ-6"
-      ],
-      "version": 1
     }
   ],
-  "new_feature_requests": [
-    {
-      "id": "AR-5",
-      "summary": "Herbouw volledig audiopad (selecteren → opnemen → share bevestigen → upload/opslag → TeamView) zodat opslaan & delen binnen challenge werkt; backend opschonen toegestaan; UIzelfde look; auth/nav/account ongewijzigd",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-7",
-      "summary": "Backend: refactor/clean up the challenge recordings API and storage logic in the single Motoko actor to ensure consistent validation and canonicalization for assignments and days, while preserving the existing authentication/authorization model and challenge membership checks.",
-      "reqIds": [
-        "REQ-2"
-      ],
-      "status": "pending"
-    }
-  ],
-  "projectName": "Untitled request",
+  "new_feature_requests": [],
+  "projectName": "Rebuild the app to refresh live deployment caches",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

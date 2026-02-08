@@ -2,11 +2,13 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-implement-a-reliable-end-to-end-audio-flow-for-a-challenge-day-and-assignment-select-assignment-record-review-confirm-whether-to-share-upload-save-optional-share-toggle-display-in-team-tab-replacing-the-old-flow",
-      "featureTitle": "Implement a reliable end-to-end audio flow for a challenge day and assignment: select assignment → record → review → confirm whether to share → upload/save → (optional) share toggle → display in Team tab, replacing the old flow.",
+      "featureId": "feature-produce-a-new-rebuild-so-the-frontend-build-version-changes-cache-busting-and-the-resulting-build-can-be-published-to-the-live-environment",
+      "featureTitle": "Produce a new rebuild so the frontend build version changes (cache-busting) and the resulting build can be published to the live environment.",
       "files": [
-        "frontend/src/components/AudioRecorder.tsx",
-        "frontend/src/screens/Screen6InChallenge.tsx"
+        "frontend/scripts/generateAppVersion.mjs",
+        "frontend/src/App.tsx",
+        "frontend/src/generated/appVersion.ts",
+        "frontend/src/utils/appVersion.ts"
       ],
       "components": [
         "authorization@4.0.0",
@@ -20,92 +22,6 @@
       ],
       "testIds": [
         "REQ-1"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-frontend-rebuild-the-in-challenge-my-recording-cards-and-upload-handler-so-that-day-indexing-and-assignment-identifiers-are-always-canonical-and-consistent-with-backend-expectations-using-the-existing-canonical-assignment-ids-and-day-conversion-utilities",
-      "featureTitle": "Frontend: rebuild the in-challenge 'My' recording cards and upload handler so that day indexing and assignment identifiers are always canonical and consistent with backend expectations, using the existing canonical assignment IDs and day conversion utilities.",
-      "files": [
-        "frontend/src/screens/Screen6InChallenge.tsx"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0",
-        "blob-storage@4.0.0",
-        "invite-links@3.0.0"
-      ],
-      "testIds": [
-        "REQ-3"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-frontend-ensure-the-share-confirmation-step-always-triggers-exactly-one-upload-attempt-and-cannot-be-bypassed-by-ui-state-glitches-prevent-duplicate-saves-shares-while-an-upload-is-in-progress",
-      "featureTitle": "Frontend: ensure the share confirmation step always triggers exactly one upload attempt and cannot be bypassed by UI state glitches; prevent duplicate saves/shares while an upload is in progress.",
-      "files": [
-        "frontend/src/components/AudioRecorder.tsx",
-        "frontend/src/screens/Screen6InChallenge.tsx"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0",
-        "blob-storage@4.0.0",
-        "invite-links@3.0.0"
-      ],
-      "testIds": [
-        "REQ-4"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-frontend-rebuild-verify-the-team-tab-view-so-it-reliably-shows-only-shared-recordings-for-challenge-participants-with-clear-empty-states-when-no-shared-recordings-exist",
-      "featureTitle": "Frontend: rebuild/verify the Team tab view so it reliably shows only shared recordings for challenge participants, with clear empty states when no shared recordings exist.",
-      "files": [
-        "frontend/src/screens/Screen6InChallenge.tsx"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0",
-        "blob-storage@4.0.0",
-        "invite-links@3.0.0"
-      ],
-      "testIds": [
-        "REQ-5"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-preserve-existing-authentication-internet-identity-navigation-structure-and-account-management-behavior-exactly-integrate-the-rebuilt-audio-flow-without-altering-those-systems-or-their-user-facing-behavior",
-      "featureTitle": "Preserve existing authentication (Internet Identity), navigation structure, and account management behavior exactly; integrate the rebuilt audio flow without altering those systems or their user-facing behavior.",
-      "files": [
-        "frontend/src/components/AudioRecorder.tsx",
-        "frontend/src/screens/Screen6InChallenge.tsx"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0",
-        "blob-storage@4.0.0",
-        "invite-links@3.0.0"
-      ],
-      "testIds": [
-        "REQ-6"
       ],
       "confidence": "high"
     }

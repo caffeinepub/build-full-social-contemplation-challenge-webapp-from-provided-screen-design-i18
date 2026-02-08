@@ -193,7 +193,7 @@ export const translations = {
     },
     screen6: {
       title: "My Challenge",
-      subtitle: "Track your daily progress and connect with your team",
+      subtitle: "Read assignments, record & share contemplations and get inspired by others",
       tabs: {
         my: "My",
         team: "Team",

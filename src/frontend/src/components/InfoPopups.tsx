@@ -1,4 +1,4 @@
-import { Info } from 'lucide-react';
+import { Info, ChevronRight } from 'lucide-react';
 import { useTranslation } from '../i18n/I18nContext';
 import { SharedPopup } from './SharedPopup';
 import { Button } from './ui/button';
@@ -12,9 +12,15 @@ export function InfoPopups() {
       {/* Social Contemplation Dialog */}
       <SharedPopup
         trigger={
-          <Button variant="outline" size="sm" className="flex-1" data-info-social>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex-1 about-button group" 
+            data-info-social
+          >
             <Info className="w-4 h-4 mr-2" />
             {t('infoPopups.socialContemplation.trigger')}
+            <ChevronRight className="w-3 h-3 ml-auto opacity-60 group-hover:opacity-100 transition-opacity" />
           </Button>
         }
         title={t('infoPopups.socialContemplation.title')}
@@ -26,9 +32,15 @@ export function InfoPopups() {
       {/* About the Challenge Dialog */}
       <SharedPopup
         trigger={
-          <Button variant="outline" size="sm" className="flex-1" data-info-challenge>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex-1 about-button group" 
+            data-info-challenge
+          >
             <Info className="w-4 h-4 mr-2" />
             {t('infoPopups.aboutChallenge.trigger')}
+            <ChevronRight className="w-3 h-3 ml-auto opacity-60 group-hover:opacity-100 transition-opacity" />
           </Button>
         }
         title={t('infoPopups.aboutChallenge.title')}

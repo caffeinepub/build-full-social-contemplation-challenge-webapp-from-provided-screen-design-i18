@@ -1,132 +1,48 @@
 {
   "kind": "build_request",
-  "title": "Rebuild the full challenge audio flow (record → confirm share → upload/save → Team view) while keeping auth/navigation/account unchanged",
+  "title": "Rebuild the app to refresh live deployment caches",
   "priority": "normal",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Implement a reliable end-to-end audio flow for a challenge day and assignment: select assignment → record → review → confirm whether to share → upload/save → (optional) share toggle → display in Team tab, replacing the old flow.",
-      "target": "both",
+      "text": "Produce a new rebuild so the frontend build version changes (cache-busting) and the resulting build can be published to the live environment.",
+      "target": "unknown",
       "source": {
         "messageIds": [
-          "msg-1"
+          "msg-20"
         ],
         "quotes": [
-          "dit is goed, bouw het"
+          "dan wil ik dat je nu een rebuild doet"
         ]
       },
       "acceptanceCriteria": [
-        "From the in-challenge screen, a user can record audio for a selected day and assignment, confirm share choice, and complete an upload without silent failures.",
-        "After a successful save, the recording is retrievable and playable in the UI.",
-        "If the user chooses to share, the recording becomes visible to other challenge participants in the Team tab; if not shared, it remains private.",
-        "Upload failures show a user-visible error message and do not result in a stuck UI state."
-      ]
-    },
-    {
-      "id": "REQ-2",
-      "text": "Backend: refactor/clean up the challenge recordings API and storage logic in the single Motoko actor to ensure consistent validation and canonicalization for assignments and days, while preserving the existing authentication/authorization model and challenge membership checks.",
-      "target": "backend",
-      "source": {
-        "messageIds": [
-          "msg-1"
-        ],
-        "quotes": [
-          "You may clean up the back-end structure completely; authentication, navigation structure, and account management must stay exactly the same."
-        ]
-      },
-      "acceptanceCriteria": [
-        "All recording write operations validate: (1) authenticated caller, (2) caller is a participant of the specified challenge, (3) day is within the supported range, (4) assignment is canonicalized and validated against the allowed set.",
-        "Assignment inputs are normalized so minor formatting differences cannot cause an 'invalid assignment' failure when the frontend sends canonical IDs.",
-        "The backend exposes a consistent way for the frontend to: save a recording blob, set/update share status, delete a recording, and fetch recordings needed for My/Team views."
-      ]
-    },
-    {
-      "id": "REQ-3",
-      "text": "Frontend: rebuild the in-challenge 'My' recording cards and upload handler so that day indexing and assignment identifiers are always canonical and consistent with backend expectations, using the existing canonical assignment IDs and day conversion utilities.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-1"
-        ],
-        "quotes": [
-          "Rebuild the full audio path so that save + share with team works reliably."
-        ]
-      },
-      "acceptanceCriteria": [
-        "All frontend calls that save/share/delete/fetch recordings use only canonical assignment IDs from frontend/src/utils/recordingIds.ts (hyphenated IDs only).",
-        "Day values sent to the backend are consistently converted using frontend/src/utils/recordingDayIndex.ts (UI 1–7 mapped to backend 0–6 if required by the backend).",
-        "The upload progress indicator updates during blob upload and clears on success; errors are surfaced via existing error UI (e.g., sanitizeErrorMessage)."
-      ]
-    },
-    {
-      "id": "REQ-4",
-      "text": "Frontend: ensure the share confirmation step always triggers exactly one upload attempt and cannot be bypassed by UI state glitches; prevent duplicate saves/shares while an upload is in progress.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-1"
-        ],
-        "quotes": [
-          "…record → confirm → upload → save → show in TeamView…"
-        ]
-      },
-      "acceptanceCriteria": [
-        "Choosing 'Yes' or 'No' in the share dialog always results in a single upload attempt with the corresponding share choice.",
-        "While uploading, record/save/share actions are disabled to prevent duplicate submissions.",
-        "If the dialog is closed without a choice, no upload is triggered and the recording remains in review state."
-      ]
-    },
-    {
-      "id": "REQ-5",
-      "text": "Frontend: rebuild/verify the Team tab view so it reliably shows only shared recordings for challenge participants, with clear empty states when no shared recordings exist.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-1"
-        ],
-        "quotes": [
-          "…showing in TeamView… so the right people find the right information."
-        ]
-      },
-      "acceptanceCriteria": [
-        "The Team tab never shows private (not shared) recordings from other participants.",
-        "When there are no shared recordings for a selected participant/day/assignment, the UI displays a clear 'no recordings yet' style state (English text).",
-        "Playback of team recordings works reliably (start/stop/ended behavior does not leak audio objects)."
-      ]
-    },
-    {
-      "id": "REQ-6",
-      "text": "Preserve existing authentication (Internet Identity), navigation structure, and account management behavior exactly; integrate the rebuilt audio flow without altering those systems or their user-facing behavior.",
-      "target": "both",
-      "source": {
-        "messageIds": [
-          "msg-1"
-        ],
-        "quotes": [
-          "The authentication, navigation structure and account management must stay exactly the same."
-        ]
-      },
-      "acceptanceCriteria": [
-        "No changes are made to Internet Identity integration hooks/components (immutable auth hook paths remain untouched).",
-        "No changes are made to the app's top-level routing/navigation patterns; the rebuilt audio flow appears in the same screens/places as before.",
-        "User profile/account flows remain functional and unchanged from a user perspective."
+        "A new build is generated successfully.",
+        "The generated build has a different app version identifier than the previous build (the HTML meta tag `app-version` is updated at build time).",
+        "After publishing the new build to live, loading the live URL reflects the new build version (no stale bundle)."
       ]
     }
   ],
   "constraints": [
-    "Backend must remain a single Motoko actor (all logic in backend/main.mo).",
-    "Do not modify immutable frontend paths: frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, frontend/src/components/ui/*.",
-    "Authentication, navigation structure, and account management must not change.",
-    "Use English for any new/edited user-facing text."
+    "Use English for any user-facing text.",
+    "Do not request edits to frontend immutable paths: frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, frontend/src/components/ui.",
+    "Backend must remain single-actor (all Motoko logic in backend/main.mo); only add migration.mo if upgrading stable state is required."
   ],
   "nonGoals": [
-    "Adding third-party authentication providers (only Internet Identity is allowed).",
-    "Introducing external databases or non-Motoko backend services.",
-    "Adding real-time features (WebSockets/push).",
-    "Redesigning unrelated challenge features such as chat, invitations, or challenge creation beyond what is necessary to make the audio flow reliable."
+    "Implementing a true 'frontend asset flush' or 'force redeploy to live' platform action via chat (not supported).",
+    "Adding new product features unrelated to ensuring a clean rebuild/publish cycle."
   ],
   "imageRequirements": {
     "required": [],
     "edits": []
+  },
+  "userProfileUpdate": {
+    "goalsToAdd": [],
+    "goalsToRemove": [],
+    "preferencesToAdd": [],
+    "preferencesToRemove": [],
+    "miscToAdd": [],
+    "miscToRemove": [],
+    "fieldsToSet": {},
+    "fieldsToDelete": []
   }
 }

@@ -11,12 +11,14 @@ import { AppUpdatingNotice } from './components/AppUpdatingNotice';
 import { UnifiedEntryMenu } from './screens/UnifiedEntryMenu';
 import { Screen3Placeholder } from './screens/Screen3Placeholder';
 import { Screen4Placeholder } from './screens/Screen4Placeholder';
-import { Screen6InChallenge } from './screens/Screen6InChallenge';
+import Screen6InChallenge from './screens/Screen6InChallenge';
 import { useGetUnifiedChallengeId } from './hooks/useQueries';
 import { readAppUrlState, writeAppUrlState } from './utils/appUrlState';
 import { parseInvitationFromURL, persistInvitationParams } from './utils/invitationLinks';
 import { hasChallengeDeletedNotice, clearChallengeDeletedNotice } from './utils/challengeDeletedNotice';
 import { useAppUpdateGuard } from './hooks/useAppUpdateGuard';
+import { stampBuildVersion } from './utils/appVersion';
+import { BUILD_VERSION } from './generated/appVersion';
 
 type AppScreen = 'menu' | 'screen3' | 'screen4' | 'screen6';
 
@@ -30,6 +32,11 @@ function AppContent() {
   
   // Check for app updates and force refresh if needed
   const { isUpdating } = useAppUpdateGuard();
+
+  // Stamp build version into meta tag on startup (once)
+  useEffect(() => {
+    stampBuildVersion(BUILD_VERSION);
+  }, []);
 
   // Persist invitation params before authentication if present
   useEffect(() => {
@@ -147,8 +154,9 @@ function AppContent() {
                         onDeleteSuccess={handleDeleteSuccess}
                       />
                     )}
-                    {currentScreen === 'screen6' && (
+                    {currentScreen === 'screen6' && resolvedChallengeId !== null && (
                       <Screen6InChallenge 
+                        challengeId={resolvedChallengeId}
                         onNavigateToManage={handleNavigateToScreen4}
                         onNavigateBack={handleNavigateToMenu}
                       />

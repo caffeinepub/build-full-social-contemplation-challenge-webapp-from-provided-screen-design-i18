@@ -10,8 +10,9 @@ const LOOP_PROTECTION_KEY = 'hard-refresh-attempted';
  * Uses location.replace to avoid adding to browser history.
  * 
  * @param reason - Optional reason for logging (e.g., 'version-mismatch', 'invalid-assignment')
+ * @returns true if refresh was initiated, false if blocked by loop protection
  */
-export function performHardRefresh(reason?: string): void {
+export function performHardRefresh(reason?: string): boolean {
   try {
     // Check if we've already attempted a refresh recently (within last 5 seconds)
     const lastAttempt = sessionStorage.getItem(LOOP_PROTECTION_KEY);
@@ -19,7 +20,7 @@ export function performHardRefresh(reason?: string): void {
       const timeSinceLastAttempt = Date.now() - parseInt(lastAttempt, 10);
       if (timeSinceLastAttempt < 5000) {
         console.warn('[HardRefresh] Skipping refresh - too soon since last attempt');
-        return;
+        return false;
       }
     }
     
@@ -37,11 +38,24 @@ export function performHardRefresh(reason?: string): void {
     
     // Use location.replace to avoid adding to history
     window.location.replace(currentUrl.toString());
+    return true;
   } catch (error) {
     console.error('[HardRefresh] Failed to perform hard refresh:', error);
     // Fallback to simple reload
     window.location.reload();
+    return true;
   }
+}
+
+/**
+ * Attempts a cache-busted refresh and returns whether navigation was initiated.
+ * If refresh is blocked by loop protection, returns false so caller can show fallback UI.
+ * 
+ * @param reason - Optional reason for logging
+ * @returns true if refresh was initiated, false if blocked
+ */
+export function tryHardRefresh(reason?: string): boolean {
+  return performHardRefresh(reason);
 }
 
 /**

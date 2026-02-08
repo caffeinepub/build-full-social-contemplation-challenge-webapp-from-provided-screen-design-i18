@@ -4,6 +4,28 @@
  */
 
 /**
+ * Checks if a version string is a placeholder or invalid.
+ */
+function isPlaceholderVersion(version: string | null | undefined): boolean {
+  if (!version) return true;
+  
+  const trimmed = version.trim();
+  if (!trimmed) return true;
+  
+  // Known placeholder patterns
+  if (
+    trimmed === 'BUILD_VERSION_PLACEHOLDER' ||
+    trimmed.includes('VITE_BUILD_TIMESTAMP') ||
+    trimmed.includes('%VITE_') ||
+    trimmed.startsWith('$')
+  ) {
+    return true;
+  }
+  
+  return false;
+}
+
+/**
  * Reads the running app version from the current document's meta tag.
  * Returns null if the meta tag is not found, has no content, or contains a placeholder.
  */
@@ -16,21 +38,12 @@ export function getRunningAppVersion(): string | null {
   
   const content = metaTag.getAttribute('content');
   
-  // Reject empty, whitespace-only, or placeholder values
-  if (!content || !content.trim()) {
-    console.warn('[AppVersion] app-version meta tag is empty');
+  if (isPlaceholderVersion(content)) {
+    console.warn('[AppVersion] app-version contains placeholder or is empty:', content);
     return null;
   }
   
-  const trimmed = content.trim();
-  
-  // Reject known placeholder patterns
-  if (trimmed === 'BUILD_VERSION_PLACEHOLDER' || trimmed.includes('VITE_BUILD_TIMESTAMP')) {
-    console.warn('[AppVersion] app-version contains placeholder:', trimmed);
-    return null;
-  }
-  
-  return trimmed;
+  return content!.trim();
 }
 
 /**
@@ -48,19 +61,34 @@ export function extractVersionFromHTML(html: string): string | null {
     
     const content = metaTag.getAttribute('content');
     
-    // Reject empty, whitespace-only, or placeholder values
-    if (!content || !content.trim()) return null;
-    
-    const trimmed = content.trim();
-    
-    // Reject known placeholder patterns
-    if (trimmed === 'BUILD_VERSION_PLACEHOLDER' || trimmed.includes('VITE_BUILD_TIMESTAMP')) {
+    if (isPlaceholderVersion(content)) {
       return null;
     }
     
-    return trimmed;
+    return content!.trim();
   } catch (error) {
     console.error('[AppVersion] Failed to extract version from HTML:', error);
     return null;
+  }
+}
+
+/**
+ * Stamps the build version into the document meta tag if it's missing or a placeholder.
+ * This ensures the running version is always concrete for update checks.
+ */
+export function stampBuildVersion(buildVersion: string): void {
+  const metaTag = document.querySelector('meta[name="app-version"]');
+  
+  if (!metaTag) {
+    console.warn('[AppVersion] No app-version meta tag found to stamp');
+    return;
+  }
+  
+  const currentContent = metaTag.getAttribute('content');
+  
+  // Only stamp if current content is placeholder or invalid
+  if (isPlaceholderVersion(currentContent)) {
+    metaTag.setAttribute('content', buildVersion);
+    console.log('[AppVersion] Stamped build version into meta tag:', buildVersion);
   }
 }
