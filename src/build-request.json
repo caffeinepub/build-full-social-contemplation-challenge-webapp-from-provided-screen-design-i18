@@ -1,72 +1,67 @@
 {
   "kind": "build_request",
-  "title": "Fix live white-screen by ensuring frontend build version is generated/injected for cache busting",
+  "title": "Redeploy and verify live build serves correct versioned frontend assets",
   "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Ensure each production (live) build produces a concrete, unique frontend build version (not a placeholder) and that the deployed app’s `meta[name=\"app-version\"]` and `frontend/src/generated/appVersion.ts` contain that concrete value so the app update guard can reliably detect stale assets.",
-      "target": "frontend",
+      "text": "Redeploy the application to the live environment and confirm the deployment completes successfully (no deployment error).",
+      "target": "unknown",
       "source": {
         "messageIds": [
-          "recent-9"
+          "recent-1"
         ],
         "quotes": [
-          "rebuild"
+          "redepeloy"
         ]
       },
       "acceptanceCriteria": [
-        "When loading the live app in a fresh browser session, the console warning `app-version contains placeholder or is empty` does not appear.",
-        "In the built/deployed output, `meta[name=\"app-version\"]` does not contain `%VITE_...%`, `$VITE_...`, or `BUILD_VERSION_PLACEHOLDER`.",
-        "In the built/deployed output, `frontend/src/generated/appVersion.ts` (bundled equivalent) does not export `BUILD_VERSION` as `BUILD_VERSION_PLACEHOLDER`.",
-        "`useAppUpdateGuard` is able to obtain a non-null `runningVersion` via `getRunningAppVersion()` on live (i.e., it does not log `No running version found, skipping check` due to placeholders)."
+        "A new deployment run completes successfully without errors.",
+        "The live app loads (no persistent white screen/spinner) after the redeploy."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Add a safe runtime fallback so that if the generated build version is still a placeholder at runtime, the app stamps `meta[name=\"app-version\"]` with a newly generated unique value (e.g., timestamp + random suffix) to enable cache-busting refresh behavior instead of leaving `runningVersion` null.",
+      "text": "Ensure the production (live) frontend build always produces a concrete, unique build version (not a placeholder) and that the deployed HTML contains a non-empty `meta[name=\"app-version\"]` value so the app can reliably detect stale assets.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "recent-9"
+          "recent-1"
         ],
         "quotes": [
-          "rebuild"
+          "redepeloy"
         ]
       },
       "acceptanceCriteria": [
-        "If `BUILD_VERSION` is detected to be a placeholder at runtime, the app sets `meta[name=\"app-version\"]` to a non-placeholder value during startup.",
-        "With the fallback active, `getRunningAppVersion()` returns a non-null value even when the build-time injection fails.",
-        "The fallback does not create an infinite refresh loop (existing loop protection in `hardRefresh.ts` continues to prevent rapid repeated reloads)."
+        "In the live environment, `document.querySelector('meta[name=\"app-version\"]').getAttribute('content')` is non-empty and does not contain placeholder patterns (e.g., `$...`, `%VITE_...`, `BUILD_VERSION_PLACEHOLDER`, `VITE_BUILD_TIMESTAMP`).",
+        "`frontend/src/generated/appVersion.ts` exports a `BUILD_VERSION` value that is concrete at runtime (never a placeholder string)."
       ]
     },
     {
       "id": "REQ-3",
-      "text": "Expose minimal diagnostics (English UI text) in an existing developer-only area to confirm which version is running on live: show the current `runningVersion` (from the meta tag) and the `BUILD_VERSION` value so cache issues can be verified without browser console access.",
+      "text": "After redeploy, verify that the existing developer diagnostics panel correctly displays version information for troubleshooting stale asset issues.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "recent-9"
+          "recent-1"
         ],
         "quotes": [
-          "rebuild"
+          "redepeloy"
         ]
       },
       "acceptanceCriteria": [
-        "There is an in-app way (developer-oriented, not shown to normal users by default) to view both the stamped running app version and the compiled build version.",
-        "All user-facing text introduced for this diagnostic is in English."
+        "With `?dev=true`, the Developer Panel shows a non-empty “Running Version (meta tag)” value (or clearly indicates “(not set)” only if the meta tag truly cannot be stamped).",
+        "With `?dev=true`, the Developer Panel shows the “Compiled Build Version” value and it matches the stamped meta-tag value when stamping is functioning."
       ]
     }
   ],
   "constraints": [
-    "Do not edit files under `frontend/src/components/ui` (compose existing shadcn components instead).",
-    "Do not modify immutable hook files: `frontend/src/hooks/useInternetIdentity.ts`, `frontend/src/hooks/useInternetIdentity.tsx`, `frontend/src/hooks/useActor.ts`, `frontend/src/main.tsx`.",
-    "Backend remains single-actor; no backend changes are required for this cache-busting fix."
+    "Do not edit files under frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or any files under frontend/src/components/ui (compose them instead).",
+    "Backend must remain a single Motoko actor in backend/main.mo; only add backend/migration.mo if an upgrade requires state migration."
   ],
   "nonGoals": [
-    "Adding new backend endpoints or changing backend data models.",
-    "Implementing external cache purge / boundary-node flush tooling (not available via this platform).",
-    "Fixing non-blocking console warnings about `agent` vs `agentOptions` unless they are proven to cause the live white-screen issue."
+    "Adding new product features unrelated to deployment/versioning.",
+    "Changing authentication approach (Internet Identity only)."
   ],
   "imageRequirements": {
     "required": [],

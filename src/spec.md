@@ -1,11 +1,12 @@
 # Specification
 
 ## Summary
-**Goal:** Prevent live white-screen issues caused by stale cached frontend assets by ensuring a real build version is generated/injected, with a safe runtime fallback and minimal in-app diagnostics.
+**Goal:** Redeploy the live app and ensure the production frontend serves a correctly stamped, non-placeholder build version to prevent stale asset issues.
 
 **Planned changes:**
-- Ensure each production build generates a concrete, unique frontend build version and injects it into both `meta[name="app-version"]` and `frontend/src/generated/appVersion.ts` (bundled equivalent), avoiding placeholder values.
-- Add a runtime fallback: if the compiled build version is still a placeholder at startup, stamp `meta[name="app-version"]` with a newly generated unique value so the update guard can detect and recover from stale assets (without creating a refresh loop).
-- Add minimal developer-only diagnostics in an existing developer area to display the stamped `runningVersion` (from the meta tag) and the compiled `BUILD_VERSION`, with all new UI text in English.
+- Redeploy the application to the live environment and confirm the deployment completes successfully and the app loads normally afterward.
+- Ensure the production build stamps a concrete, unique build version into the deployed HTML as `meta[name="app-version"]` (non-empty, not a placeholder).
+- Ensure `frontend/src/generated/appVersion.ts` exports a concrete `BUILD_VERSION` value at runtime (never a placeholder string).
+- Verify the existing Developer Panel (`?dev=true`) displays the stamped meta-tag version and the compiled build version for troubleshooting, and that they match when stamping works.
 
-**User-visible outcome:** On live deployments, the app reliably detects stale cached frontend assets and can trigger safe cache-busting refresh behavior; developers can confirm the running/compiled version from an in-app developer-only view.
+**User-visible outcome:** After redeploy, the live app loads without a persistent blank/spinner state, and developers can reliably see and compare runtime/compiled version info (via `?dev=true`) to diagnose stale frontend assets.

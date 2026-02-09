@@ -1,7 +1,7 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-08T23:47:07.771Z",
+  "generatedAt": "2026-02-09T00:21:55.868Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
@@ -12,44 +12,44 @@
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Ensure each production (live) build produces a concrete, unique frontend build version (not a placeholder) and that the deployed app’s `meta[name=\"app-version\"]` and `frontend/src/generated/appVersion.ts` contain that concrete value so the app update guard can reliably detect stale assets.",
+        "summary": "Redeploy the application to the live environment and confirm the deployment completes successfully (no deployment error).",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/index.html",
-          "frontend/src/generated/appVersion.ts",
-          "frontend/scripts/generateAppVersion.mjs",
-          "frontend/src/App.tsx"
+          "frontend/DEPLOYMENT_VERIFICATION.md"
         ],
         "matchedFiles": [
-          "frontend/index.html",
-          "frontend/src/generated/appVersion.ts",
-          "frontend/scripts/generateAppVersion.mjs",
-          "frontend/src/App.tsx"
+          "frontend/DEPLOYMENT_VERIFICATION.md"
         ]
       },
       {
         "id": "REQ-2",
-        "summary": "Add a safe runtime fallback so that if the generated build version is still a placeholder at runtime, the app stamps `meta[name=\"app-version\"]` with a newly generated unique value (e.g., timestamp + random suffix) to enable cache-busting refresh behavior instead of leaving `runningVersion` null.",
+        "summary": "Ensure the production (live) frontend build always produces a concrete, unique build version (not a placeholder) and that the deployed HTML contains a non-empty `meta[name=\"app-version\"]` value so the app can reliably detect stale assets.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/utils/appVersion.ts",
-          "frontend/src/App.tsx"
+          "frontend/index.html",
+          "frontend/scripts/generateAppVersion.mjs",
+          "frontend/src/generated/appVersion.ts",
+          "frontend/src/utils/appVersion.ts"
         ],
         "matchedFiles": [
-          "frontend/src/utils/appVersion.ts",
-          "frontend/src/App.tsx"
+          "frontend/index.html",
+          "frontend/scripts/generateAppVersion.mjs",
+          "frontend/src/generated/appVersion.ts",
+          "frontend/src/utils/appVersion.ts"
         ]
       },
       {
         "id": "REQ-3",
-        "summary": "Expose minimal diagnostics (English UI text) in an existing developer-only area to confirm which version is running on live: show the current `runningVersion` (from the meta tag) and the `BUILD_VERSION` value so cache issues can be verified without browser console access.",
+        "summary": "After redeploy, verify that the existing developer diagnostics panel correctly displays version information for troubleshooting stale asset issues.",
         "status": "implemented",
         "plannedFiles": [
           "frontend/src/components/DevPanel.tsx",
+          "frontend/src/utils/appVersion.ts",
           "frontend/src/App.tsx"
         ],
         "matchedFiles": [
           "frontend/src/components/DevPanel.tsx",
+          "frontend/src/utils/appVersion.ts",
           "frontend/src/App.tsx"
         ]
       }
@@ -60,6 +60,7 @@
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
+    "frontend/DEPLOYMENT_VERIFICATION.md",
     "frontend/index.html",
     "frontend/scripts/generateAppVersion.mjs",
     "frontend/src/App.tsx",

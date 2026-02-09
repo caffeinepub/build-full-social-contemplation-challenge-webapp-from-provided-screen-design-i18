@@ -1,78 +1,75 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Fix cache-busting version stamping and add runtime fallback + dev diagnostics",
+  "title": "Redeploy verification and reliable frontend asset version stamping",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Ensure production builds and deployed HTML/meta+compiled code use a concrete (non-placeholder) app version so the update guard can detect stale assets reliably.",
+      "summary": "Add frontend-side deployment verification guidance to ensure redeploy completes and the live app loads.",
       "acceptanceCriteria": [
-        "When loading the live app in a fresh browser session, the console warning `app-version contains placeholder or is empty` does not appear.",
-        "In the built/deployed output, `meta[name=\"app-version\"]` does not contain `%VITE_...%`, `$VITE_...`, or `BUILD_VERSION_PLACEHOLDER`.",
-        "In the built/deployed output, `frontend/src/generated/appVersion.ts` (bundled equivalent) does not export `BUILD_VERSION` as `BUILD_VERSION_PLACEHOLDER`.",
-        "`useAppUpdateGuard` is able to obtain a non-null `runningVersion` via `getRunningAppVersion()` on live (i.e., it does not log `No running version found, skipping check` due to placeholders)."
+        "A new deployment run completes successfully without errors.",
+        "The live app loads (no persistent white screen/spinner) after the redeploy."
       ],
       "file_operations": [
         {
-          "path": "frontend/index.html",
-          "operation": "modify",
-          "description": "Remove build-time placeholder content from `meta[name=\"app-version\"]` so the deployed HTML no longer contains `%VITE_...%` patterns; leave the meta tag present for runtime stamping."
-        },
-        {
-          "path": "frontend/src/generated/appVersion.ts",
-          "operation": "modify",
-          "description": "Ensure `BUILD_VERSION` is always concrete by deriving it from `import.meta.env.VITE_BUILD_TIMESTAMP` when available and otherwise generating a deterministic runtime unique value (timestamp + random suffix), so the bundled equivalent never exports `BUILD_VERSION_PLACEHOLDER`."
-        },
-        {
-          "path": "frontend/scripts/generateAppVersion.mjs",
-          "operation": "modify",
-          "description": "Harden the build-version generator to always write a concrete version into the generated TS module and the Vite env file (and ensure failures are surfaced), so production builds can inject a unique value when the script is executed as part of build."
-        },
-        {
-          "path": "frontend/src/App.tsx",
-          "operation": "modify",
-          "description": "Ensure startup always stamps the running meta version using the concrete `BUILD_VERSION` so `getRunningAppVersion()` returns non-null for update checks (without modifying immutable `frontend/src/main.tsx`)."
+          "path": "frontend/DEPLOYMENT_VERIFICATION.md",
+          "operation": "create",
+          "description": "Document a redeploy + validation checklist focused on confirming the live app loads and verifying the runtime version meta tag and compiled build version (including how to use ?dev=true to open the Developer Panel) to catch stale asset issues."
         }
       ]
     },
     {
       "id": "REQ-2",
-      "summary": "Add a safe runtime fallback that stamps a newly generated unique version into `meta[name=\"app-version\"]` when build-time injection still yields a placeholder, without triggering infinite refresh loops.",
+      "summary": "Ensure production HTML is stamped with a concrete, unique build version and the runtime BUILD_VERSION is never a placeholder.",
       "acceptanceCriteria": [
-        "If `BUILD_VERSION` is detected to be a placeholder at runtime, the app sets `meta[name=\"app-version\"]` to a non-placeholder value during startup.",
-        "With the fallback active, `getRunningAppVersion()` returns a non-null value even when the build-time injection fails.",
-        "The fallback does not create an infinite refresh loop (existing loop protection in `hardRefresh.ts` continues to prevent rapid repeated reloads)."
+        "In the live environment, `document.querySelector('meta[name=\"app-version\"]').getAttribute('content')` is non-empty and does not contain placeholder patterns (e.g., `$...`, `%VITE_...`, `BUILD_VERSION_PLACEHOLDER`, `VITE_BUILD_TIMESTAMP`).",
+        "`frontend/src/generated/appVersion.ts` exports a `BUILD_VERSION` value that is concrete at runtime (never a placeholder string)."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/utils/appVersion.ts",
+          "path": "frontend/index.html",
           "operation": "modify",
-          "description": "Add a runtime fallback helper that detects placeholder/invalid versions and stamps `meta[name=\"app-version\"]` with a generated unique value when needed; keep `getRunningAppVersion()` behavior consistent with the update guard."
+          "description": "Stamp the `meta[name=\"app-version\"]` content at build time using Vite HTML env substitution (so the deployed HTML ships with a non-empty version value even before JS runs), while keeping existing runtime stamping as fallback."
         },
         {
-          "path": "frontend/src/App.tsx",
+          "path": "frontend/scripts/generateAppVersion.mjs",
           "operation": "modify",
-          "description": "Switch startup stamping to use the new runtime-fallback-aware stamping behavior so the running version is never left null even if build-time injection fails."
+          "description": "Harden the build-version generation flow so production builds reliably get a concrete unique `VITE_BUILD_TIMESTAMP` (e.g., write version to additional env files used by production builds, and ensure placeholder-like values cannot be emitted)."
+        },
+        {
+          "path": "frontend/src/generated/appVersion.ts",
+          "operation": "modify",
+          "description": "Align placeholder detection / fallback behavior with the updated build stamping rules so `BUILD_VERSION` is always concrete at runtime (and never a placeholder string) even if env injection fails."
+        },
+        {
+          "path": "frontend/src/utils/appVersion.ts",
+          "operation": "modify",
+          "description": "Update version parsing/validation helpers so placeholder patterns (e.g., `%VITE_...`, `$...`, `VITE_BUILD_TIMESTAMP`) are consistently treated as invalid for both DOM reads and HTML extraction, matching the acceptance criteria."
         }
       ]
     },
     {
       "id": "REQ-3",
-      "summary": "Expose minimal in-app developer-only diagnostics to view both the stamped running app version and the compiled build version in English.",
+      "summary": "Ensure the Developer Panel accurately displays version diagnostics after redeploy for stale-asset troubleshooting.",
       "acceptanceCriteria": [
-        "There is an in-app way (developer-oriented, not shown to normal users by default) to view both the stamped running app version and the compiled build version.",
-        "All user-facing text introduced for this diagnostic is in English."
+        "With `?dev=true`, the Developer Panel shows a non-empty “Running Version (meta tag)” value (or clearly indicates “(not set)” only if the meta tag truly cannot be stamped).",
+        "With `?dev=true`, the Developer Panel shows the “Compiled Build Version” value and it matches the stamped meta-tag value when stamping is functioning."
       ],
       "file_operations": [
         {
           "path": "frontend/src/components/DevPanel.tsx",
           "operation": "modify",
-          "description": "Extend the existing developer-only panel to display `runningVersion` (from the meta tag via `getRunningAppVersion()`) and the compiled `BUILD_VERSION`, using English UI labels. Use existing shadcn/ui components only; do not edit files under `frontend/src/components/ui` (Verify the component's usage instructions before implementing.)"
+          "description": "Adjust the version diagnostics section to show (a) the raw meta-tag value, (b) the validated running version status, and (c) a clear comparison indicator vs `BUILD_VERSION`, so mismatches/placeholder stamping problems are obvious with ?dev=true."
+        },
+        {
+          "path": "frontend/src/utils/appVersion.ts",
+          "operation": "modify",
+          "description": "Expose minimal additional helpers needed by DevPanel (e.g., read raw meta content and/or placeholder classification) so the panel can distinguish between missing, placeholder, and correctly stamped versions."
         },
         {
           "path": "frontend/src/App.tsx",
           "operation": "modify",
-          "description": "Wire the existing DevPanel into the app behind a developer-only gating condition (e.g., an opt-in URL param or localStorage flag) so it is not shown to normal users by default."
+          "description": "Ensure the startup stamping behavior remains compatible with build-time HTML stamping (i.e., only overwrite when the meta tag is missing/placeholder) to keep Running Version and Compiled Build Version aligned."
         }
       ]
     }

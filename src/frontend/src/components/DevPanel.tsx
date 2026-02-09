@@ -3,14 +3,14 @@ import { useAuthPrincipal } from '../hooks/useAuthPrincipal';
 import { AuthButton } from './AuthButton';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { RefreshCw, Copy, Check } from 'lucide-react';
-import { getRunningAppVersion } from '../utils/appVersion';
+import { RefreshCw, Copy, Check, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { getRunningAppVersion, getRawMetaTagContent, isValidVersion } from '../utils/appVersion';
 import { BUILD_VERSION } from '../generated/appVersion';
 import { getBackendBuildIdentifier } from '../utils/backendBuildInfo';
 import { useState } from 'react';
 
 /**
- * Developer Panel - Shows authentication status, version diagnostics, and debug controls.
+ * Developer Panel - Shows authentication status, version diagnostics with mismatch detection, and debug controls.
  * Enable by adding ?dev=true to URL or setting localStorage.devMode = 'true'.
  */
 export function DevPanel() {
@@ -19,7 +19,13 @@ export function DevPanel() {
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const runningVersion = getRunningAppVersion();
+  const rawMetaContent = getRawMetaTagContent();
   const backendBuildId = getBackendBuildIdentifier();
+
+  // Version diagnostics
+  const metaTagValid = isValidVersion(rawMetaContent);
+  const buildVersionValid = isValidVersion(BUILD_VERSION);
+  const versionsMatch = runningVersion === BUILD_VERSION;
 
   const handleRefreshState = () => {
     queryClient.invalidateQueries({ queryKey: ['userChallengeStatus'] });
@@ -72,19 +78,32 @@ export function DevPanel() {
 
         {/* Version Diagnostics */}
         <div className="border-t border-border/50 pt-3 space-y-2">
-          <div className="text-xs font-medium text-muted-foreground mb-2">
-            Version Diagnostics
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-muted-foreground">
+              Version Diagnostics
+            </span>
+            {versionsMatch && metaTagValid ? (
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+            ) : (
+              <AlertTriangle className="h-4 w-4 text-yellow-600" />
+            )}
           </div>
           
+          {/* Running Version (meta tag) */}
           <div className="flex flex-col gap-1">
-            <span className="text-xs text-muted-foreground">Running Version (meta tag):</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Running Version (meta tag):</span>
+              {!metaTagValid && (
+                <span className="text-xs text-yellow-600 font-medium">⚠ Invalid</span>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono break-all bg-muted/50 p-2 rounded flex-1">
-                {runningVersion || '(not set)'}
+                {rawMetaContent || '(not set)'}
               </span>
-              {runningVersion && (
+              {rawMetaContent && (
                 <Button
-                  onClick={() => handleCopy(runningVersion, 'running')}
+                  onClick={() => handleCopy(rawMetaContent, 'running')}
                   variant="ghost"
                   size="sm"
                   className="h-8 w-8 p-0"
@@ -97,10 +116,21 @@ export function DevPanel() {
                 </Button>
               )}
             </div>
+            {!metaTagValid && rawMetaContent && (
+              <span className="text-xs text-yellow-600">
+                Contains placeholder pattern - runtime fallback may be active
+              </span>
+            )}
           </div>
 
+          {/* Compiled Build Version */}
           <div className="flex flex-col gap-1">
-            <span className="text-xs text-muted-foreground">Compiled Build Version:</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Compiled Build Version:</span>
+              {!buildVersionValid && (
+                <span className="text-xs text-yellow-600 font-medium">⚠ Fallback</span>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono break-all bg-muted/50 p-2 rounded flex-1">
                 {BUILD_VERSION}
@@ -118,10 +148,35 @@ export function DevPanel() {
                 )}
               </Button>
             </div>
+            {!buildVersionValid && (
+              <span className="text-xs text-yellow-600">
+                Runtime-generated fallback version (build stamping may have failed)
+              </span>
+            )}
           </div>
 
+          {/* Version Match Status */}
+          {metaTagValid && buildVersionValid && (
+            <div className="flex items-center gap-2 pt-1">
+              {versionsMatch ? (
+                <>
+                  <CheckCircle2 className="h-3 w-3 text-green-600" />
+                  <span className="text-xs text-green-600">Versions match</span>
+                </>
+              ) : (
+                <>
+                  <AlertTriangle className="h-3 w-3 text-yellow-600" />
+                  <span className="text-xs text-yellow-600">
+                    Version mismatch - may indicate stale assets
+                  </span>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Backend Build */}
           {backendBuildId && (
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1 pt-2 border-t border-border/30">
               <span className="text-xs text-muted-foreground">Backend Build:</span>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-mono break-all bg-muted/50 p-2 rounded flex-1">

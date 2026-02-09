@@ -18,7 +18,7 @@ import { readAppUrlState, writeAppUrlState } from './utils/appUrlState';
 import { parseInvitationFromURL, persistInvitationParams } from './utils/invitationLinks';
 import { hasChallengeDeletedNotice, clearChallengeDeletedNotice } from './utils/challengeDeletedNotice';
 import { useAppUpdateGuard } from './hooks/useAppUpdateGuard';
-import { stampBuildVersionWithFallback } from './utils/appVersion';
+import { stampBuildVersionWithFallback, getRawMetaTagContent } from './utils/appVersion';
 import { BUILD_VERSION } from './generated/appVersion';
 
 type AppScreen = 'menu' | 'screen3' | 'screen4' | 'screen6';
@@ -35,9 +35,21 @@ function AppContent() {
   // Check for app updates and force refresh if needed
   const { isUpdating } = useAppUpdateGuard();
 
-  // Stamp build version into meta tag on startup with runtime fallback (once)
+  // Stamp build version into meta tag on startup (only if meta tag is empty/placeholder)
+  // This provides a runtime fallback if build-time stamping failed
   useEffect(() => {
-    stampBuildVersionWithFallback(BUILD_VERSION);
+    const currentMetaContent = getRawMetaTagContent();
+    
+    // Only stamp if meta tag is empty or contains placeholder
+    if (!currentMetaContent || 
+        currentMetaContent.includes('VITE_') || 
+        currentMetaContent.includes('%') ||
+        currentMetaContent === 'BUILD_VERSION_PLACEHOLDER') {
+      console.log('[App] Meta tag needs stamping, applying runtime fallback');
+      stampBuildVersionWithFallback(BUILD_VERSION);
+    } else {
+      console.log('[App] Meta tag already stamped at build time:', currentMetaContent);
+    }
   }, []);
 
   // Check for dev panel flag in URL or localStorage
@@ -102,96 +114,91 @@ function AppContent() {
     setCurrentScreen('menu');
   };
 
-  // Show updating notice if app is refreshing
+  const handleNavigateToScreen3 = () => {
+    setCurrentScreen('screen3');
+  };
+
+  const handleNavigateToScreen4 = () => {
+    setCurrentScreen('screen4');
+  };
+
+  const handleNavigateToScreen6 = () => {
+    setCurrentScreen('screen6');
+  };
+
+  const handleNavigateToMenu = () => {
+    setCurrentScreen('menu');
+  };
+
+  const handleChallengeCreated = () => {
+    setCurrentScreen('screen6');
+  };
+
+  // Show updating notice if version mismatch detected
   if (isUpdating) {
     return <AppUpdatingNotice />;
   }
 
-  // Show unified entry menu when not authenticated
-  if (!isAuthenticated) {
-    return (
+  return (
+    <I18nProvider>
       <AppShell>
         {showDevPanel && <DevPanel />}
-        <UnifiedEntryMenu />
+        
+        <ChallengeDeletedNotice 
+          open={showDeletedNotice}
+          onDismiss={handleDismissDeletedNotice}
+        />
+
+        {!isAuthenticated ? (
+          <UnifiedEntryMenu 
+            onNavigateToCreate={handleNavigateToScreen3}
+            onNavigateToChallenge={handleNavigateToScreen6}
+            onNavigateToManage={handleNavigateToScreen4}
+          />
+        ) : (
+          <ProfileCompletionGate>
+            <QueryStateGate query={userStatusQuery}>
+              {(data) => (
+                <AutoInvitationRedeemGate hasActiveChallenge={data?.hasActiveChallenge || false}>
+                  {currentScreen === 'menu' && (
+                    <UnifiedEntryMenu 
+                      onNavigateToCreate={handleNavigateToScreen3}
+                      onNavigateToChallenge={handleNavigateToScreen6}
+                      onNavigateToManage={handleNavigateToScreen4}
+                    />
+                  )}
+                  
+                  {currentScreen === 'screen3' && (
+                    <Screen3Placeholder 
+                      onNavigateToScreen4={handleNavigateToScreen4}
+                    />
+                  )}
+                  
+                  {currentScreen === 'screen4' && (
+                    <Screen4Placeholder 
+                      onNavigateBack={handleNavigateToMenu}
+                      onLeaveSuccess={handleNavigateToMenu}
+                      onDeleteSuccess={handleNavigateToMenu}
+                    />
+                  )}
+                  
+                  {currentScreen === 'screen6' && resolvedChallengeId !== null && (
+                    <Screen6InChallenge 
+                      challengeId={resolvedChallengeId}
+                      onNavigateToManage={handleNavigateToScreen4}
+                      onNavigateBack={handleNavigateToMenu}
+                    />
+                  )}
+                </AutoInvitationRedeemGate>
+              )}
+            </QueryStateGate>
+          </ProfileCompletionGate>
+        )}
       </AppShell>
-    );
-  }
-
-  // User is authenticated - wrap with ProfileCompletionGate and AutoInvitationRedeemGate
-  return (
-    <AppShell>
-      {showDevPanel && <DevPanel />}
-      <ChallengeDeletedNotice 
-        open={showDeletedNotice} 
-        onDismiss={handleDismissDeletedNotice}
-      />
-      <ProfileCompletionGate>
-        <QueryStateGate query={userStatusQuery}>
-          {(userStatus) => (
-            <AutoInvitationRedeemGate hasActiveChallenge={userStatus?.hasActiveChallenge || false}>
-              {(() => {
-                const handleNavigateToMenu = () => setCurrentScreen('menu');
-                const handleNavigateToScreen4 = () => setCurrentScreen('screen4');
-                const handleNavigateToScreen6 = () => setCurrentScreen('screen6');
-                const handleNavigateToScreen3 = () => setCurrentScreen('screen3');
-                
-                const handleLeaveSuccess = () => {
-                  setCurrentScreen('menu');
-                };
-                
-                const handleDeleteSuccess = () => {
-                  setCurrentScreen('menu');
-                };
-
-                const handleJoinSuccess = () => {
-                  setCurrentScreen('screen6');
-                };
-
-                return (
-                  <>
-                    {currentScreen === 'menu' && (
-                      <UnifiedEntryMenu 
-                        onNavigateToCreate={handleNavigateToScreen4}
-                        onNavigateToChallenge={handleNavigateToScreen6}
-                        onNavigateToManage={handleNavigateToScreen4}
-                      />
-                    )}
-                    {currentScreen === 'screen3' && (
-                      <Screen3Placeholder 
-                        onNavigateToScreen4={handleNavigateToScreen4}
-                        onJoinSuccess={handleJoinSuccess}
-                        hasInconsistentState={userStatus?.hasActiveChallenge === true && resolvedChallengeId === null}
-                      />
-                    )}
-                    {currentScreen === 'screen4' && (
-                      <Screen4Placeholder 
-                        onNavigateBack={handleNavigateToMenu}
-                        onLeaveSuccess={handleLeaveSuccess}
-                        onDeleteSuccess={handleDeleteSuccess}
-                      />
-                    )}
-                    {currentScreen === 'screen6' && resolvedChallengeId !== null && (
-                      <Screen6InChallenge 
-                        challengeId={resolvedChallengeId}
-                        onNavigateToManage={handleNavigateToScreen4}
-                        onNavigateBack={handleNavigateToMenu}
-                      />
-                    )}
-                  </>
-                );
-              })()}
-            </AutoInvitationRedeemGate>
-          )}
-        </QueryStateGate>
-      </ProfileCompletionGate>
-    </AppShell>
+    </I18nProvider>
   );
 }
 
 export default function App() {
-  return (
-    <I18nProvider>
-      <AppContent />
-    </I18nProvider>
-  );
+  return <AppContent />;
 }

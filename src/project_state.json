@@ -4,29 +4,29 @@
   "summary": "New project",
   "architectural_notes": [],
   "known_issues": [
-    "Live environment sometimes serves stale/corrupted frontend assets (cache issue), causing white screen/spinner while draft works; console may show placeholder build timestamp ($VITE_BUILD_TIMESTAMPS)."
+    "Deployment unsuccessful (deployment error); user requested redeploy."
   ],
   "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-ensure-each-production-live-build-produces-a-concrete-unique-frontend-build-version-not-a-placeholder-and-that-the-deployed-app-s-meta-name-app-version-and-frontend-src-generated-appversion-ts-contain-that-concrete-value-so-the-app-update-guard-can-reliably-detect-stale-assets",
-      "title": "Ensure each production (live) build produces a concrete, unique frontend build version (not a placeholder) and that the deployed app’s `meta[name=\"app-version\"]` and `frontend/src/generated/appVersion.ts` contain that concrete value so the app update guard can reliably detect stale assets.",
+      "id": "feature-redeploy-the-application-to-the-live-environment-and-confirm-the-deployment-completes-successfully-no-deployment-error",
+      "title": "Redeploy the application to the live environment and confirm the deployment completes successfully (no deployment error).",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
     },
     {
-      "id": "feature-add-a-safe-runtime-fallback-so-that-if-the-generated-build-version-is-still-a-placeholder-at-runtime-the-app-stamps-meta-name-app-version-with-a-newly-generated-unique-value-e-g-timestamp-random-suffix-to-enable-cache-busting-refresh-behavior-instead-of-leaving-runningversion-null",
-      "title": "Add a safe runtime fallback so that if the generated build version is still a placeholder at runtime, the app stamps `meta[name=\"app-version\"]` with a newly generated unique value (e.g., timestamp + random suffix) to enable cache-busting refresh behavior instead of leaving `runningVersion` null.",
+      "id": "feature-ensure-the-production-live-frontend-build-always-produces-a-concrete-unique-build-version-not-a-placeholder-and-that-the-deployed-html-contains-a-non-empty-meta-name-app-version-value-so-the-app-can-reliably-detect-stale-assets",
+      "title": "Ensure the production (live) frontend build always produces a concrete, unique build version (not a placeholder) and that the deployed HTML contains a non-empty `meta[name=\"app-version\"]` value so the app can reliably detect stale assets.",
       "reqIds": [
         "REQ-2"
       ],
       "version": 1
     },
     {
-      "id": "feature-expose-minimal-diagnostics-english-ui-text-in-an-existing-developer-only-area-to-confirm-which-version-is-running-on-live-show-the-current-runningversion-from-the-meta-tag-and-the-build-version-value-so-cache-issues-can-be-verified-without-browser-console-access",
-      "title": "Expose minimal diagnostics (English UI text) in an existing developer-only area to confirm which version is running on live: show the current `runningVersion` (from the meta tag) and the `BUILD_VERSION` value so cache issues can be verified without browser console access.",
+      "id": "feature-after-redeploy-verify-that-the-existing-developer-diagnostics-panel-correctly-displays-version-information-for-troubleshooting-stale-asset-issues",
+      "title": "After redeploy, verify that the existing developer diagnostics panel correctly displays version information for troubleshooting stale asset issues.",
       "reqIds": [
         "REQ-3"
       ],
@@ -34,7 +34,7 @@
     }
   ],
   "new_feature_requests": [],
-  "projectName": "Fix live white-screen by ensuring frontend build version is generated/injected for cache busting",
+  "projectName": "Redeploy and verify live build serves correct versioned frontend assets",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

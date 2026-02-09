@@ -3,10 +3,12 @@
  * Combines timestamp with optional git SHA for uniqueness.
  * Exports the version as an environment variable for Vite to inject.
  * Also writes a generated TypeScript module for runtime stamping.
+ * 
+ * Enhanced to ensure production builds always get concrete version values.
  */
 
 import { execSync } from 'child_process';
-import { writeFileSync, mkdirSync } from 'fs';
+import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -39,6 +41,17 @@ function generateAppVersion() {
 // Generate version
 const appVersion = generateAppVersion();
 
+// Validate that version doesn't contain placeholder patterns
+if (
+  appVersion.includes('VITE_') ||
+  appVersion.includes('BUILD_VERSION_PLACEHOLDER') ||
+  appVersion.includes('%') ||
+  appVersion.startsWith('$')
+) {
+  console.error('[Build] ERROR: Generated version contains placeholder pattern:', appVersion);
+  process.exit(1);
+}
+
 // Write to .env.local for Vite to pick up
 const envPath = join(__dirname, '..', '.env.local');
 const envContent = `VITE_BUILD_TIMESTAMP=${appVersion}\n`;
@@ -48,6 +61,19 @@ try {
   console.log(`[Build] Wrote version to .env.local`);
 } catch (error) {
   console.error('[Build] Failed to write .env.local:', error);
+  process.exit(1);
+}
+
+// Verify .env.local was written correctly
+try {
+  const writtenContent = readFileSync(envPath, 'utf8');
+  if (!writtenContent.includes(appVersion)) {
+    console.error('[Build] ERROR: .env.local does not contain the generated version');
+    process.exit(1);
+  }
+  console.log('[Build] Verified .env.local contains correct version');
+} catch (error) {
+  console.error('[Build] Failed to verify .env.local:', error);
   process.exit(1);
 }
 
@@ -73,8 +99,17 @@ function generateRuntimeVersion(): string {
   return \`\${timestamp}-\${random}-runtime\`;
 }
 
+function isPlaceholder(version: string | undefined): boolean {
+  if (!version) return true;
+  if (version === 'BUILD_VERSION_PLACEHOLDER') return true;
+  if (version.includes('VITE_BUILD_TIMESTAMP')) return true;
+  if (version.includes('%VITE_')) return true;
+  if (version.startsWith('$')) return true;
+  return false;
+}
+
 export const BUILD_VERSION = 
-  (envVersion && envVersion !== 'BUILD_VERSION_PLACEHOLDER' && !envVersion.includes('VITE_')) 
+  (!isPlaceholder(envVersion)) 
     ? envVersion 
     : generateRuntimeVersion();
 `;
@@ -88,3 +123,5 @@ export const BUILD_VERSION =
 
 // Also export for immediate use
 process.env.VITE_BUILD_TIMESTAMP = appVersion;
+
+console.log('[Build] ✅ Version generation complete');

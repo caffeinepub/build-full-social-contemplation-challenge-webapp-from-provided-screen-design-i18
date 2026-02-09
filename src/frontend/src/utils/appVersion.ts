@@ -47,6 +47,17 @@ export function getRunningAppVersion(): string | null {
 }
 
 /**
+ * Reads the raw meta tag content without validation (for diagnostics).
+ */
+export function getRawMetaTagContent(): string | null {
+  const metaTag = document.querySelector('meta[name="app-version"]');
+  if (!metaTag) return null;
+  
+  const content = metaTag.getAttribute('content');
+  return content ? content.trim() : null;
+}
+
+/**
  * Extracts the app version from fetched HTML text.
  * Returns null if the version meta tag cannot be found, parsed, or contains a placeholder.
  */
@@ -76,6 +87,7 @@ export function extractVersionFromHTML(html: string): string | null {
  * Stamps the build version into the document meta tag with runtime fallback.
  * If the build version is also a placeholder, generates a unique runtime version.
  * This ensures the running version is always concrete for update checks.
+ * Only stamps if the current meta tag content is missing or a placeholder.
  */
 export function stampBuildVersionWithFallback(buildVersion: string): void {
   const metaTag = document.querySelector('meta[name="app-version"]');
@@ -102,6 +114,8 @@ export function stampBuildVersionWithFallback(buildVersion: string): void {
     
     metaTag.setAttribute('content', versionToStamp);
     console.log('[AppVersion] Stamped version into meta tag:', versionToStamp);
+  } else {
+    console.log('[AppVersion] Meta tag already has valid version:', currentContent);
   }
 }
 
@@ -110,4 +124,12 @@ export function stampBuildVersionWithFallback(buildVersion: string): void {
  */
 export function stampBuildVersion(buildVersion: string): void {
   stampBuildVersionWithFallback(buildVersion);
+}
+
+/**
+ * Checks if a version string is valid (not a placeholder).
+ * Exposed for DevPanel diagnostics.
+ */
+export function isValidVersion(version: string | null | undefined): boolean {
+  return !isPlaceholderVersion(version);
 }

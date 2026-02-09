@@ -1,15 +1,26 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-08T23:47:07.768Z",
-  "summary": "Implemented runtime stamping/fallback for the app-version meta tag and added developer diagnostics, plus a build-time script and generated module for BUILD_VERSION. However, the diff does not clearly show that a concrete build version is reliably injected into production builds (as opposed to being generated at runtime), nor that the HTML meta tag is populated at build time.",
+  "generatedAt": "2026-02-09T00:21:55.865Z",
+  "summary": "Diff adds build/version stamping utilities and diagnostics updates, plus a deployment verification checklist. However, evidence for an actual successful redeploy is not present, and build-time HTML meta stamping may still rely on placeholder substitution that cannot be confirmed from the diff alone.",
   "missing_requirements": [
     {
       "id": "REQ-1",
-      "requirement": "Ensure each production (live) build produces a concrete, unique frontend build version and that the deployed app’s meta[name=\"app-version\"] and frontend/src/generated/appVersion.ts contain that concrete value (not placeholders) so the update guard can reliably detect stale assets.",
-      "reason": "The meta tag in frontend/index.html is left with an empty content attribute, and the generated appVersion.ts falls back to generating a runtime version inside the module. The diff does not show any build pipeline wiring (e.g., package.json/Vite config) that guarantees VITE_BUILD_TIMESTAMP is set for production builds and that the built HTML is injected with a concrete value at build time.",
+      "requirement": "Redeploy the application to the live environment and confirm the deployment completes successfully (no deployment error) and that the live app loads.",
+      "reason": "The diff includes a verification checklist, but no evidence of an executed redeploy (e.g., CI/CD config, deployment logs, or any change that demonstrates a completed live deployment).",
+      "evidence": [
+        "frontend/DEPLOYMENT_VERIFICATION.md",
+        "project_state.json"
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "requirement": "Ensure the deployed HTML contains a non-empty meta[name=\"app-version\"] value that is not a placeholder pattern.",
+      "reason": "The source HTML still contains a placeholder string (%VITE_BUILD_TIMESTAMP%) in the meta tag. While runtime fallback stamping is added, the requirement explicitly calls for the deployed HTML meta content to be non-empty/non-placeholder; build-time substitution is implied but not provable from this diff summary alone.",
       "evidence": [
         "frontend/index.html",
+        "frontend/src/App.tsx",
+        "frontend/src/utils/appVersion.ts",
         "frontend/src/generated/appVersion.ts",
         "frontend/scripts/generateAppVersion.mjs"
       ]
@@ -17,23 +28,17 @@
   ],
   "hallucinated_features": [
     {
-      "description": "Added HTML cache-control meta directives for iOS Safari (Cache-Control/Pragma/Expires).",
-      "reason": "Not requested in any REQ; the build request explicitly focused on version generation/injection for cache busting, not cache-control headers/meta tags.",
+      "description": "Added iOS Safari cache-busting meta directives (Cache-Control/Pragma/Expires) in the HTML.",
+      "reason": "Not explicitly requested by the BuildRequest requirements (which focus on version stamping and diagnostics), though it is related to stale asset concerns.",
       "evidence": [
         "frontend/index.html"
       ]
-    },
-    {
-      "description": "Developer panel includes backend build identifier and copy-to-clipboard UI controls.",
-      "reason": "REQ-3 only asked to show runningVersion (meta) and BUILD_VERSION; backend build identifier and clipboard helpers are extra functionality beyond the minimal diagnostics requested.",
-      "evidence": [
-        "frontend/src/components/DevPanel.tsx"
-      ]
     }
   ],
-  "confidence": 0.63,
+  "confidence": 0.67,
   "changed_files": [
     "frontend-file-summaries.txt",
+    "frontend/DEPLOYMENT_VERIFICATION.md",
     "frontend/index.html",
     "frontend/scripts/generateAppVersion.mjs",
     "frontend/src/App.tsx",

@@ -12,7 +12,16 @@ function generateRuntimeVersion(): string {
   return `${timestamp}-${random}-runtime`;
 }
 
+function isPlaceholder(version: string | undefined): boolean {
+  if (!version) return true;
+  if (version === 'BUILD_VERSION_PLACEHOLDER') return true;
+  if (version.includes('VITE_BUILD_TIMESTAMP')) return true;
+  if (version.includes('%VITE_')) return true;
+  if (version.startsWith('$')) return true;
+  return false;
+}
+
 export const BUILD_VERSION = 
-  (envVersion && envVersion !== 'BUILD_VERSION_PLACEHOLDER' && !envVersion.includes('VITE_')) 
+  (!isPlaceholder(envVersion)) 
     ? envVersion 
     : generateRuntimeVersion();
